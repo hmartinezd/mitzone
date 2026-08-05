@@ -73,7 +73,7 @@ void main() {
 
       await tester.pumpWidget(capturedApp!);
 
-      expect(find.text('Could not start Mitzone'), findsOneWidget);
+      expect(find.text('Startup Failed'), findsOneWidget);
       expect(find.textContaining('Initialization failure'), findsOneWidget);
       expect(find.textContaining('Network error'), findsNothing);
       expect(find.textContaining('test-key'), findsNothing);

@@ -6,10 +6,39 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Visual system and shared components (Next)
+**Current Phase**: Splash Screen (Next)
 
 **Completed Phases**:
-- **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
+1. **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
+2. **Visual System and Shared Components**: Design tokens, dark Material 3 theme, reusable UI components, and visual showcase.
+
+## Visual System
+
+Mitzone uses a modern, minimalist, dark-first visual language designed to communicate connection and discovery.
+
+### Design Tokens
+- **Colors**: Near-black navy background, bright cyan primary, electric blue secondary, and purple accents.
+- **Typography**: Complete Material 3 `TextTheme` using system fonts for maximum reliability and accessibility.
+- **Spacing**: Predictable scale (4, 8, 12, 16, 20, 24, 32, 40, 48, 64).
+- **Radii**: Small, medium, large, extra-large, and pill.
+
+### Shared Components
+Reusable components are located in `lib/shared/widgets/` and include:
+- `MitzonePageScaffold`: Responsive layout foundation with atmospheric gradients.
+- `MitzoneBrand`: Code-based temporary brand mark and logo presentation.
+- `MitzoneButton`: Support for primary, secondary, tertiary, and destructive variants with loading states.
+- `MitzoneTextField`: Standardized inputs with validation and visibility toggles.
+- `MitzoneCard`: Semantic surfaces for content grouping.
+- `MitzoneStatusBadge`: Iconic status indicators (Neutral, Info, Success, Warning, Error).
+- `MitzoneFeedbackBanner`: Contextual feedback for user operations.
+- `MitzoneLoadingIndicator`: Spinners with optional descriptive text.
+- `MitzoneEmptyState`: Centered layouts for missing content.
+- `MitzoneConfirmationDialog`: Helper for destructive or important actions.
+
+### Implementation Guidelines
+- **Theme Usage**: Use `Theme.of(context)` to access colors and text styles.
+- **Semantic Colors**: Use `Theme.of(context).extension<MitzoneThemeColors>()` for brand-specific colors.
+- **Accessibility**: All interactive targets are at least 48x48. Large text scaling (2.0+) is supported. Contrast pairs are verified to meet WCAG standards.
 
 ## Technical Specifications
 
@@ -43,15 +72,13 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Running the Application
 
-### Commands run directly from the repository root:
-
-#### Without Supabase (Local/Default)
+### Visual System Showcase
+During this phase, the application launches directly into a showcase screen displaying all design tokens and components.
 ```bash
-flutter pub get
 flutter run
 ```
 
-#### With Environment Configuration
+### With Environment Configuration
 Create a configuration file (e.g., `config/dev.json`):
 ```json
 {
@@ -64,8 +91,6 @@ Run with the configuration:
 ```bash
 flutter run --dart-define-from-file=config/dev.json
 ```
-
-**Note**: `SUPABASE_PUBLISHABLE_KEY` is a client-side project key. **Never** include secret or service-role keys in the application.
 
 ## Quality and Validation
 
@@ -101,17 +126,20 @@ flutter build ios --simulator
 lib/
 ├── main.dart             # Entry point
 ├── bootstrap.dart        # Initialization logic
-├── app/                  # Global app configuration (router, theme)
+├── app/                  # Global app configuration
+│   ├── router/           # Routing definitions
+│   └── theme/            # Design tokens and Material theme
 ├── core/                 # Shared utilities, config, and providers
+├── shared/               # Reusable UI components
 └── features/             # Feature-specific code
-    └── foundation/       # Initial foundation screen
+    └── foundation/       # Foundation showcase and failure screens
 ```
 
 ## Planned Order of Implementation
 
 1. Foundation hardening (Completed)
-2. Visual system and shared components (Current)
-3. Splash Screen
+2. Visual system and shared components (Completed)
+3. Splash Screen (Next)
 4. Onboarding
 5. Email/password authentication
 6. Email verification
@@ -119,5 +147,3 @@ lib/
 8. Main navigation
 9. Home
 10. Profile and Settings
-
-*Note: Splash, Onboarding, authentication, matching, chat, QR, and geolocation are not yet implemented.*

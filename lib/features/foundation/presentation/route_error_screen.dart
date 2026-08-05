@@ -1,61 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/router/app_routes.dart';
+import '../../../shared/widgets/mitzone_button.dart';
+import '../../../shared/widgets/mitzone_empty_state.dart';
+import '../../../shared/widgets/mitzone_page_scaffold.dart';
 
 class RouteErrorScreen extends StatelessWidget {
-  /// The [error] is kept for debug logging if needed, but not displayed to the user.
-  final Exception? error;
+  const RouteErrorScreen({this.error, super.key});
 
-  const RouteErrorScreen({super.key, this.error});
+  final Exception? error;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 24.0,
-              vertical: 48.0,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.explore_outlined,
-                    size: 80,
-                    color: theme.colorScheme.primary,
-                    semanticLabel:
-                        'Lost explorer icon representing page not found',
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Page Not Found',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "We couldn't find the page you're looking for. "
-                    "It might have been moved or doesn't exist.",
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                  const SizedBox(height: 48),
-                  FilledButton(
-                    onPressed: () => context.go(AppRoutes.foundation),
-                    child: const Text('Return to Mitzone'),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    return MitzonePageScaffold(
+      title: 'Page Not Found',
+      child: MitzoneEmptyState(
+        title: 'Lost your way?',
+        message: 'The page you are looking for does not exist.',
+        icon: Icons.map_outlined,
+        primaryAction: MitzoneButton(
+          text: 'Back to Showcase',
+          onPressed: () => context.go(AppRoutes.showcase),
         ),
       ),
     );

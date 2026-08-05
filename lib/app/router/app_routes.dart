@@ -1,3 +1,3 @@
 class AppRoutes {
-  static const String foundation = '/';
+  static const String showcase = '/';
 }

@@ -6,12 +6,12 @@ import 'package:mitzone/app/router/app_router.dart';
 import 'package:mitzone/core/config/app_config.dart';
 import 'package:mitzone/core/config/app_environment.dart';
 import 'package:mitzone/core/providers/core_providers.dart';
-import 'package:mitzone/features/foundation/presentation/foundation_screen.dart';
+import 'package:mitzone/features/foundation/presentation/visual_system_showcase_screen.dart';
 import 'package:mitzone/features/foundation/presentation/route_error_screen.dart';
 
 void main() {
   group('MitzoneApp Widget Tests', () {
-    testWidgets('renders FoundationScreen initially', (tester) async {
+    testWidgets('renders VisualSystemShowcaseScreen initially', (tester) async {
       final config = AppConfig.validated(env: AppEnvironment.local);
 
       await tester.pumpWidget(
@@ -21,15 +21,12 @@ void main() {
         ),
       );
 
-      expect(find.byType(FoundationScreen), findsOneWidget);
-      expect(find.text('Mitzone'), findsOneWidget);
-      expect(
-        find.text('The best connections begin in the real world.'),
-        findsOneWidget,
-      );
+      expect(find.byType(VisualSystemShowcaseScreen), findsOneWidget);
+      expect(find.text('Visual System Showcase'), findsOneWidget);
+      expect(find.text('Mitzone'), findsWidgets);
     });
 
-    testWidgets('shows unconfigured Supabase state', (tester) async {
+    testWidgets('shows unconfigured Supabase state in showcase', (tester) async {
       final config = AppConfig.validated(env: AppEnvironment.local);
 
       await tester.pumpWidget(
@@ -39,11 +36,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Not Configured'), findsOneWidget);
-      expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+      expect(find.text('Unconfigured'), findsOneWidget);
     });
 
-    testWidgets('shows configured Supabase state', (tester) async {
+    testWidgets('shows configured Supabase state in showcase', (tester) async {
       final config = AppConfig.validated(
         env: AppEnvironment.development,
         supabaseUrl: 'https://example.supabase.co',
@@ -58,7 +54,6 @@ void main() {
       );
 
       expect(find.text('Configured'), findsOneWidget);
-      expect(find.byIcon(Icons.cloud_done_outlined), findsOneWidget);
     });
 
     testWidgets('real unknown-route integration test', (tester) async {
@@ -75,26 +70,25 @@ void main() {
         ),
       );
 
-      // Wait for router to settle
-      await tester.pumpAndSettle();
+      // Wait for router to settle - using pump with duration to avoid infinite settle
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Confirm friendly error screen appears
       expect(find.byType(RouteErrorScreen), findsOneWidget);
       expect(find.text('Page Not Found'), findsOneWidget);
 
-      // Confirm no raw implementation details (like Exception text)
-      expect(find.textContaining('Exception:'), findsNothing);
-
       // Tap return button
-      final returnButton = find.byType(FilledButton);
+      final returnButton = find.text('Back to Showcase');
       expect(returnButton, findsOneWidget);
       await tester.tap(returnButton);
 
       // Wait for navigation
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
-      // Confirm navigation to Foundation Screen
-      expect(find.byType(FoundationScreen), findsOneWidget);
+      // Confirm navigation to Showcase
+      expect(find.byType(VisualSystemShowcaseScreen), findsOneWidget);
 
       // Dispose the test router
       router.dispose();

@@ -2,18 +2,14 @@
 
 “The best connections begin in the real world.”
 
-Mitzone is a mobile application designed to foster authentic real-world connections by helping you find and join meaningful events and communities.
+Mitzone transforms real-world encounters into meaningful digital connections, helping people reconnect after sharing the same place, event, and moment.
 
-## Current Phase: Foundation Hardening
+## Project Status
 
-This phase focuses on repository cleanup, architecture hardening, and establishing a robust CI/CD pipeline.
+**Current Phase**: Visual system and shared components (Next)
 
-- Repository flattened (Flutter project at the root).
-- `AppConfig` runtime validation.
-- Harden bootstrap and failure handling.
-- Responsive and accessible Foundation Screen.
-- Comprehensive testing suite.
-- GitHub Actions CI for Android and iOS builds.
+**Completed Phases**:
+- **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
 
 ## Technical Specifications
 
@@ -47,7 +43,7 @@ This phase focuses on repository cleanup, architecture hardening, and establishi
 
 ## Running the Application
 
-### commands run directly from the repository root:
+### Commands run directly from the repository root:
 
 #### Without Supabase (Local/Default)
 ```bash
@@ -113,16 +109,15 @@ lib/
 
 ## Planned Order of Implementation
 
-1. Foundation hardening — current phase
-2. Visual system and shared components
+1. Foundation hardening (Completed)
+2. Visual system and shared components (Current)
 3. Splash Screen
 4. Onboarding
-5. Email/password authentication (with email verification)
+5. Email/password authentication
 6. Email verification
 7. Minimum profile
 8. Main navigation
 9. Home
 10. Profile and Settings
 
-*Note: Google, Apple, and Facebook authentication are not implemented yet.*
-*Splash, Onboarding, matching, chat, QR, and geolocation are outside the scope of the current phase.*
+*Note: Splash, Onboarding, authentication, matching, chat, QR, and geolocation are not yet implemented.*

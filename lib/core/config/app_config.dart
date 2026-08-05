@@ -6,31 +6,37 @@ class AppConfig {
   final String? supabaseUrl;
   final String? supabasePublishableKey;
 
-  const AppConfig({
+  /// Private constructor to prevent unvalidated instantiation.
+  const AppConfig._({
     required this.env,
     this.supabaseUrl,
     this.supabasePublishableKey,
   });
 
-  /// Factory that performs validation.
+  /// Factory that performs validation and returns a validated [AppConfig].
   factory AppConfig.validated({
     required AppEnvironment env,
     String? supabaseUrl,
     String? supabasePublishableKey,
   }) {
-    final config = AppConfig(
+    final sanitizedUrl = supabaseUrl?.trim().isEmpty ?? true
+        ? null
+        : supabaseUrl?.trim();
+    final sanitizedKey = supabasePublishableKey?.trim().isEmpty ?? true
+        ? null
+        : supabasePublishableKey?.trim();
+
+    final config = AppConfig._(
       env: env,
-      supabaseUrl: supabaseUrl?.trim().isEmpty ?? true
-          ? null
-          : supabaseUrl?.trim(),
-      supabasePublishableKey: supabasePublishableKey?.trim().isEmpty ?? true
-          ? null
-          : supabasePublishableKey?.trim(),
+      supabaseUrl: sanitizedUrl,
+      supabasePublishableKey: sanitizedKey,
     );
+
     config._validate();
     return config;
   }
 
+  /// Loads configuration from compile-time environment variables.
   factory AppConfig.fromEnvironment() {
     const envStr = String.fromEnvironment('APP_ENV', defaultValue: 'local');
     const urlStr = String.fromEnvironment('SUPABASE_URL');

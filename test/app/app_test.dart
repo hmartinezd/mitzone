@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mitzone/app/app.dart';
+import 'package:mitzone/app/router/app_router.dart';
 import 'package:mitzone/core/config/app_config.dart';
 import 'package:mitzone/core/config/app_environment.dart';
 import 'package:mitzone/core/providers/core_providers.dart';
@@ -60,28 +61,43 @@ void main() {
       expect(find.byIcon(Icons.cloud_done_outlined), findsOneWidget);
     });
 
-    testWidgets('shows friendly error screen for unknown route', (
-      tester,
-    ) async {
+    testWidgets('real unknown-route integration test', (tester) async {
+      final router = createAppRouter(initialLocation: '/unknown-route');
       final config = AppConfig.validated(env: AppEnvironment.local);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appConfigProvider.overrideWithValue(config)],
+          overrides: [
+            routerProvider.overrideWithValue(router),
+            appConfigProvider.overrideWithValue(config),
+          ],
           child: const MitzoneApp(),
         ),
       );
 
-      // We can't directly trigger go_router unknown route easily without accessing the router
-      // But we can test if the RouteErrorScreen renders correctly if we put it in the tree
-      await tester.pumpWidget(MaterialApp(home: const RouteErrorScreen()));
+      // Wait for router to settle
+      await tester.pumpAndSettle();
 
+      // Confirm friendly error screen appears
+      expect(find.byType(RouteErrorScreen), findsOneWidget);
       expect(find.text('Page Not Found'), findsOneWidget);
-      expect(
-        find.textContaining('Something went wrong'),
-        findsNothing,
-      ); // should be friendly
-      expect(find.byType(ElevatedButton), findsOneWidget);
+
+      // Confirm no raw implementation details (like Exception text)
+      expect(find.textContaining('Exception:'), findsNothing);
+
+      // Tap return button
+      final returnButton = find.byType(FilledButton);
+      expect(returnButton, findsOneWidget);
+      await tester.tap(returnButton);
+
+      // Wait for navigation
+      await tester.pumpAndSettle();
+
+      // Confirm navigation to Foundation Screen
+      expect(find.byType(FoundationScreen), findsOneWidget);
+
+      // Dispose the test router
+      router.dispose();
     });
 
     testWidgets('renders correctly on small screens without overflow', (

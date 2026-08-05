@@ -4,9 +4,11 @@ import 'app_routes.dart';
 import '../../features/foundation/presentation/foundation_screen.dart';
 import '../../features/foundation/presentation/route_error_screen.dart';
 
-final routerProvider = Provider<GoRouter>((ref) {
+/// Factory function to create a [GoRouter] instance.
+/// Useful for testing with different initial locations.
+GoRouter createAppRouter({String initialLocation = AppRoutes.foundation}) {
   return GoRouter(
-    initialLocation: AppRoutes.foundation,
+    initialLocation: initialLocation,
     errorBuilder: (context, state) => RouteErrorScreen(error: state.error),
     routes: [
       GoRoute(
@@ -15,4 +17,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+}
+
+/// Provider for the application router.
+final routerProvider = Provider<GoRouter>((ref) {
+  final router = createAppRouter();
+  ref.onDispose(router.dispose);
+  return router;
 });

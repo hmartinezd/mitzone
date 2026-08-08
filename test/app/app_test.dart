@@ -9,7 +9,6 @@ import 'package:mitzone/core/identity/app_identity.dart';
 import 'package:mitzone/core/identity/identity_gateway.dart';
 import 'package:mitzone/core/identity/identity_providers.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
-import 'package:mitzone/features/foundation/presentation/visual_system_showcase_screen.dart';
 import 'package:mitzone/features/foundation/presentation/route_error_screen.dart';
 import 'package:mitzone/features/splash/presentation/splash_screen.dart';
 import 'package:mitzone/features/onboarding/data/onboarding_providers.dart';

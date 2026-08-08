@@ -7,7 +7,7 @@ class MainNavigationShell extends StatelessWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  void _onTap(BuildContext context, int index) {
+  void _onTap(int index) {
     navigationShell.goBranch(
       index,
       // When tapping the current tab again, we return to the root of that branch.
@@ -25,7 +25,7 @@ class MainNavigationShell extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) => _onTap(context, index),
+        onDestinationSelected: _onTap,
         labelBehavior: isNarrow
             ? NavigationDestinationLabelBehavior.onlyShowSelected
             : NavigationDestinationLabelBehavior.alwaysShow,

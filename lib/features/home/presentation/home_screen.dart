@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../shared/widgets/mitzone_brand.dart';
-import '../../../shared/widgets/mitzone_page_scaffold.dart';
+import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../app/theme/app_spacing.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -10,7 +10,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MitzonePageScaffold(
+    return MitzonePageBody(
       title: 'Home',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

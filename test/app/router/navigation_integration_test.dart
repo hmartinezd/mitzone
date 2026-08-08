@@ -82,17 +82,12 @@ void main() {
         onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
         identityGatewayProvider.overrideWithValue(identityGateway),
         profileRepositoryProvider.overrideWithValue(profileRepo),
+        if (initialLocation != null)
+          routerInitialLocationProvider.overrideWithValue(initialLocation),
       ],
       child: Consumer(
         builder: (context, ref, _) {
-          // We need to bridge Ref to WidgetRef if we want to use the factory.
-          // Or we can just use the provider.
           final router = ref.watch(routerProvider);
-          if (initialLocation != null && initialLocation != AppRoutes.splash) {
-            // This is a hack for tests to force initial location if not splash
-            // since routerProvider uses splash by default.
-            // For real integration we should probably test from splash.
-          }
           return MaterialApp.router(routerConfig: router);
         },
       ),
@@ -198,6 +193,147 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(ProfilePreviewScreen), findsOneWidget);
       expect(find.text('User'), findsOneWidget);
+    });
+
+    group('Direct Route Tests', () {
+      testWidgets('Directly access /app/home', (tester) async {
+        onboardingStore.completed = true;
+        profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
+        await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.home));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(HomeScreen), findsOneWidget);
+        expect(find.byType(MainNavigationShell), findsOneWidget);
+        
+        final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+        expect(navBar.selectedIndex, 0);
+      });
+
+      testWidgets('Directly access /app/events', (tester) async {
+        onboardingStore.completed = true;
+        profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
+        await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.events));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(EventsScreen), findsOneWidget);
+        expect(find.byType(MainNavigationShell), findsOneWidget);
+        
+        final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+        expect(navBar.selectedIndex, 1);
+      });
+
+      testWidgets('Directly access /app/matches', (tester) async {
+        onboardingStore.completed = true;
+        profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
+        await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.matches));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(MatchesScreen), findsOneWidget);
+        expect(find.byType(MainNavigationShell), findsOneWidget);
+        
+        final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+        expect(navBar.selectedIndex, 2);
+      });
+
+      testWidgets('Directly access /app/chat', (tester) async {
+        onboardingStore.completed = true;
+        profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
+        await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.chat));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ChatScreen), findsOneWidget);
+        expect(find.byType(MainNavigationShell), findsOneWidget);
+        
+        final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+        expect(navBar.selectedIndex, 3);
+      });
+
+      testWidgets('Directly access /app/profile', (tester) async {
+        onboardingStore.completed = true;
+        profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
+        await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.profile));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ProfilePreviewScreen), findsOneWidget);
+        expect(find.byType(MainNavigationShell), findsOneWidget);
+        
+        final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+        expect(navBar.selectedIndex, 4);
+      });
+    });
+
+    group('Responsive and Text Scaling', () {
+      testWidgets('Navigation works at 320x480', (tester) async {
+        tester.view.physicalSize = const Size(320, 480);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        onboardingStore.completed = true;
+        profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
+        await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.home));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(NavigationBar), findsOneWidget);
+        
+        // Verify only selected label is shown at narrow width (rule < 360)
+        final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+        expect(navBar.labelBehavior, NavigationDestinationLabelBehavior.onlyShowSelected);
+      });
+
+      testWidgets('Navigation works with 2.0 text scaling', (tester) async {
+        onboardingStore.completed = true;
+        profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
+        
+        await tester.pumpWidget(
+          MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+            child: createTestWidget(initialLocation: AppRoutes.home),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(NavigationBar), findsOneWidget);
+      });
+    });
+
+    testWidgets('Branch state is preserved', (tester) async {
+      // Force a small viewport to ensure content overflows and scrolling is possible
+      tester.view.physicalSize = const Size(320, 480);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      onboardingStore.completed = true;
+      profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
+      await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.events));
+      await tester.pumpAndSettle();
+
+      // EventsScreen content should be scrollable via SingleChildScrollView in MitzonePageBody
+      final scrollableFinder = find.byType(Scrollable).first;
+      
+      // Scroll down significantly
+      await tester.drag(scrollableFinder, const Offset(0, -300));
+      await tester.pump();
+      
+      // Get current scroll offset
+      final scrollPosition = tester.state<ScrollableState>(scrollableFinder).position;
+      final initialOffset = scrollPosition.pixels;
+      expect(initialOffset, greaterThan(0));
+
+      // Switch to Home
+      await tester.tap(find.text('Home'));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeScreen), findsOneWidget);
+
+      // Return to Events
+      await tester.tap(find.text('Events'));
+      await tester.pumpAndSettle();
+      expect(find.byType(EventsScreen), findsOneWidget);
+      
+      // Verify scroll offset is preserved
+      final newScrollPosition = tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+      expect(newScrollPosition.pixels, initialOffset);
     });
   });
 }

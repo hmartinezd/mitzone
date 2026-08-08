@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_gradients.dart';
 import '../../app/theme/app_spacing.dart';
+import 'mitzone_page_body.dart';
 
 class MitzonePageScaffold extends StatelessWidget {
   const MitzonePageScaffold({
@@ -26,44 +26,16 @@ class MitzonePageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = child;
-
-    if (centered) {
-      content = Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: AppSpacing.maxContentWidthCompact,
-          ),
-          child: content,
-        ),
-      );
-    }
-
-    if (scrollable) {
-      content = SingleChildScrollView(
-        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-        child: content,
-      );
-    } else {
-      content = Padding(
-        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-        child: content,
-      );
-    }
-
-    if (useSafeArea) {
-      content = SafeArea(child: content);
-    }
-
     return Scaffold(
       appBar: showAppBar
           ? (appBar ?? (title != null ? AppBar(title: Text(title!)) : null))
           : null,
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppGradients.backgroundAtmospheric,
-        ),
-        child: content,
+      body: MitzonePageBody(
+        useSafeArea: useSafeArea,
+        scrollable: scrollable,
+        horizontalPadding: horizontalPadding,
+        centered: centered,
+        child: child,
       ),
     );
   }

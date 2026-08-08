@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/identity/identity_providers.dart';
-import '../../../shared/widgets/mitzone_page_scaffold.dart';
+import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../data/profile_providers.dart';
 
@@ -14,7 +14,7 @@ class ProfilePreviewScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final identityAsync = ref.watch(identityGatewayProvider).ensureIdentity();
 
-    return MitzonePageScaffold(
+    return MitzonePageBody(
       title: 'Profile',
       child: FutureBuilder(
         future: identityAsync,
@@ -79,10 +79,10 @@ class ProfilePreviewScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.xhu),
                   const Divider(),
                   const SizedBox(height: AppSpacing.lg),
-                  ListTile(
-                    leading: const Icon(Icons.info_outline),
-                    title: const Text('Profile preview only'),
-                    subtitle: const Text(
+                  const ListTile(
+                    leading: Icon(Icons.info_outline),
+                    title: Text('Profile preview only'),
+                    subtitle: Text(
                       'Editing and settings are coming soon.',
                     ),
                   ),

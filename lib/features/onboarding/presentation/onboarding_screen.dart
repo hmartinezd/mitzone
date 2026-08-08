@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../app/router/app_entry_coordinator.dart';
 import '../../../app/router/app_entry_resolver.dart';
-import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/identity/identity_providers.dart';
 import '../../../shared/widgets/mitzone_button.dart';
@@ -83,21 +83,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
         if (!mounted) return;
 
-        switch (target) {
-          case AppEntryTarget.onboarding:
-            // Should not happen if markCompleted succeeded.
-            setState(() {
-              _isCompleting = false;
-              _errorMessage =
-                  "We couldn't save your progress. Please try again.";
-            });
-          case AppEntryTarget.createProfile:
-            context.go(AppRoutes.createProfile);
-          case AppEntryTarget.ready:
-            context.go(AppRoutes.showcase);
-          case AppEntryTarget.entryFailure:
-            context.go(AppRoutes.showcase);
-        }
+        final location = AppEntryCoordinator.locationForTarget(target);
+        context.go(location);
       }
     } catch (e) {
       if (mounted) {

@@ -112,7 +112,7 @@ class _CreateMinimumProfileScreenState
       }
 
       if (mounted) {
-        context.go(AppRoutes.showcase);
+        context.go(AppRoutes.home);
       }
     } catch (e) {
       if (mounted) {

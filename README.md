@@ -6,7 +6,7 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Main Navigation (Next)
+**Current Phase**: Home (Next)
 
 **Completed Phases**:
 1. **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
@@ -14,17 +14,34 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 3. **Splash Screen**: Reveal sequence with atmospheric motion, native platform launch configuration, and routing foundation.
 4. **Onboarding**: Three-page product introduction with custom illustrations, local persistence, and application-entry resolution.
 5. **Local Development Identity + Minimum Profile**: Stable local user identity (UUID v4), profile creation (Display Name + Optional Avatar), and managed local storage.
+6. **Main Navigation**: Five-destination Material 3 navigation shell using `StatefulShellRoute`, persistent branch state, and responsive navigation bar.
 
 ## Application Entry Policy
 
 The long-term application-entry rules are:
 
-1. **Active session + complete minimum profile** → Home
+1. **Active session + complete minimum profile** → Home (/app/home)
 2. **Active session + incomplete minimum profile** → Create Profile
 3. **No active session + onboarding previously completed** → Login
 4. **First use** → Onboarding
 
 *Note: In the current development stage, a **Local Development Identity** is used instead of a Supabase session to allow rapid feature development without backend dependency.*
+
+## Main Navigation
+
+Mitzone features exactly five primary destinations accessible via a Material 3 bottom navigation bar:
+- **Home**: The central discovery dashboard (currently a temporary shell for Phase 6).
+- **Events**: Discovery of shared experiences (uses simulated local demo data).
+- **Matches**: Connections from shared experiences (currently an intentional empty state).
+- **Chat**: Conversations with connections (currently an intentional empty state).
+- **Profile**: A read-only preview of the current local development profile.
+
+## Routing Architecture
+
+The application uses `go_router` with `StatefulShellRoute.indexedStack` to provide:
+- Persistent state across navigation branches.
+- Independent navigation stacks for each destination.
+- Support for future deep linking and nested routes.
 
 ## Local Development Identity
 
@@ -117,8 +134,8 @@ lib/
 3. Splash Screen (Completed)
 4. Onboarding (Completed)
 5. Local Development Identity + Minimum Profile (Completed)
-6. Main Navigation (Next)
-7. Home
+6. Main Navigation (Completed)
+7. Home (Next)
 8. Profile and Settings
 9. Permanent Authentication (Deferred)
 10. Supabase Backend Integration (Deferred)

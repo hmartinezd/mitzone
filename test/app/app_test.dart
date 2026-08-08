@@ -8,6 +8,7 @@ import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/core/identity/app_identity.dart';
 import 'package:mitzone/core/identity/identity_gateway.dart';
 import 'package:mitzone/core/identity/identity_providers.dart';
+import 'package:mitzone/features/home/presentation/home_screen.dart';
 import 'package:mitzone/features/foundation/presentation/visual_system_showcase_screen.dart';
 import 'package:mitzone/features/foundation/presentation/route_error_screen.dart';
 import 'package:mitzone/features/splash/presentation/splash_screen.dart';
@@ -121,7 +122,7 @@ void main() {
     );
 
     testWidgets(
-      'navigates to Showcase if onboarding completed and profile exists',
+      'navigates to Home if onboarding completed and profile exists',
       (tester) async {
         onboardingStore.completed = true;
         profileRepo.profile = const UserProfile(
@@ -135,7 +136,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
 
-        expect(find.byType(VisualSystemShowcaseScreen), findsOneWidget);
+        expect(find.byType(HomeScreen), findsOneWidget);
       },
     );
 
@@ -168,12 +169,12 @@ void main() {
       // Advance past RouteErrorScreen pop and splash rendering
       await tester.pumpAndSettle();
 
-      // It might have already resolved to Onboarding or Showcase
+      // It might have already resolved to Onboarding or Shell
       expect(
         find.byType(SplashScreen).evaluate().isNotEmpty ||
             find.byType(OnboardingScreen).evaluate().isNotEmpty ||
             find.byType(CreateMinimumProfileScreen).evaluate().isNotEmpty ||
-            find.byType(VisualSystemShowcaseScreen).evaluate().isNotEmpty,
+            find.byType(HomeScreen).evaluate().isNotEmpty,
         isTrue,
       );
 

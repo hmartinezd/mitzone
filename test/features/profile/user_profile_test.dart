@@ -59,14 +59,22 @@ void main() {
     });
 
     test('completion percentage calculation', () {
+      // 1 character is invalid, so it should be 0/7
       expect(
-        const UserProfile(id: '1', displayName: 'H').completionPercentage,
+        const UserProfile(id: '1', displayName: 'A').completionPercentage,
+        0,
+      );
+      
+      // 2 characters is valid, so 1/7
+      expect(
+        const UserProfile(id: '1', displayName: 'Jo').completionPercentage,
         14,
-      ); // 1/7
+      );
+      
       expect(
         const UserProfile(
           id: '1',
-          displayName: 'H',
+          displayName: 'Hector',
           avatarUri: 'x',
         ).completionPercentage,
         29,
@@ -74,7 +82,7 @@ void main() {
 
       const full = UserProfile(
         id: '1',
-        displayName: 'H',
+        displayName: 'Hector',
         avatarUri: 'x',
         bio: 'b',
         city: 'c',
@@ -83,6 +91,17 @@ void main() {
         connectionGoal: ConnectionGoal.social,
       );
       expect(full.completionPercentage, 100);
+    });
+
+    test('defensive parsing of malformed list elements', () {
+      final json = {
+        'id': '1',
+        'displayName': 'Hector',
+        'languages': ['English', 123, null, 'Spanish'],
+      };
+      
+      final profile = UserProfile.fromJson(json);
+      expect(profile.languages, ['English', 'Spanish']);
     });
   });
 }

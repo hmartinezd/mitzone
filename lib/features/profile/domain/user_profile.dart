@@ -1,3 +1,5 @@
+import 'profile_validation.dart';
+
 /// Supported connection goals for a user.
 enum ConnectionGoal {
   social,
@@ -57,7 +59,7 @@ class UserProfile {
   /// Calculates the profile completion percentage based on 7 components.
   int get completionPercentage {
     int completed = 0;
-    if (displayName.trim().isNotEmpty) completed++;
+    if (ProfileValidation.isValidDisplayName(displayName)) completed++;
     if (avatarUri != null && avatarUri!.isNotEmpty) completed++;
     if (bio != null && bio!.trim().isNotEmpty) completed++;
     if (city != null && city!.trim().isNotEmpty) completed++;
@@ -71,22 +73,22 @@ class UserProfile {
   /// Creates a [UserProfile] from a JSON map with defensive parsing.
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     return UserProfile(
-      id: json['id'] as String,
-      displayName: json['displayName'] as String,
-      avatarUri: json['avatarUri'] as String?,
-      bio: json['bio'] as String?,
-      city: json['city'] as String?,
+      id: json['id'] is String ? json['id'] as String : '',
+      displayName: json['displayName'] is String ? json['displayName'] as String : 'Unknown',
+      avatarUri: json['avatarUri'] is String ? json['avatarUri'] as String? : null,
+      bio: json['bio'] is String ? json['bio'] as String? : null,
+      city: json['city'] is String ? json['city'] as String? : null,
       languages: _parseList(json['languages']),
       interests: _parseList(json['interests']),
       connectionGoal: ConnectionGoal.fromJson(
-        json['connectionGoal'] as String?,
+        json['connectionGoal'] is String ? json['connectionGoal'] as String? : null,
       ),
     );
   }
 
   static List<String> _parseList(dynamic value) {
     if (value is List) {
-      return value.map((e) => e.toString()).toList();
+      return value.whereType<String>().toList();
     }
     return const [];
   }

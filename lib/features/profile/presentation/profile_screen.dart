@@ -1,14 +1,15 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../shared/widgets/mitzone_card.dart';
 import '../../../shared/widgets/mitzone_loading_indicator.dart';
+import '../../../shared/widgets/mitzone_button.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/router/app_routes.dart';
 import '../data/profile_providers.dart';
 import '../domain/user_profile.dart';
+import 'widgets/profile_avatar.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -26,11 +27,11 @@ class ProfileScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Profile not found.'),
+                  const Text('Your profile could not be found.'),
                   const SizedBox(height: AppSpacing.md),
-                  TextButton(
+                  MitzoneButton(
+                    text: 'Finish your profile',
                     onPressed: () => context.go(AppRoutes.createProfile),
-                    child: const Text('Finish your profile'),
                   ),
                 ],
               ),
@@ -43,11 +44,11 @@ class ProfileScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Could not load profile.'),
+              const Text("We couldn't load your profile."),
               const SizedBox(height: AppSpacing.md),
-              TextButton(
+              MitzoneButton(
+                text: 'Try again',
                 onPressed: () => ref.invalidate(currentProfileProvider),
-                child: const Text('Try again'),
               ),
             ],
           ),
@@ -72,19 +73,10 @@ class _ProfileContent extends StatelessWidget {
         Center(
           child: Column(
             children: [
-              CircleAvatar(
+              ProfileAvatar(
+                displayName: profile.displayName,
+                avatarUri: profile.avatarUri,
                 radius: 50,
-                backgroundColor: theme.colorScheme.surfaceContainer,
-                backgroundImage: profile.avatarUri != null
-                    ? FileImage(File(profile.avatarUri!))
-                    : null,
-                child: profile.avatarUri == null
-                    ? Icon(
-                        Icons.person_outline,
-                        size: 50,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      )
-                    : null,
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
@@ -122,43 +114,48 @@ class _CompletionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return MitzoneCard(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Your profile',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+    return Semantics(
+      label: 'Profile $percentage percent complete',
+      child: MitzoneCard(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Your profile',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              Text(
-                '$percentage% complete',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.bold,
+                Text(
+                  '$percentage%',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          LinearProgressIndicator(
-            value: percentage / 100,
-            borderRadius: BorderRadius.circular(4),
-            minHeight: 8,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'Add optional details when you\'re ready.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.md),
+            ExcludeSemantics(
+              child: LinearProgressIndicator(
+                value: percentage / 100,
+                borderRadius: BorderRadius.circular(4),
+                minHeight: 8,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Add optional details when you\'re ready.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

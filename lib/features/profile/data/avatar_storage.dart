@@ -5,4 +5,12 @@ abstract interface class AvatarStorage {
     required String identityId,
     required String sourcePath,
   });
+
+  /// Deletes an avatar file from managed storage.
+  ///
+  /// Only files confirmed to be within the identity's managed directory are deleted.
+  Future<void> deleteAvatar({
+    required String identityId,
+    required String avatarPath,
+  });
 }

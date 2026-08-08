@@ -47,6 +47,12 @@ class FakeAvatarStorage implements AvatarStorage {
   }) async {
     return 'managed_$sourcePath';
   }
+
+  @override
+  Future<void> deleteAvatar({
+    required String identityId,
+    required String avatarPath,
+  }) async {}
 }
 
 void main() {
@@ -84,7 +90,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Hector'), findsOneWidget);
-      expect(find.text('14% complete'), findsOneWidget);
+      expect(find.text('14%'), findsOneWidget);
       expect(find.text('Edit profile'), findsOneWidget);
       expect(find.text('Settings'), findsOneWidget);
     });

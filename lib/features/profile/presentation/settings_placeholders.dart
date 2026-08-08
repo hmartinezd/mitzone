@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../app/theme/app_spacing.dart';
 
@@ -10,6 +11,7 @@ class AccountSettingsScreen extends StatelessWidget {
     final theme = Theme.of(context);
     return MitzonePageBody(
       title: 'Account',
+      onBack: () => context.pop(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -32,9 +34,10 @@ class PrivacySettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MitzonePageBody(
+    return MitzonePageBody(
       title: 'Privacy',
-      child: Text('Privacy controls are coming in a later phase.'),
+      onBack: () => context.pop(),
+      child: const Text('Privacy controls are coming in a later phase.'),
     );
   }
 }
@@ -44,9 +47,10 @@ class NotificationsSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MitzonePageBody(
+    return MitzonePageBody(
       title: 'Notifications',
-      child: Text(
+      onBack: () => context.pop(),
+      child: const Text(
         'Notification settings will be available in a future update.',
       ),
     );
@@ -58,9 +62,10 @@ class TermsSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MitzonePageBody(
+    return MitzonePageBody(
       title: 'Terms & Conditions',
-      child: Text('Terms & Conditions will be available before release.'),
+      onBack: () => context.pop(),
+      child: const Text('Terms & Conditions will be available before release.'),
     );
   }
 }
@@ -70,9 +75,10 @@ class PrivacyPolicySettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MitzonePageBody(
+    return MitzonePageBody(
       title: 'Privacy Policy',
-      child: Text('Privacy Policy will be available before release.'),
+      onBack: () => context.pop(),
+      child: const Text('Privacy Policy will be available before release.'),
     );
   }
 }

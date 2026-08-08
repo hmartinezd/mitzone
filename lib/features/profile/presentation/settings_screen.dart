@@ -12,6 +12,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return MitzonePageBody(
       title: 'Settings',
+      onBack: () => context.pop(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -72,17 +73,6 @@ class SettingsScreen extends StatelessWidget {
                 onTap: () {},
               ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          Center(
-            child: Text(
-              'Mitzone v0.1.0-dev',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-              ),
-            ),
           ),
           const SizedBox(height: AppSpacing.xxl),
         ],

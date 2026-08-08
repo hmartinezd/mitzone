@@ -6,7 +6,7 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Profile and Settings (Completed)
+**Current Phase**: Sprint 1 Local Demo Hardening (Completed)
 
 **Completed Phases**:
 1. **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
@@ -17,10 +17,11 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 6. **Main Navigation**: Five-destination Material 3 navigation shell using `StatefulShellRoute`, persistent branch state, and responsive navigation bar.
 7. **Full Home Experience**: Personalized discovery dashboard with curated demo events, matches empty state, and product education.
 8. **Profile and Settings**: Fully functional local profile management, derived completion percentage, and comprehensive Settings navigation structure.
+9. **Sprint 1 Local Demo Hardening**: Robust async profile loading, removal of nested scaffolds, centralized validation, improved accessibility, and safe avatar replacement.
 
 **Upcoming Phases**:
-9. **Permanent Authentication** (Deferred)
-10. **Supabase Backend Integration** (Deferred)
+10. **Permanent Authentication** (Deferred)
+11. **Supabase Backend Integration** (Deferred)
 
 ## Application Entry Policy
 
@@ -51,12 +52,24 @@ Users can manage their local profile and access application settings.
 - **Settings**: Structured navigation for Account, Privacy, Notifications, and Legal.
 - **Note on Account Actions**: Sign Out and Delete Account actions are visibly deferred until permanent authentication is implemented, as the current identity is local-only.
 
-## Routing Architecture
+## Local Demo Boundary
 
-The application uses `go_router` with `StatefulShellRoute.indexedStack` to provide:
-- Persistent state across navigation branches.
-- Independent navigation stacks for each destination.
-- Support for nested routes within branches (e.g., Profile -> Edit Profile -> Settings).
+For this development phase, the following boundaries apply:
+
+### Works
+- Persistent local identity and profile across restarts.
+- Full main navigation with tab state preservation.
+- Robust profile editing with async safety and validation.
+- Responsive layouts (320px to Tablet) and accessibility (2.0 text scale).
+- Local avatar storage with safe replacement and fallback.
+- Personalized discovery dashboard with demo content.
+
+### Intentionally Deferred
+- **Authentication**: Permanent accounts, sign-out, and deletion are unavailable.
+- **Real Backend**: All data is local; Supabase is integrated but inactive.
+- **QR/Location**: Scanner and GPS functionality are not implemented.
+- **Dynamic Content**: Events, Matches, and Chat remain deterministic demo states.
+- **Web**: Only Android/iOS platforms are currently targeted.
 
 ## Local Development Identity
 

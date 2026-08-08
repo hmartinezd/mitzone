@@ -74,6 +74,12 @@ class FakeAvatarStorage implements AvatarStorage {
     if (shouldThrow) throw Exception('Storage error');
     return 'file:///managed/avatar.png';
   }
+
+  @override
+  Future<void> deleteAvatar({
+    required String identityId,
+    required String avatarPath,
+  }) async {}
 }
 
 void main() {

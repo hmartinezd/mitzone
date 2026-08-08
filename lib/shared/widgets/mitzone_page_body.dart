@@ -16,6 +16,7 @@ class MitzonePageBody extends StatelessWidget {
     this.scrollable = true,
     this.horizontalPadding = AppSpacing.mobilePagePadding,
     this.centered = false,
+    this.onBack,
   });
 
   final Widget child;
@@ -25,24 +26,48 @@ class MitzonePageBody extends StatelessWidget {
   final double horizontalPadding;
   final bool centered;
 
+  /// Optional callback to show a visual Back affordance.
+  final VoidCallback? onBack;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     Widget content = child;
 
-    // If a title is provided, we render it at the top.
-    if (title != null) {
+    // If a title or back button is provided, we render it at the top.
+    if (title != null || onBack != null) {
       content = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(height: AppSpacing.lg),
-          Text(
-            title!,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (onBack != null) ...[
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: onBack,
+                  tooltip: 'Back',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minHeight: 48,
+                    minWidth: 48,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+              ],
+              if (title != null)
+                Expanded(
+                  child: Text(
+                    title!,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: AppSpacing.md),
           child,

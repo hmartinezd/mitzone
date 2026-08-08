@@ -28,4 +28,27 @@ class LocalAvatarStorage implements AvatarStorage {
 
     return targetPath;
   }
+
+  @override
+  Future<void> deleteAvatar({
+    required String identityId,
+    required String avatarPath,
+  }) async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final avatarDir = p.join(dir.path, 'profile_avatars', identityId);
+
+      // Security: Only delete files inside the identity-managed directory.
+      if (!p.isWithin(avatarDir, avatarPath)) {
+        return;
+      }
+
+      final file = File(avatarPath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      // Best-effort cleanup. Do not throw if deletion fails.
+    }
+  }
 }

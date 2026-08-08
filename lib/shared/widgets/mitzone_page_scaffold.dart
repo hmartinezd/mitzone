@@ -12,6 +12,7 @@ class MitzonePageScaffold extends StatelessWidget {
     this.scrollable = true,
     this.horizontalPadding = AppSpacing.mobilePagePadding,
     this.centered = false,
+    this.showAppBar = true,
   });
 
   final Widget child;
@@ -21,6 +22,7 @@ class MitzonePageScaffold extends StatelessWidget {
   final bool scrollable;
   final double horizontalPadding;
   final bool centered;
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +56,9 @@ class MitzonePageScaffold extends StatelessWidget {
     }
 
     return Scaffold(
-      appBar: appBar ?? (title != null ? AppBar(title: Text(title!)) : null),
+      appBar: showAppBar
+          ? (appBar ?? (title != null ? AppBar(title: Text(title!)) : null))
+          : null,
       body: Container(
         decoration: const BoxDecoration(
           gradient: AppGradients.backgroundAtmospheric,

@@ -50,13 +50,7 @@ class MitzoneButton extends StatelessWidget {
             Icon(leadingIcon, size: 20),
             const SizedBox(width: AppSpacing.sm),
           ],
-          Flexible(
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              // Removed ellipsis and maxLines to allow accessibility text scaling
-            ),
-          ),
+          Flexible(child: Text(text, textAlign: TextAlign.center)),
           if (trailingIcon != null) ...[
             const SizedBox(width: AppSpacing.sm),
             Icon(trailingIcon, size: 20),
@@ -81,7 +75,7 @@ class MitzoneButton extends StatelessWidget {
 
   Widget _buildButton(
     Widget child,
-    ButtonStyle style,
+    ButtonStyle? style,
     VoidCallback? onPressed,
   ) {
     switch (variant) {
@@ -95,19 +89,23 @@ class MitzoneButton extends StatelessWidget {
     }
   }
 
-  ButtonStyle _getButtonStyle(ThemeData theme) {
+  ButtonStyle? _getButtonStyle(ThemeData theme) {
     switch (variant) {
       case MitzoneButtonVariant.primary:
-        return theme.filledButtonTheme.style!;
+        return theme.filledButtonTheme.style;
       case MitzoneButtonVariant.destructive:
-        return FilledButton.styleFrom(
+        final destructiveStyle = FilledButton.styleFrom(
           backgroundColor: theme.colorScheme.error,
           foregroundColor: theme.colorScheme.onError,
-        ).merge(theme.filledButtonTheme.style);
+        );
+        final baseStyle = theme.filledButtonTheme.style;
+        return baseStyle != null
+            ? destructiveStyle.merge(baseStyle)
+            : destructiveStyle;
       case MitzoneButtonVariant.secondary:
-        return theme.outlinedButtonTheme.style!;
+        return theme.outlinedButtonTheme.style;
       case MitzoneButtonVariant.tertiary:
-        return theme.textButtonTheme.style!;
+        return theme.textButtonTheme.style;
     }
   }
 

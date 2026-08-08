@@ -6,12 +6,13 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Onboarding (Next)
+**Current Phase**: Authentication (Next)
 
 **Completed Phases**:
 1. **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
 2. **Visual System and Shared Components**: Design tokens, dark Material 3 theme, reusable UI components, and visual showcase.
 3. **Splash Screen**: Reveal sequence with atmospheric motion, native platform launch configuration, and routing foundation.
+4. **Onboarding**: Three-page product introduction with custom illustrations, local persistence using `shared_preferences`, and application-entry resolution.
 
 ## Application Entry Policy
 
@@ -22,7 +23,7 @@ The long-term application-entry rules are:
 3. **No active session + onboarding previously completed** → Login
 4. **First use** → Onboarding
 
-*Note: Until Onboarding and authentication state exist, the Splash Screen temporarily continues to the Visual System Showcase.*
+*Note: Until Authentication is implemented, users who have completed Onboarding temporarily continue to the Visual System Showcase.*
 
 ## Visual System
 
@@ -36,7 +37,7 @@ Mitzone uses a modern, minimalist, dark-first visual language designed to commun
 
 ### Shared Components
 Reusable components are located in `lib/shared/widgets/` and include:
-- `MitzonePageScaffold`: Responsive layout foundation with atmospheric gradients.
+- `MitzonePageScaffold`: Responsive layout foundation with atmospheric gradients and configurable AppBar.
 - `MitzoneBrand`: Code-based temporary brand mark and logo presentation.
 - `MitzoneButton`: Support for primary, secondary, tertiary, and destructive variants with loading states.
 - `MitzoneTextField`: Standardized inputs with validation and visibility toggles.
@@ -62,6 +63,7 @@ Reusable components are located in `lib/shared/widgets/` and include:
   - `flutter_riverpod`: ^3.4.2
   - `go_router`: ^17.4.0
   - `supabase_flutter`: ^2.17.1
+  - `shared_preferences`: ^2.5.5
 
 ## Development Setup
 
@@ -86,7 +88,7 @@ Reusable components are located in `lib/shared/widgets/` and include:
 ## Running the Application
 
 ### Initial Route
-The application launches into the **Splash Screen** (`/`), which navigates to the **Visual System Showcase** (`/showcase`) after completion.
+The application launches into the **Splash Screen** (`/`), which resolves the next destination via `AppEntryResolver`. First-time users are directed to **Onboarding** (`/onboarding`).
 
 ```bash
 flutter run
@@ -141,13 +143,14 @@ lib/
 ├── main.dart             # Entry point
 ├── bootstrap.dart        # Initialization logic
 ├── app/                  # Global app configuration
-│   ├── router/           # Routing definitions
+│   ├── router/           # Routing and entry resolution
 │   └── theme/            # Design tokens and Material theme
 ├── core/                 # Shared utilities, config, and providers
 ├── shared/               # Reusable UI components
 └── features/             # Feature-specific code
     ├── foundation/       # Foundation showcase and failure screens
-    └── splash/           # Splash screen and entry animation
+    ├── splash/           # Splash screen and entry animation
+    └── onboarding/       # Product onboarding and local state
 ```
 
 ## Planned Order of Implementation
@@ -155,8 +158,8 @@ lib/
 1. Foundation hardening (Completed)
 2. Visual system and shared components (Completed)
 3. Splash Screen (Completed)
-4. Onboarding (Next)
-5. Email/password authentication
+4. Onboarding (Completed)
+5. Email/password authentication (Next)
 6. Email verification
 7. Minimum profile
 8. Main navigation

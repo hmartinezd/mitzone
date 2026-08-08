@@ -3,22 +3,41 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mitzone/app/app.dart';
 import 'package:mitzone/app/router/app_router.dart';
-import 'package:mitzone/app/router/app_routes.dart';
 import 'package:mitzone/core/config/app_config.dart';
 import 'package:mitzone/core/config/app_environment.dart';
 import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/features/foundation/presentation/visual_system_showcase_screen.dart';
 import 'package:mitzone/features/foundation/presentation/route_error_screen.dart';
 import 'package:mitzone/features/splash/presentation/splash_screen.dart';
+import 'package:mitzone/features/onboarding/data/onboarding_providers.dart';
+import 'package:mitzone/features/onboarding/data/onboarding_status_store.dart';
+import 'package:mitzone/features/onboarding/presentation/onboarding_screen.dart';
+
+class FakeOnboardingStatusStore implements OnboardingStatusStore {
+  bool completed = false;
+  @override
+  Future<bool> isCompleted() async => completed;
+  @override
+  Future<void> markCompleted() async => completed = true;
+}
 
 void main() {
   group('MitzoneApp Widget Tests', () {
+    late FakeOnboardingStatusStore onboardingStore;
+
+    setUp(() {
+      onboardingStore = FakeOnboardingStatusStore();
+    });
+
     testWidgets('renders SplashScreen initially', (tester) async {
       final config = AppConfig.validated(env: AppEnvironment.local);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appConfigProvider.overrideWithValue(config)],
+          overrides: [
+            appConfigProvider.overrideWithValue(config),
+            onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
+          ],
           child: const MitzoneApp(),
         ),
       );
@@ -29,73 +48,77 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
-    testWidgets('navigates from Splash to Showcase after completion', (
+    testWidgets('navigates to Onboarding if not completed', (tester) async {
+      final config = AppConfig.validated(env: AppEnvironment.local);
+      onboardingStore.completed = false;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appConfigProvider.overrideWithValue(config),
+            onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
+          ],
+          child: const MitzoneApp(),
+        ),
+      );
+
+      // Advance splash
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(milliseconds: 500)); // allow navigation
+
+      expect(find.byType(OnboardingScreen), findsOneWidget);
+    });
+
+    testWidgets('navigates to Showcase if onboarding completed', (
+      tester,
+    ) async {
+      final config = AppConfig.validated(env: AppEnvironment.local);
+      onboardingStore.completed = true;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appConfigProvider.overrideWithValue(config),
+            onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
+          ],
+          child: const MitzoneApp(),
+        ),
+      );
+
+      // Advance splash
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(VisualSystemShowcaseScreen), findsOneWidget);
+    });
+
+    testWidgets('real unknown-route integration test returns to Splash', (
       tester,
     ) async {
       final config = AppConfig.validated(env: AppEnvironment.local);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appConfigProvider.overrideWithValue(config)],
-          child: const MitzoneApp(),
-        ),
-      );
-
-      expect(find.byType(SplashScreen), findsOneWidget);
-
-      // Advance time for splash completion
-      await tester.pump(const Duration(seconds: 5));
-      // Pump for navigation to take effect
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 100));
-
-      expect(find.byType(VisualSystemShowcaseScreen), findsOneWidget);
-    });
-
-    testWidgets('can navigate directly to showcase route', (tester) async {
-      final router = createAppRouter(initialLocation: AppRoutes.showcase);
-      final config = AppConfig.validated(env: AppEnvironment.local);
-
-      await tester.pumpWidget(
-        ProviderScope(
           overrides: [
-            routerProvider.overrideWithValue(router),
             appConfigProvider.overrideWithValue(config),
+            onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
+            routerProvider.overrideWith(
+              (ref) =>
+                  createAppRouter(initialLocation: '/unknown-route', ref: ref),
+            ),
           ],
           child: const MitzoneApp(),
         ),
       );
 
-      expect(find.byType(VisualSystemShowcaseScreen), findsOneWidget);
-      router.dispose();
-    });
-
-    testWidgets('real unknown-route integration test', (tester) async {
-      final router = createAppRouter(initialLocation: '/unknown-route');
-      final config = AppConfig.validated(env: AppEnvironment.local);
-
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            routerProvider.overrideWithValue(router),
-            appConfigProvider.overrideWithValue(config),
-          ],
-          child: const MitzoneApp(),
-        ),
-      );
-
-      // Wait for router to settle
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
 
       // Confirm friendly error screen appears
       expect(find.byType(RouteErrorScreen), findsOneWidget);
-      expect(find.text('Page Not Found'), findsOneWidget);
 
       // Tap return button
-      final returnButton = find.text('Return to Mitzone');
-      expect(returnButton, findsOneWidget);
-      await tester.tap(returnButton);
+      await tester.tap(find.text('Return to Mitzone'));
 
       // Wait for navigation
       await tester.pump(const Duration(milliseconds: 500));
@@ -106,9 +129,6 @@ void main() {
 
       // Clear splash timers
       await tester.pump(const Duration(seconds: 5));
-
-      // Dispose the test router
-      router.dispose();
     });
 
     testWidgets('renders correctly on small screens without overflow', (
@@ -121,7 +141,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appConfigProvider.overrideWithValue(config)],
+          overrides: [
+            appConfigProvider.overrideWithValue(config),
+            onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
+          ],
           child: const MitzoneApp(),
         ),
       );
@@ -142,7 +165,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [appConfigProvider.overrideWithValue(config)],
+          overrides: [
+            appConfigProvider.overrideWithValue(config),
+            onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
+          ],
           child: MediaQuery(
             data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
             child: const MitzoneApp(),

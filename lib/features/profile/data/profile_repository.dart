@@ -13,4 +13,7 @@ abstract interface class ProfileRepository {
     required String displayName,
     String? avatarUri,
   });
+
+  /// Saves the full profile data.
+  Future<UserProfile> saveProfile(UserProfile profile);
 }

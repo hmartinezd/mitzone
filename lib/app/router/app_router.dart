@@ -14,7 +14,11 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
-import '../../features/profile/presentation/profile_preview_screen.dart';
+import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/profile/presentation/edit_profile_screen.dart';
+import '../../features/profile/presentation/profile_details_screen.dart';
+import '../../features/profile/presentation/settings_screen.dart';
+import '../../features/profile/presentation/settings_placeholders.dart';
 import '../../features/navigation/presentation/main_navigation_shell.dart';
 import 'app_entry_resolver.dart';
 import 'app_routes.dart';
@@ -115,7 +119,48 @@ GoRouter createAppRouter({
             routes: [
               GoRoute(
                 path: AppRoutes.profile,
-                builder: (context, state) => const ProfilePreviewScreen(),
+                builder: (context, state) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) => const EditProfileScreen(),
+                  ),
+                  GoRoute(
+                    path: 'details',
+                    builder: (context, state) => const ProfileDetailsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    builder: (context, state) => const SettingsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'account',
+                        builder: (context, state) =>
+                            const AccountSettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'privacy',
+                        builder: (context, state) =>
+                            const PrivacySettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'notifications',
+                        builder: (context, state) =>
+                            const NotificationsSettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'terms',
+                        builder: (context, state) =>
+                            const TermsSettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'privacy-policy',
+                        builder: (context, state) =>
+                            const PrivacyPolicySettingsScreen(),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

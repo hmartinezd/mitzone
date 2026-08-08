@@ -20,7 +20,8 @@ class LocalAvatarStorage implements AvatarStorage {
     }
 
     final extension = p.extension(sourcePath);
-    final targetPath = p.join(avatarDir.path, 'avatar$extension');
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final targetPath = p.join(avatarDir.path, 'avatar_$timestamp$extension');
 
     // Copy to managed storage to avoid dependency on temporary picker paths.
     await File(sourcePath).copy(targetPath);

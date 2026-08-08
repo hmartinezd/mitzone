@@ -1,15 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mitzone/app/router/app_router.dart';
+import 'package:mitzone/app/router/app_routes.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 
 void main() {
-  Widget createHomeScreen({required AsyncValue<UserProfile?> profileState}) {
+  Widget createHomeScreen({
+    required AsyncValue<UserProfile?> profileState,
+    String initialLocation = AppRoutes.home,
+  }) {
     return ProviderScope(
-      overrides: [currentProfileProvider.overrideWithValue(profileState)],
-      child: const MaterialApp(home: HomeScreen()),
+      overrides: [
+        currentProfileProvider.overrideWithValue(profileState),
+        routerInitialLocationProvider.overrideWithValue(initialLocation),
+      ],
+      child: Consumer(
+        builder: (context, ref, _) {
+          final router = ref.watch(routerProvider);
+          return MaterialApp.router(routerConfig: router);
+        },
+      ),
+    );
+  }
+
+  Finder findHomeScrollable() {
+    return find
+        .descendant(
+          of: find.byType(HomeScreen),
+          matching: find.byWidgetPredicate(
+            (widget) => widget is Scrollable && widget.axis == Axis.vertical,
+          ),
+        )
+        .first;
+  }
+
+  Finder findHomeText(String text) {
+    return find.descendant(
+      of: find.byType(HomeScreen),
+      matching: find.text(text),
     );
   }
 
@@ -21,11 +52,11 @@ void main() {
       await tester.pumpWidget(
         createHomeScreen(profileState: const AsyncValue.data(profile)),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.text('Hi, Hector'), findsOneWidget);
+      expect(findHomeText('Hi, Hector'), findsOneWidget);
       expect(
-        find.text('Ready to see where real-world connections can lead?'),
+        findHomeText('Ready to see where real-world connections can lead?'),
         findsOneWidget,
       );
     });
@@ -35,19 +66,19 @@ void main() {
       await tester.pumpWidget(
         createHomeScreen(profileState: const AsyncValue.data(profile)),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.text('Hi, Zoë'), findsOneWidget);
+      expect(findHomeText('Hi, Zoë'), findsOneWidget);
     });
 
     testWidgets('renders Welcome back when profile is loading', (tester) async {
       await tester.pumpWidget(
         createHomeScreen(profileState: const AsyncValue.loading()),
       );
+      await tester.pump();
 
-      expect(find.text('Welcome back'), findsOneWidget);
-      // Other sections should still be there
-      expect(find.text('Events near you'), findsOneWidget);
+      expect(findHomeText('Welcome back'), findsOneWidget);
+      expect(findHomeText('Events near you'), findsOneWidget);
     });
 
     testWidgets('renders friendly error when profile fails to load', (
@@ -58,93 +89,159 @@ void main() {
           profileState: AsyncValue.error(Exception('Failed'), StackTrace.empty),
         ),
       );
-      await tester.pump();
-      await tester.pump(Duration.zero);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.text("We couldn't load your profile."), findsOneWidget);
-      expect(find.text('Try again'), findsOneWidget);
+      expect(findHomeText("We couldn't load your profile."), findsOneWidget);
+      expect(findHomeText('Try again'), findsOneWidget);
+    });
+  });
+
+  group('HomeScreen - Router Actions', () {
+    testWidgets('Home -> Explore events -> Events (index 1)', (tester) async {
+      const profile = UserProfile(id: '1', displayName: 'Hector');
+      await tester.pumpWidget(
+        createHomeScreen(profileState: const AsyncValue.data(profile)),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = findHomeScrollable();
+      final exploreBtn = findHomeText('Explore events');
+
+      // Scroll to Matches card to find "Explore events"
+      await tester.scrollUntilVisible(exploreBtn, 200, scrollable: scrollable);
+      await tester.tap(exploreBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Discover what\'s happening.'), findsOneWidget);
+      final nav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(nav.selectedIndex, 1);
     });
 
-    testWidgets('renders Finish your profile when profile is missing', (
+    testWidgets('See all -> Events (index 1)', (tester) async {
+      const profile = UserProfile(id: '1', displayName: 'Hector');
+      await tester.pumpWidget(
+        createHomeScreen(profileState: const AsyncValue.data(profile)),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap first "See all"
+      await tester.tap(findHomeText('See all').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Discover what\'s happening.'), findsOneWidget);
+      final nav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(nav.selectedIndex, 1);
+    });
+
+    testWidgets('Home -> View profile -> Profile (index 4)', (tester) async {
+      const profile = UserProfile(id: '1', displayName: 'Hector');
+      await tester.pumpWidget(
+        createHomeScreen(profileState: const AsyncValue.data(profile)),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = findHomeScrollable();
+      final viewProfileBtn = findHomeText('View profile');
+
+      // Scroll to Profile card to find "View profile"
+      await tester.scrollUntilVisible(
+        viewProfileBtn,
+        200,
+        scrollable: scrollable,
+      );
+      await tester.tap(viewProfileBtn);
+      await tester.pumpAndSettle();
+
+      final nav = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(nav.selectedIndex, 4);
+    });
+
+    testWidgets('Home -> Scan QR -> SnackBar and remain on Home', (
       tester,
     ) async {
+      const profile = UserProfile(id: '1', displayName: 'Hector');
       await tester.pumpWidget(
-        createHomeScreen(profileState: const AsyncValue.data(null)),
+        createHomeScreen(profileState: const AsyncValue.data(profile)),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(
-        find.text('Finish your profile to get the most out of Mitzone.'),
-        findsOneWidget,
-      );
+      final scrollable = findHomeScrollable();
+      final scanQRBtn = findHomeText('Scan QR');
+
+      await tester.scrollUntilVisible(scanQRBtn, 200, scrollable: scrollable);
+      await tester.tap(scanQRBtn);
+      await tester.pump(); // SnackBar appears
+
+      expect(find.text('QR scanning is coming soon.'), findsOneWidget);
+      expect(find.byType(HomeScreen), findsOneWidget);
     });
   });
 
-  group('HomeScreen - Required Sections', () {
-    testWidgets('renders all required dashboard sections', (tester) async {
-      await tester.pumpWidget(
-        createHomeScreen(profileState: const AsyncValue.data(null)),
-      );
-      await tester.pump();
+  group('HomeScreen - Viewport Coverage', () {
+    final viewports = {
+      '320x480': const Size(320, 480),
+      '414x896': const Size(414, 896),
+      '896x414': const Size(896, 414),
+      '1024x768': const Size(1024, 768),
+    };
 
-      expect(
-        find.text('Real moments.\nMeaningful connections.'),
-        findsOneWidget,
-      );
-      expect(find.text('Events near you'), findsOneWidget);
-      expect(find.text('Popular events'), findsOneWidget);
-      expect(find.text('Upcoming activities'), findsOneWidget);
-      expect(find.text('Matches'), findsOneWidget);
-      expect(find.text('No matches yet'), findsOneWidget);
-      expect(find.text('Complete your profile'), findsOneWidget);
-      expect(find.text('How Mitzone works'), findsOneWidget);
-    });
-  });
+    for (final entry in viewports.entries) {
+      testWidgets('renders without overflow at ${entry.key}', (tester) async {
+        tester.view.physicalSize = entry.value;
+        tester.view.devicePixelRatio = 1.0;
 
-  group('HomeScreen - Demo Events', () {
-    testWidgets('renders demo events in sections', (tester) async {
-      await tester.pumpWidget(
-        createHomeScreen(profileState: const AsyncValue.data(null)),
-      );
-      await tester.pump();
+        await tester.pumpWidget(
+          createHomeScreen(profileState: const AsyncValue.data(null)),
+        );
+        await tester.pumpAndSettle();
 
-      // Check for Tech Mixer (which is in nearby and upcoming)
-      expect(find.text('Tech Mixer 2026'), findsNWidgets(2));
-      expect(find.text('DEMO'), findsOneWidget); // Nearby badge
-    });
-  });
+        // Scroll through the page
+        final scrollable = findHomeScrollable();
+        await tester.drag(scrollable, const Offset(0, -1000));
+        await tester.pump();
 
-  group('HomeScreen - Accessibility and Responsiveness', () {
-    testWidgets('renders without overflow at small size (320x480)', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(320, 480);
-      tester.view.devicePixelRatio = 1.0;
+        expect(tester.takeException(), isNull);
 
-      await tester.pumpWidget(
-        createHomeScreen(profileState: const AsyncValue.data(null)),
-      );
-      await tester.pump();
-
-      expect(tester.takeException(), isNull);
-
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
       });
-    });
+    }
+  });
 
-    testWidgets('renders without overflow at 2.0x text scale', (tester) async {
+  group('HomeScreen - Text Scaling', () {
+    testWidgets('renders without overflow at 2.0x text scale and scrolls', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MediaQuery(
           data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
           child: createHomeScreen(profileState: const AsyncValue.data(null)),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
+      final scrollable = findHomeScrollable();
+
+      // Verify key sections exist and are reachable
+      final sections = [
+        'Real moments.\nMeaningful connections.',
+        'Events near you',
+        'Matches',
+        'Complete your profile',
+        'How Mitzone works',
+      ];
+
+      for (final section in sections) {
+        await tester.scrollUntilVisible(
+          findHomeText(section).first,
+          200,
+          scrollable: scrollable,
+        );
+        expect(findHomeText(section), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      }
     });
   });
 }

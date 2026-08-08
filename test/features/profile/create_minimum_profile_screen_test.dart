@@ -47,6 +47,14 @@ class FakeProfileRepository implements ProfileRepository {
       avatarUri: avatarUri,
     );
   }
+
+  @override
+  Future<UserProfile> saveProfile(UserProfile profile) async {
+    await Future.delayed(delay);
+    if (shouldThrow) throw Exception('Save failed');
+    saveCallCount++;
+    return profile;
+  }
 }
 
 class FakeAvatarPicker implements AvatarPicker {

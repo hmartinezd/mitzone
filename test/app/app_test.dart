@@ -59,6 +59,12 @@ class FakeProfileRepository implements ProfileRepository {
     );
     return profile!;
   }
+
+  @override
+  Future<UserProfile> saveProfile(UserProfile p) async {
+    profile = p;
+    return profile!;
+  }
 }
 
 void main() {

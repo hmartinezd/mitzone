@@ -38,11 +38,21 @@ class LocalProfileRepository implements ProfileRepository {
       avatarUri: avatarUri,
     );
 
-    await _storage.setString(
-      _profileKey(identityId),
-      jsonEncode(profile.toJson()),
-    );
+    await _saveToStorage(profile);
 
     return profile;
+  }
+
+  @override
+  Future<UserProfile> saveProfile(UserProfile profile) async {
+    await _saveToStorage(profile);
+    return profile;
+  }
+
+  Future<void> _saveToStorage(UserProfile profile) async {
+    await _storage.setString(
+      _profileKey(profile.id),
+      jsonEncode(profile.toJson()),
+    );
   }
 }

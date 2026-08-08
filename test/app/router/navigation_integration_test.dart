@@ -19,7 +19,7 @@ import 'package:mitzone/features/home/presentation/home_screen.dart';
 import 'package:mitzone/features/events/presentation/events_screen.dart';
 import 'package:mitzone/features/matches/presentation/matches_screen.dart';
 import 'package:mitzone/features/chat/presentation/chat_screen.dart';
-import 'package:mitzone/features/profile/presentation/profile_preview_screen.dart';
+import 'package:mitzone/features/profile/presentation/profile_screen.dart';
 import 'package:mitzone/features/navigation/presentation/main_navigation_shell.dart';
 
 class MockOnboardingStore implements OnboardingStatusStore {
@@ -62,6 +62,12 @@ class MockProfileRepository implements ProfileRepository {
     );
     profile = newProfile;
     return newProfile;
+  }
+
+  @override
+  Future<UserProfile> saveProfile(UserProfile p) async {
+    profile = p;
+    return p;
   }
 }
 
@@ -201,7 +207,7 @@ void main() {
         find.descendant(of: navBar, matching: find.text('Profile')),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(ProfilePreviewScreen), findsOneWidget);
+      expect(find.byType(ProfileScreen), findsOneWidget);
       expect(find.text('User'), findsOneWidget);
     });
 
@@ -274,7 +280,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byType(ProfilePreviewScreen), findsOneWidget);
+        expect(find.byType(ProfileScreen), findsOneWidget);
         expect(find.byType(MainNavigationShell), findsOneWidget);
 
         final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));

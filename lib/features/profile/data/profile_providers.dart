@@ -25,7 +25,7 @@ final avatarPickerProvider = Provider<AvatarPicker>((ref) {
   return ImagePickerAvatarPicker(ImagePicker());
 });
 
-/// Reusable provider for the current authenticated user's profile.
+/// Reusable provider for the profile associated with the current local-development identity.
 final currentProfileProvider = FutureProvider<UserProfile?>((ref) async {
   final identityGateway = ref.watch(identityGatewayProvider);
   final profileRepository = ref.watch(profileRepositoryProvider);

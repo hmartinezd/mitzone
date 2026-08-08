@@ -6,7 +6,7 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Profile and Settings (Next)
+**Current Phase**: Profile and Settings (Completed)
 
 **Completed Phases**:
 1. **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
@@ -16,6 +16,11 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 5. **Local Development Identity + Minimum Profile**: Stable local user identity (UUID v4), profile creation (Display Name + Optional Avatar), and managed local storage.
 6. **Main Navigation**: Five-destination Material 3 navigation shell using `StatefulShellRoute`, persistent branch state, and responsive navigation bar.
 7. **Full Home Experience**: Personalized discovery dashboard with curated demo events, matches empty state, and product education.
+8. **Profile and Settings**: Fully functional local profile management, derived completion percentage, and comprehensive Settings navigation structure.
+
+**Upcoming Phases**:
+9. **Permanent Authentication** (Deferred)
+10. **Supabase Backend Integration** (Deferred)
 
 ## Application Entry Policy
 
@@ -35,27 +40,30 @@ Mitzone features exactly five primary destinations accessible via a Material 3 b
 - **Events**: Discovery of shared experiences (uses simulated local demo data).
 - **Matches**: Connections from shared experiences (currently an intentional empty state).
 - **Chat**: Conversations with connections (currently an intentional empty state).
-- **Profile**: A read-only preview of the current local development profile.
+- **Profile**: Functional profile management and application settings.
+
+## Profile and Settings
+
+Users can manage their local profile and access application settings.
+- **Editable Profile**: Change display name and profile photo with safe replacement strategy.
+- **Progressive Details**: Optional fields including bio, city, languages, interests, and connection goals (Social, Professional, Both).
+- **Profile Completion**: Informational percentage derived from seven profile components.
+- **Settings**: Structured navigation for Account, Privacy, Notifications, and Legal.
+- **Note on Account Actions**: Sign Out and Delete Account actions are visibly deferred until permanent authentication is implemented, as the current identity is local-only.
 
 ## Routing Architecture
 
 The application uses `go_router` with `StatefulShellRoute.indexedStack` to provide:
 - Persistent state across navigation branches.
 - Independent navigation stacks for each destination.
-- Support for future deep linking and nested routes.
+- Support for nested routes within branches (e.g., Profile -> Edit Profile -> Settings).
 
 ## Local Development Identity
 
 Mitzone currently uses a persistent, locally generated identity to represent the user during development.
 - **Identity ID**: A stable UUID v4 generated once upon onboarding completion.
 - **Storage**: Persisted in `SharedPreferences` as `local_identity.id.v1`.
-- **Purpose**: Provides a stable identifier for profile ownership and future feature data (events, matches) while remaining decoupled from the future Supabase implementation.
-
-## Minimum Profile
-
-Users must complete a minimal profile before entering the main application.
-- **Display Name**: Required, 2-50 characters. Supports international characters.
-- **Profile Photo**: Optional. Selected from gallery and copied to managed application storage.
+- **Purpose**: Provides a stable identifier for profile ownership and future feature data while remaining decoupled from the future Supabase implementation.
 
 ## Visual System
 
@@ -78,21 +86,6 @@ Mitzone uses a modern, minimalist, dark-first visual language.
   - `uuid`: ^4.6.0
   - `image_picker`: ^1.2.3
   - `path_provider`: ^2.1.6
-
-## Development Setup
-
-### Prerequisites
-- Flutter SDK (Stable)
-- Android Studio / Xcode
-
-## Running the Application
-
-### Initial Route
-The application launches into the **Splash Screen** (`/`), which resolves the destination via `AppEntryResolver`.
-
-```bash
-flutter run
-```
 
 ## Quality and Validation
 
@@ -129,16 +122,3 @@ lib/
     ├── profile/          # User profile management
     └── events/           # Event discovery
 ```
-
-## Planned Order of Implementation
-
-1. Foundation hardening (Completed)
-2. Visual system and shared components (Completed)
-3. Splash Screen (Completed)
-4. Onboarding (Completed)
-5. Local Development Identity + Minimum Profile (Completed)
-6. Main Navigation (Completed)
-7. Full Home Experience (Completed)
-8. Profile and Settings
-9. Permanent Authentication (Deferred)
-10. Supabase Backend Integration (Deferred)

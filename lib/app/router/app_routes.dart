@@ -28,4 +28,30 @@ class AppRoutes {
 
   /// Main navigation branch: Profile
   static const String profile = '/app/profile';
+
+  /// Profile editing screen (basic info)
+  static const String profileEdit = '/app/profile/edit';
+
+  /// Profile details screen (progressive info)
+  static const String profileDetails = '/app/profile/details';
+
+  /// Settings root screen
+  static const String settings = '/app/profile/settings';
+
+  /// Settings: Account
+  static const String settingsAccount = '/app/profile/settings/account';
+
+  /// Settings: Privacy
+  static const String settingsPrivacy = '/app/profile/settings/privacy';
+
+  /// Settings: Notifications
+  static const String settingsNotifications =
+      '/app/profile/settings/notifications';
+
+  /// Settings: Terms
+  static const String settingsTerms = '/app/profile/settings/terms';
+
+  /// Settings: Privacy Policy
+  static const String settingsPrivacyPolicy =
+      '/app/profile/settings/privacy-policy';
 }

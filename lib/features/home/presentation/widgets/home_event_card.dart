@@ -46,8 +46,6 @@ class HomeEventCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                const Icon(Icons.more_horiz, size: 20),
               ],
             ),
             const SizedBox(height: AppSpacing.md),

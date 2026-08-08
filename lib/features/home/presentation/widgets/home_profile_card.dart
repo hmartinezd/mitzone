@@ -34,7 +34,7 @@ class HomeProfileCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
-            'Soon you will be able to add interests, languages, and bio to help others get to know you better.',
+            'Add interests, languages, and bio to help others get to know you better.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

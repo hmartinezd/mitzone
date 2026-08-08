@@ -6,7 +6,7 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Home (Next)
+**Current Phase**: Profile and Settings (Next)
 
 **Completed Phases**:
 1. **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
@@ -15,6 +15,7 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 4. **Onboarding**: Three-page product introduction with custom illustrations, local persistence, and application-entry resolution.
 5. **Local Development Identity + Minimum Profile**: Stable local user identity (UUID v4), profile creation (Display Name + Optional Avatar), and managed local storage.
 6. **Main Navigation**: Five-destination Material 3 navigation shell using `StatefulShellRoute`, persistent branch state, and responsive navigation bar.
+7. **Full Home Experience**: Personalized discovery dashboard with curated demo events, matches empty state, and product education.
 
 ## Application Entry Policy
 
@@ -30,7 +31,7 @@ The long-term application-entry rules are:
 ## Main Navigation
 
 Mitzone features exactly five primary destinations accessible via a Material 3 bottom navigation bar:
-- **Home**: The central discovery dashboard (currently a temporary shell for Phase 6).
+- **Home**: The central discovery dashboard. Features personalized greeting and curated discovery sections.
 - **Events**: Discovery of shared experiences (uses simulated local demo data).
 - **Matches**: Connections from shared experiences (currently an intentional empty state).
 - **Chat**: Conversations with connections (currently an intentional empty state).
@@ -124,7 +125,9 @@ lib/
     ├── foundation/       # Showcase and failure screens
     ├── splash/           # Splash animation
     ├── onboarding/       # Product onboarding
-    └── profile/          # User profile management
+    ├── home/             # Discovery dashboard
+    ├── profile/          # User profile management
+    └── events/           # Event discovery
 ```
 
 ## Planned Order of Implementation
@@ -135,7 +138,7 @@ lib/
 4. Onboarding (Completed)
 5. Local Development Identity + Minimum Profile (Completed)
 6. Main Navigation (Completed)
-7. Home (Next)
+7. Full Home Experience (Completed)
 8. Profile and Settings
 9. Permanent Authentication (Deferred)
 10. Supabase Backend Integration (Deferred)

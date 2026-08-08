@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
 
 class OnboardingPageIndicator extends StatelessWidget {
@@ -14,6 +13,11 @@ class OnboardingPageIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final bool reducedMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(itemCount, (index) {
@@ -22,12 +26,16 @@ class OnboardingPageIndicator extends StatelessWidget {
           label: 'Page ${index + 1} of $itemCount',
           selected: isActive,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
+            duration: reducedMotion
+                ? Duration.zero
+                : const Duration(milliseconds: 300),
             margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             height: 8,
             width: isActive ? 24 : 8,
             decoration: BoxDecoration(
-              color: isActive ? AppColors.primary : AppColors.outlineStrong,
+              color: isActive
+                  ? colorScheme.primary
+                  : colorScheme.outlineVariant,
               borderRadius: BorderRadius.circular(4),
             ),
           ),

@@ -1,33 +1,57 @@
+import '../../core/identity/identity_gateway.dart';
 import '../../features/onboarding/data/onboarding_status_store.dart';
+import '../../features/profile/data/profile_repository.dart';
 
 /// Possible destinations after the application startup/splash sequence.
 enum AppEntryTarget {
   /// The user should see the onboarding sequence.
   onboarding,
 
-  /// The user has already completed onboarding.
-  ///
-  /// This will later map to Home or Login depending on the session.
-  /// Currently maps to the development Showcase.
-  postOnboarding,
+  /// The user needs to create a minimum profile.
+  createProfile,
+
+  /// The application is ready for use (post-profile).
+  ready,
+
+  /// A critical failure occurred during entry resolution.
+  entryFailure,
 }
 
 /// Resolves where the user should be directed after the splash screen.
 class AppEntryResolver {
-  const AppEntryResolver(this._onboardingStatusStore);
+  const AppEntryResolver({
+    required this.onboardingStatusStore,
+    required this.identityGateway,
+    required this.profileRepository,
+  });
 
-  final OnboardingStatusStore _onboardingStatusStore;
+  final OnboardingStatusStore onboardingStatusStore;
+  final IdentityGateway identityGateway;
+  final ProfileRepository profileRepository;
 
-  /// Determines the next [AppEntryTarget] based on persisted application state.
+  /// Determines the next [AppEntryTarget] based on application and backend state.
   Future<AppEntryTarget> resolve() async {
     try {
-      final isCompleted = await _onboardingStatusStore.isCompleted();
-      return isCompleted
-          ? AppEntryTarget.postOnboarding
-          : AppEntryTarget.onboarding;
+      final isOnboardingCompleted = await onboardingStatusStore.isCompleted();
+      if (!isOnboardingCompleted) return AppEntryTarget.onboarding;
     } catch (e) {
-      // In case of read failure, safely default to showing onboarding.
+      // Safely default to showing onboarding on read failure.
       return AppEntryTarget.onboarding;
+    }
+
+    try {
+      // For this phase, we always use the Local Identity Gateway.
+      final identity = await identityGateway.ensureIdentity();
+      final profile = await profileRepository.getProfile(identity.id);
+
+      if (profile == null || profile.displayName.trim().length < 2) {
+        return AppEntryTarget.createProfile;
+      }
+
+      return AppEntryTarget.ready;
+    } catch (e) {
+      // Critical failures (identity generation/storage) lead to failure state.
+      return AppEntryTarget.entryFailure;
     }
   }
 }

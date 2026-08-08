@@ -1,15 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/identity/identity_providers.dart';
 import '../../features/foundation/presentation/route_error_screen.dart';
 import '../../features/foundation/presentation/visual_system_showcase_screen.dart';
 import '../../features/onboarding/data/onboarding_providers.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/profile/data/profile_providers.dart';
+import '../../features/profile/presentation/create_minimum_profile_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import 'app_entry_resolver.dart';
 import 'app_routes.dart';
 
 /// Factory function to create a [GoRouter] instance.
-/// Useful for testing with different initial locations.
 GoRouter createAppRouter({
   String initialLocation = AppRoutes.splash,
   required Ref ref,
@@ -23,8 +25,12 @@ GoRouter createAppRouter({
         builder: (context, state) {
           return SplashScreen(
             onCompleted: () async {
-              final store = ref.read(onboardingStatusStoreProvider);
-              final resolver = AppEntryResolver(store);
+              final resolver = AppEntryResolver(
+                onboardingStatusStore: ref.read(onboardingStatusStoreProvider),
+                identityGateway: ref.read(identityGatewayProvider),
+                profileRepository: ref.read(profileRepositoryProvider),
+              );
+
               final target = await resolver.resolve();
 
               if (!context.mounted) return;
@@ -32,8 +38,13 @@ GoRouter createAppRouter({
               switch (target) {
                 case AppEntryTarget.onboarding:
                   context.go(AppRoutes.onboarding);
-                case AppEntryTarget.postOnboarding:
-                  // TEMPORARY: Showcase until auth is implemented.
+                case AppEntryTarget.createProfile:
+                  context.go(AppRoutes.createProfile);
+                case AppEntryTarget.ready:
+                  // Ready destination is temporarily the Showcase.
+                  context.go(AppRoutes.showcase);
+                case AppEntryTarget.entryFailure:
+                  // For now, redirect to Showcase on failure as well.
                   context.go(AppRoutes.showcase);
               }
             },
@@ -43,6 +54,10 @@ GoRouter createAppRouter({
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.createProfile,
+        builder: (context, state) => const CreateMinimumProfileScreen(),
       ),
       GoRoute(
         path: AppRoutes.showcase,

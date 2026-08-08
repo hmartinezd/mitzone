@@ -68,12 +68,8 @@ void main() {
       expect(find.text('Turn encounters into opportunities.'), findsOneWidget);
       expect(find.text('Get Started'), findsOneWidget);
 
-      // Skip should be effectively hidden (opacity 0)
-      final skipFinder = find.text('Skip');
-      final skipWidget = tester.widget<Opacity>(
-        find.ancestor(of: skipFinder, matching: find.byType(Opacity)),
-      );
-      expect(skipWidget.opacity, 0.0);
+      // Skip should be absent
+      expect(find.text('Skip'), findsNothing);
     });
 
     testWidgets('can swipe between pages', (tester) async {
@@ -87,6 +83,25 @@ void main() {
       // Swipe Page 2 -> 1
       await tester.drag(find.byType(PageView), const Offset(600, 0));
       await tester.pumpAndSettle();
+      expect(
+        find.text('The best connections begin in the real world.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Back navigation Page 2 -> Page 1', (tester) async {
+      await tester.pumpWidget(createWidget());
+
+      // Go to Page 2
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      expect(find.text('Share experiences.'), findsOneWidget);
+
+      // Trigger back navigation
+      final dynamic widgetsAppState = tester.state(find.byType(WidgetsApp));
+      await widgetsAppState.didPopRoute();
+      await tester.pumpAndSettle();
+
       expect(
         find.text('The best connections begin in the real world.'),
         findsOneWidget,

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../app/router/app_entry_resolver.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/identity/identity_providers.dart';
 import '../../../shared/widgets/mitzone_button.dart';
 import '../../../shared/widgets/mitzone_feedback_banner.dart';
 import '../../../shared/widgets/mitzone_page_scaffold.dart';
+import '../../profile/data/profile_providers.dart';
 import '../data/onboarding_providers.dart';
 import 'onboarding_illustrations.dart';
 import 'onboarding_page.dart';
@@ -70,8 +73,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await store.markCompleted();
 
       if (mounted) {
-        // Replace history so user can't go back to onboarding
-        context.go(AppRoutes.showcase);
+        final resolver = AppEntryResolver(
+          onboardingStatusStore: store,
+          identityGateway: ref.read(identityGatewayProvider),
+          profileRepository: ref.read(profileRepositoryProvider),
+        );
+
+        final target = await resolver.resolve();
+
+        if (!mounted) return;
+
+        switch (target) {
+          case AppEntryTarget.onboarding:
+            // Should not happen if markCompleted succeeded.
+            setState(() {
+              _isCompleting = false;
+              _errorMessage =
+                  "We couldn't save your progress. Please try again.";
+            });
+          case AppEntryTarget.createProfile:
+            context.go(AppRoutes.createProfile);
+          case AppEntryTarget.ready:
+            context.go(AppRoutes.showcase);
+          case AppEntryTarget.entryFailure:
+            context.go(AppRoutes.showcase);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -100,82 +126,108 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
   }
 
+  void _previousPage() {
+    if (_currentPage > 0) {
+      final bool reducedMotion =
+          MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+      if (reducedMotion) {
+        _pageController.jumpToPage(_currentPage - 1);
+      } else {
+        _pageController.previousPage(
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLastPage = _currentPage == _pages.length - 1;
 
-    return MitzonePageScaffold(
-      showAppBar: false,
-      scrollable: false, // PageView needs fixed height from parent
-      horizontalPadding: 0, // Let pages handle their own padding
-      child: Column(
-        children: [
-          SafeArea(
-            bottom: false,
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Opacity(
-                  opacity: isLastPage ? 0.0 : 1.0,
-                  child: TextButton(
-                    onPressed: isLastPage || _isCompleting
-                        ? null
-                        : _completeOnboarding,
-                    child: const Text('Skip'),
+    return PopScope(
+      canPop: _currentPage == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _previousPage();
+      },
+      child: MitzonePageScaffold(
+        showAppBar: false,
+        scrollable: false,
+        horizontalPadding: 0,
+        child: Column(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                  child: SizedBox(
+                    height: 48,
+                    child: isLastPage
+                        ? const SizedBox.shrink()
+                        : TextButton(
+                            onPressed: _isCompleting
+                                ? null
+                                : _completeOnboarding,
+                            child: const Text('Skip'),
+                          ),
                   ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: _onPageChanged,
-              itemCount: _pages.length,
-              itemBuilder: (context, index) {
-                final page = _pages[index];
-                return OnboardingPage(
-                  title: page.title,
-                  description: page.description,
-                  illustration: page.illustration,
-                );
-              },
-            ),
-          ),
-          if (_errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: MitzoneFeedbackBanner(
-                title: 'Error',
-                message: _errorMessage,
-                type: MitzoneFeedbackType.error,
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                itemCount: _pages.length,
+                itemBuilder: (context, index) {
+                  final page = _pages[index];
+                  return OnboardingPage(
+                    title: page.title,
+                    description: page.description,
+                    illustration: page.illustration,
+                  );
+                },
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xxl,
-              AppSpacing.md,
-              AppSpacing.xxl,
-              AppSpacing.xxl,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                OnboardingPageIndicator(
-                  itemCount: _pages.length,
-                  currentIndex: _currentPage,
+            if (_errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: MitzoneFeedbackBanner(
+                  title: 'Error',
+                  message: _errorMessage,
+                  type: MitzoneFeedbackType.error,
                 ),
-                const SizedBox(height: AppSpacing.xxl),
-                MitzoneButton(
-                  text: isLastPage ? 'Get Started' : 'Next',
-                  isLoading: _isCompleting,
-                  onPressed: _isCompleting ? null : _nextPage,
-                ),
-              ],
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xxl,
+                AppSpacing.md,
+                AppSpacing.xxl,
+                AppSpacing.xxl,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  OnboardingPageIndicator(
+                    itemCount: _pages.length,
+                    currentIndex: _currentPage,
+                  ),
+                  const SizedBox(height: AppSpacing.xxl),
+                  MitzoneButton(
+                    text: isLastPage ? 'Get Started' : 'Next',
+                    isLoading: _isCompleting,
+                    onPressed: _isCompleting ? null : _nextPage,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

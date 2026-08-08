@@ -6,11 +6,23 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Splash Screen (Next)
+**Current Phase**: Onboarding (Next)
 
 **Completed Phases**:
 1. **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
 2. **Visual System and Shared Components**: Design tokens, dark Material 3 theme, reusable UI components, and visual showcase.
+3. **Splash Screen**: Reveal sequence with atmospheric motion, native platform launch configuration, and routing foundation.
+
+## Application Entry Policy
+
+The long-term application-entry rules are:
+
+1. **Active session + complete minimum profile** → Home
+2. **Active session + incomplete minimum profile** → Create Profile
+3. **No active session + onboarding previously completed** → Login
+4. **First use** → Onboarding
+
+*Note: Until Onboarding and authentication state exist, the Splash Screen temporarily continues to the Visual System Showcase.*
 
 ## Visual System
 
@@ -37,8 +49,9 @@ Reusable components are located in `lib/shared/widgets/` and include:
 
 ### Implementation Guidelines
 - **Theme Usage**: Use `Theme.of(context)` to access colors and text styles.
-- **Semantic Colors**: Use `Theme.of(context).extension<MitzoneThemeColors>()` for brand-specific colors.
-- **Accessibility**: All interactive targets are at least 48x48. Large text scaling (2.0+) is supported. Contrast pairs are verified to meet WCAG standards.
+- **Semantic Colors**: Use `Theme.of(context).extension<MitzoneThemeColors>()` for brand-specific colors and semantic roles (success, warning, info).
+- **Accessibility**: All interactive targets are at least 48x48. Large text scaling (2.0+) is supported without clipping or overflow. Contrast pairs are verified to meet WCAG standards.
+- **Motion**: Accessibility motion preferences are respected using `MediaQuery.disableAnimations`.
 
 ## Technical Specifications
 
@@ -72,8 +85,9 @@ Reusable components are located in `lib/shared/widgets/` and include:
 
 ## Running the Application
 
-### Visual System Showcase
-During this phase, the application launches directly into a showcase screen displaying all design tokens and components.
+### Initial Route
+The application launches into the **Splash Screen** (`/`), which navigates to the **Visual System Showcase** (`/showcase`) after completion.
+
 ```bash
 flutter run
 ```
@@ -132,15 +146,16 @@ lib/
 ├── core/                 # Shared utilities, config, and providers
 ├── shared/               # Reusable UI components
 └── features/             # Feature-specific code
-    └── foundation/       # Foundation showcase and failure screens
+    ├── foundation/       # Foundation showcase and failure screens
+    └── splash/           # Splash screen and entry animation
 ```
 
 ## Planned Order of Implementation
 
 1. Foundation hardening (Completed)
 2. Visual system and shared components (Completed)
-3. Splash Screen (Next)
-4. Onboarding
+3. Splash Screen (Completed)
+4. Onboarding (Next)
 5. Email/password authentication
 6. Email verification
 7. Minimum profile

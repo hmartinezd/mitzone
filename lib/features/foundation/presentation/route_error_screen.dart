@@ -19,8 +19,8 @@ class RouteErrorScreen extends StatelessWidget {
         message: 'The page you are looking for does not exist.',
         icon: Icons.map_outlined,
         primaryAction: MitzoneButton(
-          text: 'Back to Showcase',
-          onPressed: () => context.go(AppRoutes.showcase),
+          text: 'Return to Mitzone',
+          onPressed: () => context.go(AppRoutes.splash),
         ),
       ),
     );

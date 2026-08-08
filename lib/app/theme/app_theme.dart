@@ -168,12 +168,25 @@ class AppTheme {
         }),
       ),
       extensions: [
-        const MitzoneThemeColors(
+        MitzoneThemeColors(
           brandCyan: AppColors.primary,
           brandBlue: AppColors.secondary,
           brandPurple: AppColors.accent,
           surfaceSubtle: AppColors.surfaceSubtle,
           surfaceStrong: AppColors.surfaceElevated,
+          success: AppColors.success,
+          successContainer: AppColors.successContainer,
+          onSuccess: Colors.black,
+          onSuccessContainer: AppColors.success,
+          warning: AppColors.warning,
+          warningContainer: AppColors.warningContainer,
+          onWarning: Colors.black,
+          onWarningContainer: AppColors.warning,
+          info: AppColors.info,
+          infoContainer: AppColors.infoContainer,
+          onInfo: Colors.white,
+          onInfoContainer: AppColors.info,
+          focusIndicator: AppColors.focusIndicator,
         ),
       ],
     );

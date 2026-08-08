@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
-import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_radii.dart';
+import '../../app/theme/app_spacing.dart';
+import '../../app/theme/mitzone_theme_colors.dart';
 
 enum MitzoneFeedbackType { info, success, warning, error }
 
@@ -24,7 +24,8 @@ class MitzoneFeedbackBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = _getColorScheme();
+    final mitzoneColors = theme.extension<MitzoneThemeColors>()!;
+    final colorScheme = _getColorScheme(theme, mitzoneColors);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -69,14 +70,20 @@ class MitzoneFeedbackBanner extends StatelessWidget {
               ),
               if (onDismiss != null)
                 IconButton(
+                  tooltip: 'Dismiss',
                   icon: Icon(
                     Icons.close,
                     size: 20,
                     color: colorScheme.foreground,
                   ),
                   onPressed: onDismiss,
+                  // Ensure minimum touch target of 48x48
+                  constraints: const BoxConstraints(
+                    minWidth: 48,
+                    minHeight: 48,
+                  ),
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  splashRadius: 24,
                 ),
             ],
           ),
@@ -102,27 +109,30 @@ class MitzoneFeedbackBanner extends StatelessWidget {
     }
   }
 
-  _BannerColors _getColorScheme() {
+  _BannerColors _getColorScheme(
+    ThemeData theme,
+    MitzoneThemeColors mitzoneColors,
+  ) {
     switch (type) {
       case MitzoneFeedbackType.info:
         return _BannerColors(
-          container: AppColors.infoContainer,
-          foreground: AppColors.info,
+          container: mitzoneColors.infoContainer,
+          foreground: mitzoneColors.onInfoContainer,
         );
       case MitzoneFeedbackType.success:
         return _BannerColors(
-          container: AppColors.successContainer,
-          foreground: AppColors.success,
+          container: mitzoneColors.successContainer,
+          foreground: mitzoneColors.onSuccessContainer,
         );
       case MitzoneFeedbackType.warning:
         return _BannerColors(
-          container: AppColors.warningContainer,
-          foreground: AppColors.warning,
+          container: mitzoneColors.warningContainer,
+          foreground: mitzoneColors.onWarningContainer,
         );
       case MitzoneFeedbackType.error:
         return _BannerColors(
-          container: AppColors.errorContainer,
-          foreground: AppColors.error,
+          container: theme.colorScheme.errorContainer,
+          foreground: theme.colorScheme.onErrorContainer,
         );
     }
   }

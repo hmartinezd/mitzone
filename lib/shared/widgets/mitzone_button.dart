@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 
-enum MitzoneButtonVariant {
-  primary,
-  secondary,
-  tertiary,
-  destructive,
-}
+enum MitzoneButtonVariant { primary, secondary, tertiary, destructive }
 
 class MitzoneButton extends StatelessWidget {
   const MitzoneButton({
@@ -59,8 +53,8 @@ class MitzoneButton extends StatelessWidget {
           Flexible(
             child: Text(
               text,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
+              textAlign: TextAlign.center,
+              // Removed ellipsis and maxLines to allow accessibility text scaling
             ),
           ),
           if (trailingIcon != null) ...[
@@ -72,10 +66,7 @@ class MitzoneButton extends StatelessWidget {
     );
 
     if (fullWidth) {
-      content = SizedBox(
-        width: double.infinity,
-        child: content,
-      );
+      content = SizedBox(width: double.infinity, child: content);
     }
 
     final buttonStyle = _getButtonStyle(theme);
@@ -88,27 +79,19 @@ class MitzoneButton extends StatelessWidget {
     );
   }
 
-  Widget _buildButton(Widget child, ButtonStyle style, VoidCallback? onPressed) {
+  Widget _buildButton(
+    Widget child,
+    ButtonStyle style,
+    VoidCallback? onPressed,
+  ) {
     switch (variant) {
       case MitzoneButtonVariant.primary:
       case MitzoneButtonVariant.destructive:
-        return FilledButton(
-          onPressed: onPressed,
-          style: style,
-          child: child,
-        );
+        return FilledButton(onPressed: onPressed, style: style, child: child);
       case MitzoneButtonVariant.secondary:
-        return OutlinedButton(
-          onPressed: onPressed,
-          style: style,
-          child: child,
-        );
+        return OutlinedButton(onPressed: onPressed, style: style, child: child);
       case MitzoneButtonVariant.tertiary:
-        return TextButton(
-          onPressed: onPressed,
-          style: style,
-          child: child,
-        );
+        return TextButton(onPressed: onPressed, style: style, child: child);
     }
   }
 
@@ -118,8 +101,8 @@ class MitzoneButton extends StatelessWidget {
         return theme.filledButtonTheme.style!;
       case MitzoneButtonVariant.destructive:
         return FilledButton.styleFrom(
-          backgroundColor: AppColors.error,
-          foregroundColor: Colors.black,
+          backgroundColor: theme.colorScheme.error,
+          foregroundColor: theme.colorScheme.onError,
         ).merge(theme.filledButtonTheme.style);
       case MitzoneButtonVariant.secondary:
         return theme.outlinedButtonTheme.style!;
@@ -131,8 +114,9 @@ class MitzoneButton extends StatelessWidget {
   Color _getForegroundColor(ThemeData theme) {
     switch (variant) {
       case MitzoneButtonVariant.primary:
+        return theme.colorScheme.onPrimary;
       case MitzoneButtonVariant.destructive:
-        return Colors.black;
+        return theme.colorScheme.onError;
       case MitzoneButtonVariant.secondary:
       case MitzoneButtonVariant.tertiary:
         return theme.colorScheme.primary;

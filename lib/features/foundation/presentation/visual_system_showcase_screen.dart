@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../app/theme/app_colors.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../app/theme/mitzone_theme_colors.dart';
 import '../../../core/providers/core_providers.dart';
 import '../../../shared/widgets/mitzone_brand.dart';
 import '../../../shared/widgets/mitzone_button.dart';
@@ -37,6 +37,7 @@ class _VisualSystemShowcaseScreenState
   Widget build(BuildContext context) {
     final config = ref.watch(appConfigProvider);
     final theme = Theme.of(context);
+    final mitzoneColors = theme.extension<MitzoneThemeColors>()!;
 
     return MitzonePageScaffold(
       title: 'Visual System Showcase',
@@ -66,8 +67,8 @@ class _VisualSystemShowcaseScreenState
                           ? 'Configured'
                           : 'Unconfigured',
                       valueColor: config.isSupabaseConfigured
-                          ? AppColors.success
-                          : AppColors.error,
+                          ? mitzoneColors.success
+                          : theme.colorScheme.error,
                     ),
                   ],
                 ),
@@ -101,10 +102,7 @@ class _VisualSystemShowcaseScreenState
           _Section(
             title: 'Buttons',
             children: [
-              MitzoneButton(
-                text: 'Primary Button',
-                onPressed: () {},
-              ),
+              MitzoneButton(text: 'Primary Button', onPressed: () {}),
               const SizedBox(height: AppSpacing.md),
               MitzoneButton(
                 text: 'Secondary Button',
@@ -138,6 +136,12 @@ class _VisualSystemShowcaseScreenState
                 text: 'Disabled Button',
                 enabled: false,
                 onPressed: null,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              MitzoneButton(
+                text:
+                    'Large Text Scaling Button That Should Wrap Instead Of Ellipsis For Accessibility',
+                onPressed: () {},
               ),
             ],
           ),
@@ -198,11 +202,23 @@ class _VisualSystemShowcaseScreenState
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
                 children: [
-                  MitzoneStatusBadge(text: 'Neutral', status: MitzoneStatus.neutral),
+                  MitzoneStatusBadge(
+                    text: 'Neutral',
+                    status: MitzoneStatus.neutral,
+                  ),
                   MitzoneStatusBadge(text: 'Info', status: MitzoneStatus.info),
-                  MitzoneStatusBadge(text: 'Success', status: MitzoneStatus.success),
-                  MitzoneStatusBadge(text: 'Warning', status: MitzoneStatus.warning),
-                  MitzoneStatusBadge(text: 'Error', status: MitzoneStatus.error),
+                  MitzoneStatusBadge(
+                    text: 'Success',
+                    status: MitzoneStatus.success,
+                  ),
+                  MitzoneStatusBadge(
+                    text: 'Warning',
+                    status: MitzoneStatus.warning,
+                  ),
+                  MitzoneStatusBadge(
+                    text: 'Error',
+                    status: MitzoneStatus.error,
+                  ),
                 ],
               ),
             ],
@@ -216,10 +232,11 @@ class _VisualSystemShowcaseScreenState
                 type: MitzoneFeedbackType.info,
               ),
               const SizedBox(height: AppSpacing.md),
-              const MitzoneFeedbackBanner(
-                title: 'Success',
+              MitzoneFeedbackBanner(
+                title: 'Dismissible Success',
                 message: 'Operation completed successfully.',
                 type: MitzoneFeedbackType.success,
+                onDismiss: () {},
               ),
               const SizedBox(height: AppSpacing.md),
               const MitzoneFeedbackBanner(
@@ -288,9 +305,9 @@ class _VisualSystemShowcaseScreenState
                   );
                   if (!context.mounted) return;
                   if (result == true) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Confirmed')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(const SnackBar(content: Text('Confirmed')));
                   }
                 },
               ),
@@ -331,9 +348,9 @@ class _Section extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-              ),
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         ...children,
@@ -344,11 +361,7 @@ class _Section extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({
-    required this.label,
-    required this.value,
-    this.valueColor,
-  });
+  const _InfoRow({required this.label, required this.value, this.valueColor});
 
   final String label;
   final String value;
@@ -373,9 +386,9 @@ class _InfoRow extends StatelessWidget {
             child: Text(
               value,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: valueColor,
-                  ),
+                fontWeight: FontWeight.bold,
+                color: valueColor,
+              ),
               textAlign: TextAlign.right,
               overflow: TextOverflow.ellipsis,
             ),

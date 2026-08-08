@@ -6,11 +6,7 @@ import '../../../shared/widgets/mitzone_page_scaffold.dart';
 import '../../../app/theme/app_spacing.dart';
 
 class StartupFailureScreen extends StatelessWidget {
-  const StartupFailureScreen({
-    required this.message,
-    super.key,
-    this.onRetry,
-  });
+  const StartupFailureScreen({required this.message, super.key, this.onRetry});
 
   final String message;
   final VoidCallback? onRetry;
@@ -34,10 +30,7 @@ class StartupFailureScreen extends StatelessWidget {
           ),
           if (onRetry != null) ...[
             const SizedBox(height: AppSpacing.xxl),
-            MitzoneButton(
-              text: 'Retry Startup',
-              onPressed: onRetry!,
-            ),
+            MitzoneButton(text: 'Retry Startup', onPressed: onRetry!),
           ],
         ],
       ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_spacing.dart';
 
 class MitzoneBrand extends StatelessWidget {
@@ -18,8 +17,11 @@ class MitzoneBrand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Semantics(
       label: 'Mitzone Brand',
+      container: true,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: alignment,
@@ -29,7 +31,7 @@ class MitzoneBrand extends StatelessWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Mitzone',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.2,
               ),
@@ -39,9 +41,9 @@ class MitzoneBrand extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Real world. Real connections.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ],
@@ -57,13 +59,14 @@ class _BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     // Temporary brand mark: A stylized "M" combined with a connection point motif
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary, width: 2),
+        border: Border.all(color: theme.colorScheme.primary, width: 2),
       ),
       child: Center(
         child: Stack(
@@ -72,15 +75,15 @@ class _BrandMark extends StatelessWidget {
             Icon(
               Icons.location_on_outlined,
               size: size * 0.6,
-              color: AppColors.primary,
+              color: theme.colorScheme.primary,
             ),
             Positioned(
               top: size * 0.25,
               child: Container(
                 width: size * 0.15,
                 height: size * 0.15,
-                decoration: const BoxDecoration(
-                  color: AppColors.secondary,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary,
                   shape: BoxShape.circle,
                 ),
               ),

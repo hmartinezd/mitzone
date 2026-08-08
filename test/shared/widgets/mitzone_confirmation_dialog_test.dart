@@ -7,21 +7,25 @@ void main() {
   group('MitzoneConfirmationDialog Tests', () {
     testWidgets('confirm returns true', (tester) async {
       bool? result;
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.darkTheme,
-        home: Builder(builder: (context) {
-          return ElevatedButton(
-            onPressed: () async {
-              result = await MitzoneConfirmationDialog.show(
-                context,
-                title: 'Confirm Action',
-                message: 'Are you sure?',
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () async {
+                  result = await MitzoneConfirmationDialog.show(
+                    context,
+                    title: 'Confirm Action',
+                    message: 'Are you sure?',
+                  );
+                },
+                child: const Text('Show'),
               );
             },
-            child: const Text('Show'),
-          );
-        }),
-      ));
+          ),
+        ),
+      );
 
       await tester.tap(find.text('Show'));
       await tester.pumpAndSettle();
@@ -38,21 +42,25 @@ void main() {
 
     testWidgets('cancel returns false', (tester) async {
       bool? result;
-      await tester.pumpWidget(MaterialApp(
-        theme: AppTheme.darkTheme,
-        home: Builder(builder: (context) {
-          return ElevatedButton(
-            onPressed: () async {
-              result = await MitzoneConfirmationDialog.show(
-                context,
-                title: 'Confirm Action',
-                message: 'Are you sure?',
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: Builder(
+            builder: (context) {
+              return ElevatedButton(
+                onPressed: () async {
+                  result = await MitzoneConfirmationDialog.show(
+                    context,
+                    title: 'Confirm Action',
+                    message: 'Are you sure?',
+                  );
+                },
+                child: const Text('Show'),
               );
             },
-            child: const Text('Show'),
-          );
-        }),
-      ));
+          ),
+        ),
+      );
 
       await tester.tap(find.text('Show'));
       await tester.pumpAndSettle();

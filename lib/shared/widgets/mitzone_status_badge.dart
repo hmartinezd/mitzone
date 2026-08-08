@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
-import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_radii.dart';
+import '../../app/theme/app_spacing.dart';
+import '../../app/theme/mitzone_theme_colors.dart';
 
 enum MitzoneStatus { neutral, info, success, warning, error }
 
@@ -18,7 +18,8 @@ class MitzoneStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = _getColorScheme();
+    final mitzoneColors = theme.extension<MitzoneThemeColors>()!;
+    final colorScheme = _getColorScheme(theme, mitzoneColors);
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -67,32 +68,35 @@ class MitzoneStatusBadge extends StatelessWidget {
     }
   }
 
-  _BadgeColors _getColorScheme() {
+  _BadgeColors _getColorScheme(
+    ThemeData theme,
+    MitzoneThemeColors mitzoneColors,
+  ) {
     switch (status) {
       case MitzoneStatus.neutral:
         return _BadgeColors(
-          container: AppColors.surfaceElevated,
-          foreground: AppColors.textSecondary,
+          container: mitzoneColors.surfaceStrong,
+          foreground: theme.colorScheme.onSurfaceVariant,
         );
       case MitzoneStatus.info:
         return _BadgeColors(
-          container: AppColors.infoContainer,
-          foreground: AppColors.info,
+          container: mitzoneColors.infoContainer,
+          foreground: mitzoneColors.onInfoContainer,
         );
       case MitzoneStatus.success:
         return _BadgeColors(
-          container: AppColors.successContainer,
-          foreground: AppColors.success,
+          container: mitzoneColors.successContainer,
+          foreground: mitzoneColors.onSuccessContainer,
         );
       case MitzoneStatus.warning:
         return _BadgeColors(
-          container: AppColors.warningContainer,
-          foreground: AppColors.warning,
+          container: mitzoneColors.warningContainer,
+          foreground: mitzoneColors.onWarningContainer,
         );
       case MitzoneStatus.error:
         return _BadgeColors(
-          container: AppColors.errorContainer,
-          foreground: AppColors.error,
+          container: theme.colorScheme.errorContainer,
+          foreground: theme.colorScheme.onErrorContainer,
         );
     }
   }

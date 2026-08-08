@@ -11,18 +11,16 @@ class MitzoneLoadingIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final indicator = Semantics(
-      label: 'Loading',
-      child: const CircularProgressIndicator(),
-    );
-
     if (compact) {
-      return SizedBox(
-        width: 24,
-        height: 24,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          color: theme.colorScheme.primary,
+      return Semantics(
+        label: 'Loading',
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: theme.colorScheme.primary,
+          ),
         ),
       );
     }
@@ -31,7 +29,7 @@ class MitzoneLoadingIndicator extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        indicator,
+        Semantics(label: 'Loading', child: const CircularProgressIndicator()),
         if (text != null) ...[
           const SizedBox(height: AppSpacing.lg),
           Text(

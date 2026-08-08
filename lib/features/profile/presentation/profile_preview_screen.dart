@@ -82,9 +82,7 @@ class ProfilePreviewScreen extends ConsumerWidget {
                   const ListTile(
                     leading: Icon(Icons.info_outline),
                     title: Text('Profile preview only'),
-                    subtitle: Text(
-                      'Editing and settings are coming soon.',
-                    ),
+                    subtitle: Text('Editing and settings are coming soon.'),
                   ),
                 ],
               );

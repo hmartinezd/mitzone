@@ -127,7 +127,9 @@ GoRouter createAppRouter({
 
 /// Provider for the initial location of the router.
 /// This can be overridden in tests to start at a specific route.
-final routerInitialLocationProvider = Provider<String>((ref) => AppRoutes.splash);
+final routerInitialLocationProvider = Provider<String>(
+  (ref) => AppRoutes.splash,
+);
 
 /// Provider for the application router.
 final routerProvider = Provider<GoRouter>((ref) {

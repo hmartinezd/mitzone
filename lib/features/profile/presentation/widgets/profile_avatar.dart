@@ -67,21 +67,27 @@ class ProfileAvatar extends StatelessWidget {
         Positioned(
           bottom: 0,
           right: 0,
-          child: Material(
-            color: Colors.transparent,
-            child: Semantics(
-              button: true,
-              label: 'Change profile photo',
-              child: InkWell(
-                onTap: onEdit,
-                customBorder: const CircleBorder(),
-                child: CircleAvatar(
-                  backgroundColor: theme.colorScheme.primary,
-                  radius: (radius * 0.3).clamp(18, 24),
-                  child: Icon(
-                    editIcon,
-                    size: (radius * 0.15).clamp(18, 20),
-                    color: theme.colorScheme.onPrimary,
+          child: Semantics(
+            button: true,
+            label: 'Change profile photo',
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onEdit,
+                  customBorder: const CircleBorder(),
+                  child: Center(
+                    child: CircleAvatar(
+                      backgroundColor: theme.colorScheme.primary,
+                      radius: (radius * 0.3).clamp(18, 24),
+                      child: Icon(
+                        editIcon,
+                        size: (radius * 0.15).clamp(18, 20),
+                        color: theme.colorScheme.onPrimary,
+                      ),
+                    ),
                   ),
                 ),
               ),

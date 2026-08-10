@@ -41,9 +41,10 @@ class EditProfileScreen extends ConsumerWidget {
         }
         return EditProfileForm(profile: profile);
       },
-      loading: () => const MitzonePageBody(
+      loading: () => MitzonePageBody(
         title: 'Edit Profile',
-        child: Center(child: MitzoneLoadingIndicator()),
+        onBack: () => context.pop(),
+        child: const Center(child: MitzoneLoadingIndicator()),
       ),
       error: (error, stack) => MitzonePageBody(
         title: 'Edit Profile',
@@ -67,10 +68,7 @@ class EditProfileScreen extends ConsumerWidget {
 }
 
 class EditProfileForm extends ConsumerStatefulWidget {
-  const EditProfileForm({
-    required this.profile,
-    super.key,
-  });
+  const EditProfileForm({required this.profile, super.key});
 
   final UserProfile profile;
 
@@ -118,13 +116,13 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
 
     setState(() => _isSaving = true);
 
+    final storage = ref.read(avatarStorageProvider);
     final oldAvatarUri = widget.profile.avatarUri;
-    String? newAvatarUri = oldAvatarUri;
+    String? stagedAvatarUri;
 
     try {
       if (_newAvatarPath != null) {
-        final storage = ref.read(avatarStorageProvider);
-        newAvatarUri = await storage.saveAvatar(
+        stagedAvatarUri = await storage.saveAvatar(
           identityId: widget.profile.id,
           sourcePath: _newAvatarPath!,
         );
@@ -133,7 +131,7 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
       final updatedProfile = UserProfile(
         id: widget.profile.id,
         displayName: _nameController.text.trim(),
-        avatarUri: newAvatarUri,
+        avatarUri: stagedAvatarUri ?? oldAvatarUri,
         bio: widget.profile.bio,
         city: widget.profile.city,
         languages: widget.profile.languages,
@@ -143,9 +141,8 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
 
       await ref.read(profileRepositoryProvider).saveProfile(updatedProfile);
 
-      // Cleanup old avatar if it was replaced.
-      if (_newAvatarPath != null && oldAvatarUri != null) {
-        final storage = ref.read(avatarStorageProvider);
+      // Cleanup old avatar ONLY after successful commit.
+      if (stagedAvatarUri != null && oldAvatarUri != null) {
         await storage.deleteAvatar(
           identityId: widget.profile.id,
           avatarPath: oldAvatarUri,
@@ -158,12 +155,16 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
         context.pop();
       }
     } catch (e) {
+      if (stagedAvatarUri != null) {
+        // Best-effort cleanup of orphan staged avatar.
+        await storage.deleteAvatar(
+          identityId: widget.profile.id,
+          avatarPath: stagedAvatarUri,
+        );
+      }
+
       if (mounted) {
         setState(() => _isSaving = false);
-        // If we saved a new avatar file but failed to update the profile, 
-        // we might want to clean up the orphan file, but it's safer to keep it 
-        // for now as it doesn't hurt and manual cleanup logic is complex.
-        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("We couldn't save your profile. Please try again."),
@@ -217,10 +218,12 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
                   if (value == null || value.trim().isEmpty) {
                     return 'Name is required';
                   }
-                  if (value.trim().length < ProfileValidation.minDisplayNameLength) {
+                  if (value.trim().length <
+                      ProfileValidation.minDisplayNameLength) {
                     return 'Minimum ${ProfileValidation.minDisplayNameLength} characters';
                   }
-                  if (value.trim().length > ProfileValidation.maxDisplayNameLength) {
+                  if (value.trim().length >
+                      ProfileValidation.maxDisplayNameLength) {
                     return 'Maximum ${ProfileValidation.maxDisplayNameLength} characters';
                   }
                 }

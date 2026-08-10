@@ -5,6 +5,8 @@ import 'package:mitzone/app/router/app_routes.dart';
 import 'package:mitzone/core/identity/app_identity.dart';
 import 'package:mitzone/core/identity/identity_gateway.dart';
 import 'package:mitzone/core/identity/identity_providers.dart';
+import 'package:mitzone/features/onboarding/data/onboarding_providers.dart';
+import 'package:mitzone/features/onboarding/data/onboarding_status_store.dart';
 import 'package:mitzone/features/profile/data/avatar_picker.dart';
 import 'package:mitzone/features/profile/data/avatar_storage.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
@@ -13,6 +15,13 @@ import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/features/profile/presentation/edit_profile_screen.dart';
 import 'package:mitzone/features/profile/presentation/profile_details_screen.dart';
 import 'package:mitzone/app/router/app_router.dart';
+
+class MockOnboardingStore implements OnboardingStatusStore {
+  @override
+  Future<bool> isCompleted() async => true;
+  @override
+  Future<void> markCompleted() async {}
+}
 
 class MockIdentityGateway implements IdentityGateway {
   @override
@@ -91,12 +100,14 @@ class MockAvatarStorage implements AvatarStorage {
 }
 
 void main() {
+  late MockOnboardingStore onboardingStore;
   late MockIdentityGateway identityGateway;
   late MockProfileRepository profileRepo;
   late MockAvatarPicker avatarPicker;
   late MockAvatarStorage avatarStorage;
 
   setUp(() {
+    onboardingStore = MockOnboardingStore();
     identityGateway = MockIdentityGateway();
     profileRepo = MockProfileRepository();
     avatarPicker = MockAvatarPicker();
@@ -106,6 +117,7 @@ void main() {
   Widget createTestWidget({String? initialLocation}) {
     return ProviderScope(
       overrides: [
+        onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
         identityGatewayProvider.overrideWithValue(identityGateway),
         profileRepositoryProvider.overrideWithValue(profileRepo),
         avatarPickerProvider.overrideWithValue(avatarPicker),
@@ -138,26 +150,30 @@ void main() {
       expect(profileRepo.saveCount, 0);
     });
 
-    testWidgets('Picker error: picker throws -> friendly feedback, profile unchanged', (
-      tester,
-    ) async {
-      avatarPicker.shouldThrow = true;
-      await tester.pumpWidget(
-        createTestWidget(initialLocation: AppRoutes.profileEdit),
-      );
-      await tester.pumpAndSettle();
+    testWidgets(
+      'Picker error: picker throws -> friendly feedback, profile unchanged',
+      (tester) async {
+        avatarPicker.shouldThrow = true;
+        await tester.pumpWidget(
+          createTestWidget(initialLocation: AppRoutes.profileEdit),
+        );
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(InkWell).first);
-      await tester.pumpAndSettle();
+        await tester.tap(find.byType(InkWell).first);
+        await tester.pumpAndSettle();
 
-      expect(find.text('Failed to pick image.'), findsOneWidget);
-      expect(profileRepo.saveCount, 0);
-    });
+        expect(find.text('Failed to pick image.'), findsOneWidget);
+        expect(profileRepo.saveCount, 0);
+      },
+    );
 
     testWidgets(
       'Storage error: saveAvatar throws -> repo not called, old avatar remains',
       (tester) async {
-        avatarPicker.result = const PickedAvatar(path: 'new/path.png', name: 'n');
+        avatarPicker.result = const PickedAvatar(
+          path: 'new/path.png',
+          name: 'n',
+        );
         avatarStorage.shouldSaveFail = true;
 
         await tester.pumpWidget(
@@ -168,19 +184,27 @@ void main() {
         await tester.tap(find.byType(InkWell).first);
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Save Changes'));
+        final saveButton = find.text('Save Changes');
+        await tester.ensureVisible(saveButton);
+        await tester.tap(saveButton);
         await tester.pumpAndSettle();
 
         expect(avatarStorage.saveCount, 1);
         expect(profileRepo.saveCount, 0);
-        expect(find.textContaining("We couldn't save your profile"), findsOneWidget);
+        expect(
+          find.textContaining("We couldn't save your profile"),
+          findsOneWidget,
+        );
       },
     );
 
     testWidgets(
       'Repository error after avatar copy: B created -> repo throws -> B cleanup attempted, A remains profile avatar',
       (tester) async {
-        avatarPicker.result = const PickedAvatar(path: 'new/path.png', name: 'n');
+        avatarPicker.result = const PickedAvatar(
+          path: 'new/path.png',
+          name: 'n',
+        );
         profileRepo.shouldFail = true;
 
         await tester.pumpWidget(
@@ -191,15 +215,23 @@ void main() {
         await tester.tap(find.byType(InkWell).first);
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Save Changes'));
+        final saveButton = find.text('Save Changes');
+        await tester.ensureVisible(saveButton);
+        await tester.tap(saveButton);
         await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
         expect(avatarStorage.saveCount, 1);
         expect(profileRepo.saveCount, 1);
         // Should have attempted to delete the new (staged) avatar
-        expect(avatarStorage.deletedPaths, contains('managed/path/to/avatar_1.png'));
+        expect(
+          avatarStorage.deletedPaths,
+          contains('managed/path/to/avatar_1.png'),
+        );
         // Old avatar should not have been deleted
-        expect(avatarStorage.deletedPaths, isNot(contains('original/path.png')));
+        expect(
+          avatarStorage.deletedPaths,
+          isNot(contains('original/path.png')),
+        );
         expect(find.byType(EditProfileForm), findsOneWidget);
       },
     );
@@ -207,7 +239,10 @@ void main() {
     testWidgets(
       'Success: B created -> profile saved with B -> old A cleanup attempted',
       (tester) async {
-        avatarPicker.result = const PickedAvatar(path: 'new/path.png', name: 'n');
+        avatarPicker.result = const PickedAvatar(
+          path: 'new/path.png',
+          name: 'n',
+        );
 
         await tester.pumpWidget(
           createTestWidget(initialLocation: AppRoutes.profileEdit),
@@ -217,7 +252,9 @@ void main() {
         await tester.tap(find.byType(InkWell).first);
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Save Changes'));
+        final saveButton = find.text('Save Changes');
+        await tester.ensureVisible(saveButton);
+        await tester.tap(saveButton);
         await tester.pumpAndSettle();
 
         expect(profileRepo.saveCount, 1);
@@ -225,7 +262,10 @@ void main() {
         // Old avatar A should be cleaned up
         expect(avatarStorage.deletedPaths, contains('original/path.png'));
         // Staged avatar B should NOT be cleaned up (it's now active)
-        expect(avatarStorage.deletedPaths, isNot(contains('managed/path/to/avatar_1.png')));
+        expect(
+          avatarStorage.deletedPaths,
+          isNot(contains('managed/path/to/avatar_1.png')),
+        );
       },
     );
   });
@@ -238,9 +278,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Save Details'));
-      await tester.tap(find.text('Save Details'));
-      await tester.tap(find.text('Save Details'));
+      final saveButton = find.text('Save Details');
+      await tester.ensureVisible(saveButton);
+
+      await tester.tap(saveButton);
+      await tester.tap(saveButton);
+      await tester.tap(saveButton);
 
       await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
@@ -255,10 +298,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Save Details'));
+      final saveButton = find.text('Save Details');
+      await tester.ensureVisible(saveButton);
+      await tester.tap(saveButton);
       await tester.pumpAndSettle();
 
-      expect(find.textContaining("We couldn't save your details"), findsOneWidget);
+      expect(
+        find.textContaining("We couldn't save your details"),
+        findsOneWidget,
+      );
       expect(find.byType(ProfileDetailsForm), findsOneWidget);
     });
   });

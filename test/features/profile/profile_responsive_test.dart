@@ -5,11 +5,20 @@ import 'package:mitzone/app/router/app_routes.dart';
 import 'package:mitzone/core/identity/app_identity.dart';
 import 'package:mitzone/core/identity/identity_gateway.dart';
 import 'package:mitzone/core/identity/identity_providers.dart';
+import 'package:mitzone/features/onboarding/data/onboarding_providers.dart';
+import 'package:mitzone/features/onboarding/data/onboarding_status_store.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/data/profile_repository.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/app/router/app_router.dart';
 import 'package:mitzone/features/profile/presentation/widgets/profile_avatar.dart';
+
+class MockOnboardingStore implements OnboardingStatusStore {
+  @override
+  Future<bool> isCompleted() async => true;
+  @override
+  Future<void> markCompleted() async {}
+}
 
 class MockIdentityGateway implements IdentityGateway {
   @override
@@ -43,10 +52,12 @@ class MockProfileRepository implements ProfileRepository {
 }
 
 void main() {
+  late MockOnboardingStore onboardingStore;
   late MockIdentityGateway identityGateway;
   late MockProfileRepository profileRepo;
 
   setUp(() {
+    onboardingStore = MockOnboardingStore();
     identityGateway = MockIdentityGateway();
     profileRepo = MockProfileRepository();
   });
@@ -58,6 +69,7 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
         identityGatewayProvider.overrideWithValue(identityGateway),
         profileRepositoryProvider.overrideWithValue(profileRepo),
         if (initialLocation != null)
@@ -94,7 +106,9 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() => tester.view.resetPhysicalSize());
 
-        await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.profile));
+        await tester.pumpWidget(
+          createTestWidget(initialLocation: AppRoutes.profile),
+        );
         await tester.pumpAndSettle();
 
         expect(tester.takeException(), isNull);
@@ -108,7 +122,9 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() => tester.view.resetPhysicalSize());
 
-        await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.profileEdit));
+        await tester.pumpWidget(
+          createTestWidget(initialLocation: AppRoutes.profileEdit),
+        );
         await tester.pumpAndSettle();
 
         expect(tester.takeException(), isNull);
@@ -134,9 +150,14 @@ void main() {
   });
 
   group('Profile Text Scaling 2.0', () {
-    testWidgets('Edit Profile with 2.0 text scale remains usable', (tester) async {
+    testWidgets('Edit Profile with 2.0 text scale remains usable', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        createTestWidget(initialLocation: AppRoutes.profileEdit, textScale: 2.0),
+        createTestWidget(
+          initialLocation: AppRoutes.profileEdit,
+          textScale: 2.0,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -144,9 +165,14 @@ void main() {
       expect(find.text('Save Changes'), findsOneWidget);
     });
 
-    testWidgets('Profile Details with 2.0 text scale remains usable', (tester) async {
+    testWidgets('Profile Details with 2.0 text scale remains usable', (
+      tester,
+    ) async {
       await tester.pumpWidget(
-        createTestWidget(initialLocation: AppRoutes.profileDetails, textScale: 2.0),
+        createTestWidget(
+          initialLocation: AppRoutes.profileDetails,
+          textScale: 2.0,
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -165,10 +191,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: ProfileAvatar(
-              displayName: 'Hector',
-              onEdit: () {},
-            ),
+            body: ProfileAvatar(displayName: 'Hector', onEdit: () {}),
           ),
         ),
       );

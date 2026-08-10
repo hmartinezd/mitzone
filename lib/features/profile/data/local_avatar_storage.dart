@@ -36,14 +36,17 @@ class LocalAvatarStorage implements AvatarStorage {
   }) async {
     try {
       final dir = await getApplicationSupportDirectory();
-      final avatarDir = p.join(dir.path, 'profile_avatars', identityId);
+      final avatarDir = p.canonicalize(
+        p.join(dir.path, 'profile_avatars', identityId),
+      );
+      final normalizedPath = p.canonicalize(avatarPath);
 
       // Security: Only delete files inside the identity-managed directory.
-      if (!p.isWithin(avatarDir, avatarPath)) {
+      if (!p.isWithin(avatarDir, normalizedPath)) {
         return;
       }
 
-      final file = File(avatarPath);
+      final file = File(normalizedPath);
       if (await file.exists()) {
         await file.delete();
       }

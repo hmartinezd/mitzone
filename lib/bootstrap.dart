@@ -28,11 +28,11 @@ Future<void> bootstrap({
   SupabaseInitializer supabaseInitializer = Supabase.initialize,
   AppRunner appRunner = runApp,
 }) async {
-  // Ensure Flutter bindings are initialized before any plugin usage.
-  WidgetsFlutterBinding.ensureInitialized();
-
   await runZonedGuarded(
     () async {
+      // Initialize bindings in the same zone that will call runApp.
+      WidgetsFlutterBinding.ensureInitialized();
+
       final AppConfig config;
       try {
         config = configLoader();

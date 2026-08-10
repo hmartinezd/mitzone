@@ -11,7 +11,7 @@ import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/data/profile_repository.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/app/router/app_router.dart';
-import 'package:mitzone/shared/widgets/main_navigation_shell.dart';
+import 'package:mitzone/features/navigation/presentation/main_navigation_shell.dart';
 import 'package:mitzone/features/profile/presentation/settings_placeholders.dart';
 
 class MockOnboardingStore implements OnboardingStatusStore {
@@ -105,7 +105,9 @@ void main() {
     }
 
     testWidgets('Settings child routes Back -> Settings', (tester) async {
-      await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.settingsAccount));
+      await tester.pumpWidget(
+        createTestWidget(initialLocation: AppRoutes.settingsAccount),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Back'));
@@ -132,8 +134,12 @@ void main() {
       }
     });
 
-    testWidgets('Account actions are disabled and do not mutate', (tester) async {
-      await tester.pumpWidget(createTestWidget(initialLocation: AppRoutes.settingsAccount));
+    testWidgets('Account actions are disabled and do not mutate', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(initialLocation: AppRoutes.settingsAccount),
+      );
       await tester.pumpAndSettle();
 
       final signOut = find.text('Sign out');

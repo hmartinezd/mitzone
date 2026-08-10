@@ -40,9 +40,10 @@ class ProfileDetailsScreen extends ConsumerWidget {
         }
         return ProfileDetailsForm(profile: profile);
       },
-      loading: () => const MitzonePageBody(
+      loading: () => MitzonePageBody(
         title: 'Profile Details',
-        child: Center(child: MitzoneLoadingIndicator()),
+        onBack: () => context.pop(),
+        child: const Center(child: MitzoneLoadingIndicator()),
       ),
       error: (error, stack) => MitzonePageBody(
         title: 'Profile Details',
@@ -66,10 +67,7 @@ class ProfileDetailsScreen extends ConsumerWidget {
 }
 
 class ProfileDetailsForm extends ConsumerStatefulWidget {
-  const ProfileDetailsForm({
-    required this.profile,
-    super.key,
-  });
+  const ProfileDetailsForm({required this.profile, super.key});
 
   final UserProfile profile;
 
@@ -109,17 +107,19 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
     super.dispose();
   }
 
-  String? _validateList(String? value, String label) {
+  String? _validateList(String? value, String label, String singularLabel) {
     if (value == null || value.trim().isEmpty) return null;
-    final items = value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-    
-    if (items.length > ProfileValidation.maxListItems) {
+    final rawItems = value.split(',').map((e) => e.trim()).toList();
+    final normalizedItems = ProfileValidation.normalizeList(rawItems);
+
+    if (normalizedItems.length > ProfileValidation.maxListItems) {
       return 'Add up to ${ProfileValidation.maxListItems} $label.';
     }
-    
-    for (final item in items) {
-      if (item.length > ProfileValidation.maxListItemLength) {
-        return 'Each $label must be ${ProfileValidation.maxListItemLength} characters or fewer.';
+
+    for (final item in rawItems) {
+      if (item.isNotEmpty &&
+          item.length > ProfileValidation.maxListItemLength) {
+        return 'Each $singularLabel must be ${ProfileValidation.maxListItemLength} characters or fewer.';
       }
     }
     return null;
@@ -132,8 +132,14 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
     setState(() => _isSaving = true);
 
     try {
-      final rawLanguages = _languagesController.text.split(',').map((e) => e.trim()).toList();
-      final rawInterests = _interestsController.text.split(',').map((e) => e.trim()).toList();
+      final rawLanguages = _languagesController.text
+          .split(',')
+          .map((e) => e.trim())
+          .toList();
+      final rawInterests = _interestsController.text
+          .split(',')
+          .map((e) => e.trim())
+          .toList();
 
       final updatedProfile = UserProfile(
         id: widget.profile.id,
@@ -196,7 +202,8 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
               decoration: InputDecoration(
                 labelText: 'Bio',
                 hintText: 'Tell others about yourself',
-                helperText: '${_bioController.text.length}/${ProfileValidation.maxBioLength}',
+                helperText:
+                    '${_bioController.text.length}/${ProfileValidation.maxBioLength}',
                 alignLabelWithHint: true,
               ),
               maxLines: 4,
@@ -223,10 +230,12 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
               decoration: const InputDecoration(
                 labelText: 'Interests',
                 hintText: 'Music, Technology, Travel...',
-                helperText: 'Separate with commas (max ${ProfileValidation.maxListItems})',
+                helperText:
+                    'Separate with commas (max ${ProfileValidation.maxListItems})',
               ),
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (value) => _validateList(value, 'interests'),
+              validator: (value) =>
+                  _validateList(value, 'interests', 'interest'),
             ),
             const SizedBox(height: AppSpacing.lg),
 
@@ -237,10 +246,12 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
               decoration: const InputDecoration(
                 labelText: 'Languages',
                 hintText: 'English, Spanish...',
-                helperText: 'Separate with commas (max ${ProfileValidation.maxListItems})',
+                helperText:
+                    'Separate with commas (max ${ProfileValidation.maxListItems})',
               ),
               autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (value) => _validateList(value, 'languages'),
+              validator: (value) =>
+                  _validateList(value, 'languages', 'language'),
             ),
             const SizedBox(height: AppSpacing.xxl),
 
@@ -252,7 +263,7 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            
+
             // Using Wrap for better responsiveness with large text/narrow screens
             Wrap(
               spacing: AppSpacing.sm,
@@ -261,22 +272,27 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
                 _GoalChip(
                   label: 'Not set',
                   selected: _connectionGoal == null,
-                  onSelected: (selected) => setState(() => _connectionGoal = null),
+                  onSelected: (selected) =>
+                      setState(() => _connectionGoal = null),
                 ),
                 _GoalChip(
                   label: 'Social',
                   selected: _connectionGoal == ConnectionGoal.social,
-                  onSelected: (selected) => setState(() => _connectionGoal = ConnectionGoal.social),
+                  onSelected: (selected) =>
+                      setState(() => _connectionGoal = ConnectionGoal.social),
                 ),
                 _GoalChip(
                   label: 'Professional',
                   selected: _connectionGoal == ConnectionGoal.professional,
-                  onSelected: (selected) => setState(() => _connectionGoal = ConnectionGoal.professional),
+                  onSelected: (selected) => setState(
+                    () => _connectionGoal = ConnectionGoal.professional,
+                  ),
                 ),
                 _GoalChip(
                   label: 'Both',
                   selected: _connectionGoal == ConnectionGoal.both,
-                  onSelected: (selected) => setState(() => _connectionGoal = ConnectionGoal.both),
+                  onSelected: (selected) =>
+                      setState(() => _connectionGoal = ConnectionGoal.both),
                 ),
               ],
             ),

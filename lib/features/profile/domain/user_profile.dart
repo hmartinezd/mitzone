@@ -72,16 +72,32 @@ class UserProfile {
 
   /// Creates a [UserProfile] from a JSON map with defensive parsing.
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    final id = json['id'];
+    final displayName = json['displayName'];
+
+    if (id is! String || id.trim().isEmpty) {
+      throw const FormatException('Invalid profile id');
+    }
+
+    if (displayName is! String ||
+        !ProfileValidation.isValidDisplayName(displayName)) {
+      throw const FormatException('Invalid profile display name');
+    }
+
     return UserProfile(
-      id: json['id'] is String ? json['id'] as String : '',
-      displayName: json['displayName'] is String ? json['displayName'] as String : 'Unknown',
-      avatarUri: json['avatarUri'] is String ? json['avatarUri'] as String? : null,
+      id: id,
+      displayName: displayName,
+      avatarUri: json['avatarUri'] is String
+          ? json['avatarUri'] as String?
+          : null,
       bio: json['bio'] is String ? json['bio'] as String? : null,
       city: json['city'] is String ? json['city'] as String? : null,
       languages: _parseList(json['languages']),
       interests: _parseList(json['interests']),
       connectionGoal: ConnectionGoal.fromJson(
-        json['connectionGoal'] is String ? json['connectionGoal'] as String? : null,
+        json['connectionGoal'] is String
+            ? json['connectionGoal'] as String?
+            : null,
       ),
     );
   }

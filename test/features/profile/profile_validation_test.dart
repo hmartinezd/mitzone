@@ -7,12 +7,18 @@ void main() {
       expect(ProfileValidation.isValidDisplayName('Hector'), isTrue);
       expect(ProfileValidation.isValidDisplayName('  Hector  '), isTrue);
       expect(ProfileValidation.isValidDisplayName('Jo'), isTrue); // 2 chars
-      expect(ProfileValidation.isValidDisplayName('A' * 50), isTrue); // 50 chars
-      
+      expect(
+        ProfileValidation.isValidDisplayName('A' * 50),
+        isTrue,
+      ); // 50 chars
+
       expect(ProfileValidation.isValidDisplayName(''), isFalse);
       expect(ProfileValidation.isValidDisplayName(' '), isFalse);
       expect(ProfileValidation.isValidDisplayName('A'), isFalse); // 1 char
-      expect(ProfileValidation.isValidDisplayName('A' * 51), isFalse); // 51 chars
+      expect(
+        ProfileValidation.isValidDisplayName('A' * 51),
+        isFalse,
+      ); // 51 chars
       expect(ProfileValidation.isValidDisplayName(null), isFalse);
     });
 
@@ -34,10 +40,10 @@ void main() {
     test('normalizeList', () {
       final input = [' Tech ', '', 'MUSIC', 'music', '  Travel  ', 'TECH'];
       final output = ProfileValidation.normalizeList(input);
-      
+
       expect(output, ['Tech', 'MUSIC', 'Travel']);
     });
-    
+
     test('Unicode display names', () {
       expect(ProfileValidation.isValidDisplayName('José'), isTrue);
       expect(ProfileValidation.isValidDisplayName('Zoë'), isTrue);

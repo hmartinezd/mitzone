@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
-import '../../../shared/widgets/mitzone_page_body.dart';
-import '../../../app/theme/app_spacing.dart';
-import '../data/demo_events.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class EventsScreen extends StatelessWidget {
+import '../../../app/router/app_routes.dart';
+import '../../../app/theme/app_spacing.dart';
+import '../../../shared/widgets/mitzone_page_body.dart';
+import '../data/event_providers.dart';
+import 'widgets/event_list_card.dart';
+
+class EventsScreen extends ConsumerWidget {
   const EventsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final events = ref.watch(eventCatalogProvider).getAll();
 
     return MitzonePageBody(
       title: 'Events',
@@ -25,12 +31,15 @@ class EventsScreen extends StatelessWidget {
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: demoEvents.length,
+            itemCount: events.length,
             separatorBuilder: (context, index) =>
                 const SizedBox(height: AppSpacing.md),
             itemBuilder: (context, index) {
-              final event = demoEvents[index];
-              return _EventCard(event: event);
+              final event = events[index];
+              return EventListCard(
+                event: event,
+                onTap: () => context.push(AppRoutes.eventDetails(event.id)),
+              );
             },
           ),
           const SizedBox(height: AppSpacing.xxl),
@@ -42,87 +51,9 @@ class EventsScreen extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: AppSpacing.xxl),
         ],
       ),
     );
-  }
-}
-
-class _EventCard extends StatelessWidget {
-  const _EventCard({required this.event});
-
-  final EventSummary event;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainer,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withAlpha(30),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _getIconForCategory(event.category),
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.lg),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    event.title,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    event.venue,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    event.timeLabel,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _getIconForCategory(String category) {
-    switch (category.toLowerCase()) {
-      case 'networking':
-        return Icons.people_outline;
-      case 'art':
-        return Icons.palette_outlined;
-      case 'wellness':
-        return Icons.spa_outlined;
-      case 'music':
-        return Icons.music_note_outlined;
-      default:
-        return Icons.event_outlined;
-    }
   }
 }

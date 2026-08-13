@@ -12,6 +12,7 @@ import '../../features/profile/presentation/create_minimum_profile_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
+import '../../features/events/presentation/event_details_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -96,6 +97,14 @@ GoRouter createAppRouter({
               GoRoute(
                 path: AppRoutes.events,
                 builder: (context, state) => const EventsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':eventId',
+                    builder: (context, state) => EventDetailsScreen(
+                      eventId: state.pathParameters['eventId']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

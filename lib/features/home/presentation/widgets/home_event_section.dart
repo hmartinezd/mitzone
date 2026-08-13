@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../app/theme/app_spacing.dart';
-import '../../../events/data/demo_events.dart';
+import '../../../events/domain/event.dart';
 import 'home_event_card.dart';
 
 class HomeEventSection extends StatelessWidget {
@@ -8,13 +8,15 @@ class HomeEventSection extends StatelessWidget {
     required this.title,
     required this.events,
     required this.onSeeAll,
+    required this.onEventTap,
     this.showDemoBadge = false,
     super.key,
   });
 
   final String title;
-  final List<EventSummary> events;
+  final List<Event> events;
   final VoidCallback onSeeAll;
+  final ValueChanged<Event> onEventTap;
   final bool showDemoBadge;
 
   @override
@@ -119,7 +121,10 @@ class HomeEventSection extends StatelessWidget {
             itemCount: events.length,
             clipBehavior: Clip.none,
             itemBuilder: (context, index) {
-              return HomeEventCard(event: events[index]);
+              return HomeEventCard(
+                event: events[index],
+                onTap: () => onEventTap(events[index]),
+              );
             },
           ),
         ),

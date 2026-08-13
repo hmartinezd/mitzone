@@ -20,6 +20,8 @@ class AppRoutes {
   /// Main navigation branch: Events
   static const String events = '/app/events';
 
+  static String eventDetails(String eventId) => '$events/$eventId';
+
   /// Main navigation branch: Matches
   static const String matches = '/app/matches';
 

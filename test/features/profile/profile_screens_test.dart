@@ -194,13 +194,14 @@ void main() {
 
       expect(find.text('GENERAL'), findsOneWidget);
       expect(find.text('ABOUT'), findsOneWidget);
-      expect(find.text('ACCOUNT ACTIONS'), findsOneWidget);
-      expect(find.text('Sign out'), findsOneWidget);
-      expect(find.text('Delete account'), findsOneWidget);
+      expect(find.text('ACCOUNT ACTIONS'), findsNothing);
+      expect(find.text('Account'), findsOneWidget);
+      expect(find.text('Sign out'), findsNothing);
+      expect(find.text('Delete account'), findsNothing);
     });
 
     testWidgets('account actions are disabled', (tester) async {
-      await tester.pumpWidget(createWidget(AppRoutes.settings));
+      await tester.pumpWidget(createWidget(AppRoutes.settingsAccount));
       await tester.pumpAndSettle();
 
       final signOutFinder = find.ancestor(

@@ -12,7 +12,7 @@ class MatchesScreen extends StatelessWidget {
       child: MitzoneEmptyState(
         title: 'No matches yet',
         message:
-            'When you connect with people from shared experiences, they\'ll appear here.',
+            'Join an event to start building the experiences that can lead to connections.',
         icon: Icons.people_outline,
       ),
     );

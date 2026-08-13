@@ -54,27 +54,6 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xxl),
-          _SettingsSection(
-            title: 'Account Actions',
-            items: [
-              _SettingsItem(
-                icon: Icons.logout,
-                title: 'Sign out',
-                subtitle: 'Available when account sign-in is enabled.',
-                enabled: false,
-                onTap: () {},
-              ),
-              _SettingsItem(
-                icon: Icons.delete_outline,
-                title: 'Delete account',
-                subtitle: 'Available when permanent accounts are enabled.',
-                enabled: false,
-                destructive: true,
-                onTap: () {},
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xxl),
         ],
       ),
     );
@@ -129,43 +108,23 @@ class _SettingsItem extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
-    this.subtitle,
-    this.enabled = true,
-    this.destructive = false,
   });
 
   final IconData icon;
   final String title;
-  final String? subtitle;
   final VoidCallback onTap;
-  final bool enabled;
-  final bool destructive;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = destructive
-        ? theme.colorScheme.error
-        : theme.colorScheme.primary;
-
     return ListTile(
-      leading: Icon(
-        icon,
-        color: enabled
-            ? color
-            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-      ),
+      leading: Icon(icon, color: theme.colorScheme.primary),
       title: Text(
         title,
-        style: theme.textTheme.bodyLarge?.copyWith(
-          color: destructive ? theme.colorScheme.error : null,
-          fontWeight: FontWeight.w500,
-        ),
+        style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
       ),
-      subtitle: subtitle != null ? Text(subtitle!) : null,
-      trailing: enabled ? const Icon(Icons.chevron_right, size: 20) : null,
-      onTap: enabled ? onTap : null,
-      enabled: enabled,
+      trailing: const Icon(Icons.chevron_right, size: 20),
+      onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.xs,

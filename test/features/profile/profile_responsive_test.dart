@@ -160,13 +160,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(tester.takeException(), isNull);
-        final scrollable = find.byType(Scrollable).first;
-        await tester.scrollUntilVisible(
-          find.text('Delete account'),
-          100,
-          scrollable: scrollable,
-        );
-        expect(find.text('Delete account'), findsOneWidget);
+        expect(find.text('Account'), findsOneWidget);
+        expect(find.text('Delete account'), findsNothing);
         expect(tester.takeException(), isNull);
       });
     }
@@ -228,28 +223,18 @@ void main() {
     });
 
     testWidgets(
-      'Settings with 2.0 text scale keeps deferred actions readable',
+      'Account settings with 2.0 text scale keeps deferred actions readable',
       (tester) async {
         await tester.pumpWidget(
-          createTestWidget(initialLocation: AppRoutes.settings, textScale: 2.0),
+          createTestWidget(
+            initialLocation: AppRoutes.settingsAccount,
+            textScale: 2.0,
+          ),
         );
         await tester.pumpAndSettle();
 
-        final scrollable = find.byType(Scrollable).first;
-        await tester.scrollUntilVisible(
-          find.text('Delete account'),
-          100,
-          scrollable: scrollable,
-        );
-
-        expect(
-          find.text('Available when account sign-in is enabled.'),
-          findsOneWidget,
-        );
-        expect(
-          find.text('Available when permanent accounts are enabled.'),
-          findsOneWidget,
-        );
+        expect(find.text('Sign out'), findsOneWidget);
+        expect(find.text('Delete account'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

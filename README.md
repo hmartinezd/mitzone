@@ -6,10 +6,10 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Phase 9 — Sprint 1 Local Demo Hardening
+**Current Phase**: Sprint 2 — active
 
-**Baseline**: Sprint 1 local/offline demo baseline — hardened. This is a
-validated demo baseline, not a production-readiness claim.
+**Baseline**: Sprint 1 local/offline demo — closed and validated. This is a
+demo baseline, not a production-readiness claim.
 
 **Completed Phases**:
 1. **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
@@ -21,10 +21,15 @@ validated demo baseline, not a production-readiness claim.
 7. **Full Home Experience**: Personalized discovery dashboard with curated demo events, matches empty state, and product education.
 8. **Profile and Settings**: Fully functional local profile management, derived completion percentage, and comprehensive Settings navigation structure.
 9. **Sprint 1 Local Demo Hardening**: Robust async profile loading, removal of nested scaffolds, centralized validation, improved accessibility, corruption-safe local persistence, and transactional avatar replacement.
+10. **Event Experience & Local Participation Foundation**: Event details, stable local catalog IDs, identity-scoped participation, and participation-aware upcoming activities.
 
-**Upcoming Phases**:
-10. **Permanent Authentication — Deferred**
-11. **Supabase Backend Integration — Deferred**
+**Future / Deferred**:
+- **Permanent Authentication — Deferred**
+- **Supabase Backend Integration — Deferred**
+- **Verified Event Presence — Future**
+- **Matching — Future**
+- **QR Check-in — Future**
+- **Geolocation — Future**
 
 ## Application Entry Policy
 
@@ -41,7 +46,7 @@ The long-term application-entry rules are:
 
 Mitzone features exactly five primary destinations accessible via a Material 3 bottom navigation bar:
 - **Home**: The central discovery dashboard. Features personalized greeting and curated discovery sections.
-- **Events**: Discovery of shared experiences (uses simulated local demo data).
+- **Events**: Interactive discovery and details backed by deterministic demo data, with local participation.
 - **Matches**: Connections from shared experiences (currently an intentional empty state).
 - **Chat**: Conversations with connections (currently an intentional empty state).
 - **Profile**: Functional profile management and application settings.
@@ -66,12 +71,15 @@ For this development phase, the following boundaries apply:
 - Responsive layouts (320px to Tablet) and accessibility (2.0 text scale).
 - Local avatar storage with safe replacement and fallback.
 - Personalized discovery dashboard with demo content.
+- Identity-scoped event participation persisted as event IDs under `local_event_participation.v1.<identityId>`.
+- Upcoming activities synchronized with joined events without restarting.
 
 ### Intentionally Deferred
 - **Authentication**: Permanent accounts, sign-out, and deletion are unavailable.
 - **Real Backend**: All data is local; Supabase is integrated but inactive.
 - **QR/Location**: Scanner and GPS functionality are not implemented.
-- **Dynamic Content**: Events, Matches, and Chat remain deterministic demo states.
+- **Event Content**: The catalog remains deterministic demo data; participation is local intent, not verified presence.
+- **Matching and Chat**: No people discovery, matching, or conversations are implemented.
 - **Web**: Only Android/iOS platforms are currently targeted.
 
 ## Local Development Identity

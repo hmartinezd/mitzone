@@ -6,6 +6,8 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../app/router/app_routes.dart';
 import '../../profile/data/profile_providers.dart';
 import '../../events/data/demo_events.dart';
+import '../../events/data/event_providers.dart';
+import '../../events/domain/event.dart';
 import 'widgets/home_header.dart';
 import 'widgets/home_welcome_card.dart';
 import 'widgets/home_event_section.dart';
@@ -19,6 +21,10 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
+    final joinedIdsAsync = ref.watch(joinedEventIdsProvider);
+    final catalog = ref.watch(eventCatalogProvider);
+    void openEvent(Event event) =>
+        context.push(AppRoutes.eventDetails(event.id));
 
     return MitzonePageBody(
       title: null, // We use custom header instead of default title
@@ -60,18 +66,37 @@ class HomeScreen extends ConsumerWidget {
             events: nearbyDemoEvents,
             showDemoBadge: true,
             onSeeAll: () => context.go(AppRoutes.events),
+            onEventTap: openEvent,
           ),
           const SizedBox(height: AppSpacing.xl),
           HomeEventSection(
             title: 'Popular events',
             events: popularDemoEvents,
             onSeeAll: () => context.go(AppRoutes.events),
+            onEventTap: openEvent,
           ),
           const SizedBox(height: AppSpacing.xl),
-          HomeEventSection(
-            title: 'Upcoming activities',
-            events: upcomingDemoEvents,
-            onSeeAll: () => context.go(AppRoutes.events),
+          joinedIdsAsync.when(
+            loading: () => const _UpcomingLoading(),
+            error: (error, stack) =>
+                _UpcomingEmpty(onExplore: () => context.go(AppRoutes.events)),
+            data: (ids) {
+              final joined = catalog
+                  .getAll()
+                  .where((event) => ids.contains(event.id))
+                  .toList();
+              if (joined.isEmpty) {
+                return _UpcomingEmpty(
+                  onExplore: () => context.go(AppRoutes.events),
+                );
+              }
+              return HomeEventSection(
+                title: 'Upcoming activities',
+                events: joined,
+                onSeeAll: () => context.go(AppRoutes.events),
+                onEventTap: openEvent,
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.xxl),
           HomeMatchesCard(
@@ -90,6 +115,60 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xxl),
           const HowMitzoneWorks(),
           const SizedBox(height: AppSpacing.xxl),
+        ],
+      ),
+    );
+  }
+}
+
+class _UpcomingLoading extends StatelessWidget {
+  const _UpcomingLoading();
+
+  @override
+  Widget build(BuildContext context) => const Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Upcoming activities'),
+      SizedBox(height: AppSpacing.md),
+      LinearProgressIndicator(),
+    ],
+  );
+}
+
+class _UpcomingEmpty extends StatelessWidget {
+  const _UpcomingEmpty({required this.onExplore});
+  final VoidCallback onExplore;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Upcoming activities',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const Text('No upcoming activities yet.'),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Explore events and join one to keep it here.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton(onPressed: onExplore, child: const Text('Find an event')),
         ],
       ),
     );

@@ -12,36 +12,34 @@ class AccountSettingsScreen extends StatelessWidget {
     return MitzonePageBody(
       title: 'Account',
       onBack: () => context.pop(),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Account sign-in is not enabled in this build.',
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Account sign-in is not enabled in this build.',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          ListTile(
+            title: const Text('Sign out'),
+            subtitle: const Text('Authentication deferred'),
+            enabled: false,
+            onTap: () {},
+          ),
+          ListTile(
+            title: Text(
+              'Delete account',
+              style: TextStyle(
+                color: theme.colorScheme.error.withValues(alpha: 0.5),
               ),
             ),
-            const SizedBox(height: AppSpacing.xxl),
-            ListTile(
-              title: const Text('Sign out'),
-              subtitle: const Text('Authentication deferred'),
-              enabled: false,
-              onTap: () {},
-            ),
-            ListTile(
-              title: Text(
-                'Delete account',
-                style: TextStyle(
-                  color: theme.colorScheme.error.withValues(alpha: 0.5),
-                ),
-              ),
-              subtitle: const Text('Authentication deferred'),
-              enabled: false,
-              onTap: () {},
-            ),
-          ],
-        ),
+            subtitle: const Text('Authentication deferred'),
+            enabled: false,
+            onTap: () {},
+          ),
+        ],
       ),
     );
   }

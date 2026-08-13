@@ -23,8 +23,9 @@ class HomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
     final joinedIdsAsync = ref.watch(joinedEventIdsProvider);
     final catalog = ref.watch(eventCatalogProvider);
-    void openEvent(Event event) =>
-        context.push(AppRoutes.eventDetails(event.id));
+    void openEvent(Event event) => context.go(
+      AppRoutes.eventDetails(event.id, origin: EventDetailsOrigin.home),
+    );
 
     return MitzonePageBody(
       title: null, // We use custom header instead of default title
@@ -78,8 +79,9 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xl),
           joinedIdsAsync.when(
             loading: () => const _UpcomingLoading(),
-            error: (error, stack) =>
-                _UpcomingEmpty(onExplore: () => context.go(AppRoutes.events)),
+            error: (error, stack) => _UpcomingError(
+              onRetry: () => ref.invalidate(joinedEventIdsProvider),
+            ),
             data: (ids) {
               final joined = catalog
                   .getAll()
@@ -169,6 +171,39 @@ class _UpcomingEmpty extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           TextButton(onPressed: onExplore, child: const Text('Find an event')),
+        ],
+      ),
+    );
+  }
+}
+
+class _UpcomingError extends StatelessWidget {
+  const _UpcomingError({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Upcoming activities',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          const Text("We couldn't load your upcoming activities."),
+          const SizedBox(height: AppSpacing.sm),
+          TextButton(onPressed: onRetry, child: const Text('Try again')),
         ],
       ),
     );

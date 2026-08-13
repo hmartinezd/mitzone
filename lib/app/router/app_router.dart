@@ -102,6 +102,9 @@ GoRouter createAppRouter({
                     path: ':eventId',
                     builder: (context, state) => EventDetailsScreen(
                       eventId: state.pathParameters['eventId']!,
+                      origin: state.uri.queryParameters['origin'] == 'home'
+                          ? EventDetailsOrigin.home
+                          : EventDetailsOrigin.direct,
                     ),
                   ),
                 ],

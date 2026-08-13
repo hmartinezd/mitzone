@@ -9,6 +9,9 @@ import 'package:mitzone/core/identity/identity_providers.dart';
 import 'package:mitzone/features/events/data/event_providers.dart';
 import 'package:mitzone/features/events/domain/event_participation_repository.dart';
 import 'package:mitzone/features/events/presentation/event_details_screen.dart';
+import 'package:mitzone/features/home/presentation/home_screen.dart';
+import 'package:mitzone/features/home/presentation/widgets/home_event_card.dart';
+import 'package:mitzone/features/home/presentation/widgets/home_event_section.dart';
 
 class TestIdentityGateway implements IdentityGateway {
   static const identity = AppIdentity(
@@ -26,11 +29,13 @@ class TestIdentityGateway implements IdentityGateway {
 class TestParticipationRepository implements EventParticipationRepository {
   final idsByIdentity = <String, Set<String>>{};
   bool failMutations = false;
+  bool failLoads = false;
 
   @override
-  Future<Set<String>> getJoinedEventIds(String identityId) async => {
-    ...?idsByIdentity[identityId],
-  };
+  Future<Set<String>> getJoinedEventIds(String identityId) async {
+    if (failLoads) throw Exception('read failed');
+    return {...?idsByIdentity[identityId]};
+  }
 
   @override
   Future<bool> isJoined({
@@ -165,6 +170,208 @@ void main() {
     await revealAndTap(tester, 'Join event');
     await tester.pumpAndSettle();
     expect(find.text("You're participating"), findsOneWidget);
+  });
+
+  testWidgets('failed leave preserves joined state and allows retry', (
+    tester,
+  ) async {
+    final repository = TestParticipationRepository()
+      ..idsByIdentity['identity-a'] = {'tech-mixer-2026'}
+      ..failMutations = true;
+    await tester.pumpWidget(appAt('/app/events/tech-mixer-2026', repository));
+    await tester.pumpAndSettle();
+
+    await revealAndTap(tester, 'Leave event');
+    await tester.pumpAndSettle();
+    expect(find.text("You're participating"), findsOneWidget);
+    expect(find.text('Leave event'), findsOneWidget);
+    expect(
+      find.text("We couldn't update your participation. Please try again."),
+      findsOneWidget,
+    );
+
+    repository.failMutations = false;
+    await revealAndTap(tester, 'Leave event');
+    await tester.pumpAndSettle();
+    expect(find.text('Join event'), findsOneWidget);
+  });
+
+  testWidgets('participation error keeps event content and retry succeeds', (
+    tester,
+  ) async {
+    final repository = TestParticipationRepository()..failLoads = true;
+    await tester.pumpWidget(appAt('/app/events/tech-mixer-2026', repository));
+    await tester.pumpAndSettle();
+    expect(find.text('Tech Mixer 2026'), findsOneWidget);
+    expect(find.text('The Innovation Hub'), findsOneWidget);
+    expect(find.textContaining('Meet curious builders'), findsOneWidget);
+    expect(find.text("We couldn't load your participation."), findsOneWidget);
+
+    repository.failLoads = false;
+    await revealAndTap(tester, 'Try again');
+    await tester.pumpAndSettle();
+    expect(find.text('Join event'), findsOneWidget);
+  });
+
+  testWidgets('participation semantics match the available actions', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final repository = TestParticipationRepository();
+    await tester.pumpWidget(appAt('/app/events/tech-mixer-2026', repository));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Join event'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    Finder semanticsWithLabel(String label) => find.byWidgetPredicate(
+      (widget) => widget is Semantics && widget.properties.label == label,
+    );
+    expect(semanticsWithLabel('Join Tech Mixer 2026'), findsOneWidget);
+    await tester.tap(find.text('Join event'));
+    await tester.pumpAndSettle();
+    expect(
+      semanticsWithLabel('Participating in Tech Mixer 2026'),
+      findsOneWidget,
+    );
+    expect(semanticsWithLabel('Leave Tech Mixer 2026'), findsOneWidget);
+    semantics.dispose();
+  });
+
+  testWidgets('Home event details backs to Home with Home selected', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      appAt(AppRoutes.home, TestParticipationRepository()),
+    );
+    await tester.pumpAndSettle();
+    final homeScrollable = find
+        .descendant(
+          of: find.byType(HomeScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.text('Tech Mixer 2026').first,
+      200,
+      scrollable: homeScrollable,
+    );
+    await tester.tap(
+      find.bySemanticsLabel(
+        'Tech Mixer 2026. Networking. The Innovation Hub. Tonight, 7:00 PM.',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(EventDetailsScreen), findsOneWidget);
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      1,
+    );
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      0,
+    );
+  });
+
+  testWidgets('join and leave synchronize Home without manual refresh', (
+    tester,
+  ) async {
+    final repository = TestParticipationRepository();
+    await tester.pumpWidget(appAt(AppRoutes.home, repository));
+    await tester.pumpAndSettle();
+    final navigationBar = find.byType(NavigationBar);
+    await tester.tap(
+      find.descendant(of: navigationBar, matching: find.text('Events')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tech Mixer 2026'));
+    await tester.pumpAndSettle();
+    await revealAndTap(tester, 'Join event');
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: navigationBar, matching: find.text('Home')),
+    );
+    await tester.pumpAndSettle();
+
+    final upcoming = find.byWidgetPredicate(
+      (widget) =>
+          widget is HomeEventSection && widget.title == 'Upcoming activities',
+    );
+    expect(upcoming, findsOneWidget);
+    expect(
+      find.descendant(of: upcoming, matching: find.text('Tech Mixer 2026')),
+      findsOneWidget,
+    );
+
+    final homeScrollable = find
+        .descendant(
+          of: find.byType(HomeScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.descendant(of: upcoming, matching: find.text('Tech Mixer 2026')),
+      200,
+      scrollable: homeScrollable,
+    );
+    await tester.tap(
+      find.descendant(of: upcoming, matching: find.byType(HomeEventCard)),
+    );
+    await tester.pumpAndSettle();
+    await revealAndTap(tester, 'Leave event');
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(of: navigationBar, matching: find.text('Home')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is HomeEventSection && widget.title == 'Upcoming activities',
+      ),
+      findsNothing,
+    );
+    expect(find.text('No upcoming activities yet.'), findsOneWidget);
+  });
+
+  testWidgets('Events and joined details remain usable at 320x480 and 2.0x', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+      tester.platformDispatcher.clearTextScaleFactorTestValue();
+    });
+    final repository = TestParticipationRepository()
+      ..idsByIdentity['identity-a'] = {'tech-mixer-2026'};
+    await tester.pumpWidget(appAt(AppRoutes.events, repository));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('Tech Mixer 2026'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Tech Mixer 2026'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Back'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Leave event'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(EventDetailsScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.text("You're participating"), findsOneWidget);
+    expect(find.text('Leave event'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   for (final size in [

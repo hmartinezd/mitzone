@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/app/router/app_router.dart';
 import 'package:mitzone/app/router/app_routes.dart';
+import 'package:mitzone/features/events/data/event_providers.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
@@ -10,11 +11,15 @@ import 'package:mitzone/features/profile/domain/user_profile.dart';
 void main() {
   Widget createHomeScreen({
     required AsyncValue<UserProfile?> profileState,
+    AsyncValue<Set<String>> joinedEventIdsState = const AsyncValue.data(
+      <String>{},
+    ),
     String initialLocation = AppRoutes.home,
   }) {
     return ProviderScope(
       overrides: [
         currentProfileProvider.overrideWithValue(profileState),
+        joinedEventIdsProvider.overrideWithValue(joinedEventIdsState),
         routerInitialLocationProvider.overrideWithValue(initialLocation),
       ],
       child: Consumer(
@@ -93,6 +98,122 @@ void main() {
 
       expect(findHomeText("We couldn't load your profile."), findsOneWidget);
       expect(findHomeText('Try again'), findsOneWidget);
+    });
+  });
+
+  group('HomeScreen - Upcoming activities', () {
+    testWidgets('shows the empty participation state', (tester) async {
+      await tester.pumpWidget(
+        createHomeScreen(profileState: const AsyncValue.data(null)),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText('No upcoming activities yet.'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      expect(findHomeText('Find an event'), findsOneWidget);
+    });
+
+    testWidgets('shows joined catalog events', (tester) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          joinedEventIdsState: const AsyncValue.data({'tech-mixer-2026'}),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText('Upcoming activities'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      final upcoming = find
+          .ancestor(
+            of: findHomeText('Upcoming activities'),
+            matching: find.byType(Column),
+          )
+          .first;
+      expect(
+        find.descendant(of: upcoming, matching: find.text('Tech Mixer 2026')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows a distinct participation error state', (tester) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          joinedEventIdsState: AsyncValue.error(
+            Exception('failed'),
+            StackTrace.empty,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText("We couldn't load your upcoming activities."),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      expect(findHomeText('Try again'), findsOneWidget);
+      expect(findHomeText('No upcoming activities yet.'), findsNothing);
+    });
+
+    testWidgets('participation retry invalidates and reaches success', (
+      tester,
+    ) async {
+      var attempts = 0;
+      var allowSuccess = false;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            currentProfileProvider.overrideWithValue(
+              const AsyncValue.data(null),
+            ),
+            joinedEventIdsProvider.overrideWith((ref) async {
+              attempts += 1;
+              if (!allowSuccess) throw Exception('failed');
+              return <String>{};
+            }),
+            routerInitialLocationProvider.overrideWithValue(AppRoutes.home),
+          ],
+          child: Consumer(
+            builder: (context, ref, _) =>
+                MaterialApp.router(routerConfig: ref.watch(routerProvider)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText("We couldn't load your upcoming activities."),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      allowSuccess = true;
+      final attemptsBeforeRetry = attempts;
+      await tester.tap(findHomeText('Try again'));
+      await tester.pumpAndSettle();
+      expect(attempts, greaterThan(attemptsBeforeRetry));
+      expect(findHomeText('No upcoming activities yet.'), findsOneWidget);
+    });
+
+    testWidgets('unknown joined IDs safely show the empty state', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          joinedEventIdsState: const AsyncValue.data({'removed-event'}),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText('No upcoming activities yet.'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      expect(findHomeText('removed-event'), findsNothing);
     });
   });
 
@@ -228,6 +349,7 @@ void main() {
       final sections = [
         'Real moments.\nMeaningful connections.',
         'Events near you',
+        'Upcoming activities',
         'Matches',
         'Complete your profile',
         'How Mitzone works',

@@ -21,7 +21,7 @@ demo baseline, not a production-readiness claim.
 7. **Full Home Experience**: Personalized discovery dashboard with curated demo events, matches empty state, and product education.
 8. **Profile and Settings**: Fully functional local profile management, derived completion percentage, and comprehensive Settings navigation structure.
 9. **Sprint 1 Local Demo Hardening**: Robust async profile loading, removal of nested scaffolds, centralized validation, improved accessibility, corruption-safe local persistence, and transactional avatar replacement.
-10. **Event Experience & Local Participation Foundation**: Event details, stable local catalog IDs, identity-scoped participation, and participation-aware upcoming activities.
+10. **Event Experience & Local Participation Foundation — Complete**: Event details, stable local catalog IDs, identity-scoped participation, and participation-aware upcoming activities.
 
 **Future / Deferred**:
 - **Permanent Authentication — Deferred**
@@ -75,9 +75,12 @@ For this development phase, the following boundaries apply:
 - Upcoming activities synchronized with joined events without restarting.
 
 ### Intentionally Deferred
-- **Authentication**: Permanent accounts, sign-out, and deletion are unavailable.
-- **Real Backend**: All data is local; Supabase is integrated but inactive.
-- **QR/Location**: Scanner and GPS functionality are not implemented.
+- **Permanent Authentication — Deferred**: Permanent accounts, sign-out, and deletion are unavailable.
+- **Supabase Backend Integration — Deferred**: All data is local; Supabase is integrated but inactive.
+- **Verified Event Presence — Future**: Participation records intent only and never claims verified attendance.
+- **Matching — Future**: No people discovery or matching is implemented.
+- **QR Check-in — Future**: Scanner functionality is not implemented.
+- **Geolocation — Future**: GPS functionality is not implemented.
 - **Event Content**: The catalog remains deterministic demo data; participation is local intent, not verified presence.
 - **Matching and Chat**: No people discovery, matching, or conversations are implemented.
 - **Web**: Only Android/iOS platforms are currently targeted.

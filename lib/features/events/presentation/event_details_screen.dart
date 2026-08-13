@@ -11,9 +11,14 @@ import '../domain/event.dart';
 import 'event_category_presentation.dart';
 
 class EventDetailsScreen extends ConsumerStatefulWidget {
-  const EventDetailsScreen({required this.eventId, super.key});
+  const EventDetailsScreen({
+    required this.eventId,
+    this.origin = EventDetailsOrigin.direct,
+    super.key,
+  });
 
   final String eventId;
+  final EventDetailsOrigin origin;
 
   @override
   ConsumerState<EventDetailsScreen> createState() => _EventDetailsScreenState();
@@ -23,6 +28,10 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
   bool _isMutating = false;
 
   void _back() {
+    if (widget.origin == EventDetailsOrigin.home) {
+      context.go(AppRoutes.home);
+      return;
+    }
     if (context.canPop()) {
       context.pop();
     } else {
@@ -59,13 +68,14 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final event = ref.watch(eventCatalogProvider).getById(widget.eventId);
-    if (event == null) return _EventNotFound(onBack: _back);
+    if (event == null) return const _EventNotFound();
     return _EventDetailsContent(
       event: event,
       joinedIds: ref.watch(joinedEventIdsProvider),
       isMutating: _isMutating,
       onBack: _back,
       onSetJoined: _setJoined,
+      onRetryParticipation: () => ref.invalidate(joinedEventIdsProvider),
     );
   }
 }
@@ -77,6 +87,7 @@ class _EventDetailsContent extends StatelessWidget {
     required this.isMutating,
     required this.onBack,
     required this.onSetJoined,
+    required this.onRetryParticipation,
   });
 
   final Event event;
@@ -84,6 +95,7 @@ class _EventDetailsContent extends StatelessWidget {
   final bool isMutating;
   final VoidCallback onBack;
   final ValueChanged<bool> onSetJoined;
+  final VoidCallback onRetryParticipation;
 
   @override
   Widget build(BuildContext context) {
@@ -158,9 +170,7 @@ class _EventDetailsContent extends StatelessWidget {
                 children: [
                   const Text("We couldn't load your participation."),
                   TextButton(
-                    onPressed: () => ProviderScope.containerOf(
-                      context,
-                    ).invalidate(joinedEventIdsProvider),
+                    onPressed: onRetryParticipation,
                     child: const Text('Try again'),
                   ),
                 ],
@@ -170,34 +180,69 @@ class _EventDetailsContent extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Semantics(
-                      label: isJoined
-                          ? 'Participating in ${event.title}'
-                          : 'Join ${event.title}',
-                      button: true,
-                      excludeSemantics: true,
-                      child: FilledButton.icon(
-                        onPressed: isMutating
-                            ? null
-                            : () => onSetJoined(!isJoined),
-                        icon: isMutating
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                    if (!isJoined)
+                      Semantics(
+                        label: 'Join ${event.title}',
+                        button: true,
+                        excludeSemantics: true,
+                        child: FilledButton.icon(
+                          onPressed: isMutating
+                              ? null
+                              : () => onSetJoined(true),
+                          icon: isMutating
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.add),
+                          label: const Text('Join event'),
+                        ),
+                      )
+                    else ...[
+                      Semantics(
+                        label: 'Participating in ${event.title}',
+                        excludeSemantics: true,
+                        child: Container(
+                          padding: const EdgeInsets.all(AppSpacing.md),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check),
+                              const SizedBox(width: AppSpacing.sm),
+                              Expanded(
+                                child: Text(
+                                  "You're participating",
+                                  style: theme.textTheme.titleMedium,
                                 ),
-                              )
-                            : Icon(isJoined ? Icons.check : Icons.add),
-                        label: Text(
-                          isJoined ? "You're participating" : 'Join event',
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    if (isJoined) ...[
                       const SizedBox(height: AppSpacing.sm),
-                      TextButton(
-                        onPressed: isMutating ? null : () => onSetJoined(false),
-                        child: const Text('Leave event'),
+                      Semantics(
+                        label: 'Leave ${event.title}',
+                        button: true,
+                        excludeSemantics: true,
+                        child: TextButton.icon(
+                          onPressed: isMutating
+                              ? null
+                              : () => onSetJoined(false),
+                          icon: isMutating
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.remove_circle_outline),
+                          label: const Text('Leave event'),
+                        ),
                       ),
                     ],
                     const SizedBox(height: AppSpacing.sm),
@@ -237,8 +282,7 @@ class _DetailLine extends StatelessWidget {
 }
 
 class _EventNotFound extends StatelessWidget {
-  const _EventNotFound({required this.onBack});
-  final VoidCallback onBack;
+  const _EventNotFound();
 
   @override
   Widget build(BuildContext context) => MitzonePageBody(

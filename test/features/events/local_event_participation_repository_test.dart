@@ -56,7 +56,23 @@ void main() {
     expect(await repository.getJoinedEventIds('a'), isEmpty);
     storage.values['local_event_participation.v1.a'] = '{"id":"one"}';
     expect(await repository.getJoinedEventIds('a'), isEmpty);
-    storage.values['local_event_participation.v1.a'] = '["one", 2]';
+  });
+
+  test('mixed corruption retains trimmed valid IDs', () async {
+    storage.values['local_event_participation.v1.a'] =
+        '[" tech-mixer-2026 ",123,null,"","live-jazz-night",'
+        '"tech-mixer-2026"]';
+    expect(await repository.getJoinedEventIds('a'), {
+      'tech-mixer-2026',
+      'live-jazz-night',
+    });
+  });
+
+  test('blank mutations are ignored and mutation IDs are trimmed', () async {
+    await repository.join(identityId: 'a', eventId: '   ');
+    expect(storage.values, isEmpty);
+    await repository.join(identityId: 'a', eventId: ' one ');
+    await repository.leave(identityId: 'a', eventId: ' one ');
     expect(await repository.getJoinedEventIds('a'), isEmpty);
   });
 

@@ -18,10 +18,12 @@ class LocalEventParticipationRepository
     if (value == null) return <String>{};
     try {
       final decoded = jsonDecode(value);
-      if (decoded is! List || decoded.any((item) => item is! String)) {
-        return <String>{};
-      }
-      return decoded.cast<String>().where((id) => id.isNotEmpty).toSet();
+      if (decoded is! List) return <String>{};
+      return decoded
+          .whereType<String>()
+          .map((id) => id.trim())
+          .where((id) => id.isNotEmpty)
+          .toSet();
     } on FormatException {
       return <String>{};
     }
@@ -43,6 +45,8 @@ class LocalEventParticipationRepository
     required String identityId,
     required String eventId,
   }) async {
+    eventId = eventId.trim();
+    if (eventId.isEmpty) return;
     final ids = await getJoinedEventIds(identityId);
     if (ids.add(eventId)) await _write(identityId, ids);
   }
@@ -52,6 +56,8 @@ class LocalEventParticipationRepository
     required String identityId,
     required String eventId,
   }) async {
+    eventId = eventId.trim();
+    if (eventId.isEmpty) return;
     final ids = await getJoinedEventIds(identityId);
     if (ids.remove(eventId)) await _write(identityId, ids);
   }

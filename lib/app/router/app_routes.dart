@@ -20,7 +20,13 @@ class AppRoutes {
   /// Main navigation branch: Events
   static const String events = '/app/events';
 
-  static String eventDetails(String eventId) => '$events/$eventId';
+  static String eventDetails(
+    String eventId, {
+    EventDetailsOrigin origin = EventDetailsOrigin.direct,
+  }) {
+    final path = '$events/$eventId';
+    return origin == EventDetailsOrigin.home ? '$path?origin=home' : path;
+  }
 
   /// Main navigation branch: Matches
   static const String matches = '/app/matches';
@@ -57,3 +63,5 @@ class AppRoutes {
   static const String settingsPrivacyPolicy =
       '/app/profile/settings/privacy-policy';
 }
+
+enum EventDetailsOrigin { home, events, direct }

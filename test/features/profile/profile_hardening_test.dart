@@ -233,6 +233,40 @@ void main() {
       expect(find.text('Add up to 10 interests.'), findsOneWidget);
     });
 
+    testWidgets('duplicate interests count once after normalization', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(initialLocation: AppRoutes.profileDetails),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('interests_field')),
+        'Flutter, flutter, FLUTTER, 2,3,4,5,6,7,8,9,10',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add up to 10 interests.'), findsNothing);
+    });
+
+    testWidgets('duplicate languages count once after normalization', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(initialLocation: AppRoutes.profileDetails),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('languages_field')),
+        'English, english, ENGLISH, 2,3,4,5,6,7,8,9,10',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add up to 10 languages.'), findsNothing);
+    });
+
     testWidgets('Interest validation feedback (>30 chars item)', (
       tester,
     ) async {

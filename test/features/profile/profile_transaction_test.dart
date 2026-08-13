@@ -77,6 +77,7 @@ class MockAvatarStorage implements AvatarStorage {
   int saveCount = 0;
   int deleteCount = 0;
   bool shouldSaveFail = false;
+  bool shouldDeleteFail = false;
   List<String> deletedPaths = [];
 
   @override
@@ -96,6 +97,7 @@ class MockAvatarStorage implements AvatarStorage {
   }) async {
     deleteCount++;
     deletedPaths.add(avatarPath);
+    if (shouldDeleteFail) throw Exception('Storage delete failed');
   }
 }
 
@@ -143,7 +145,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byType(InkWell).first); // Edit button
+      await tester.tap(find.byKey(const Key('profile_avatar_edit_target')));
       await tester.pumpAndSettle();
 
       expect(avatarStorage.saveCount, 0);
@@ -159,7 +161,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(InkWell).first);
+        await tester.tap(find.byKey(const Key('profile_avatar_edit_target')));
         await tester.pumpAndSettle();
 
         expect(find.text('Failed to pick image.'), findsOneWidget);
@@ -181,7 +183,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(InkWell).first);
+        await tester.tap(find.byKey(const Key('profile_avatar_edit_target')));
         await tester.pumpAndSettle();
 
         final saveButton = find.text('Save Changes');
@@ -212,7 +214,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(InkWell).first);
+        await tester.tap(find.byKey(const Key('profile_avatar_edit_target')));
         await tester.pumpAndSettle();
 
         final saveButton = find.text('Save Changes');
@@ -249,7 +251,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byType(InkWell).first);
+        await tester.tap(find.byKey(const Key('profile_avatar_edit_target')));
         await tester.pumpAndSettle();
 
         final saveButton = find.text('Save Changes');
@@ -266,6 +268,37 @@ void main() {
           avatarStorage.deletedPaths,
           isNot(contains('managed/path/to/avatar_1.png')),
         );
+      },
+    );
+
+    testWidgets(
+      'Old-avatar cleanup failure preserves successful profile update',
+      (tester) async {
+        avatarPicker.result = const PickedAvatar(
+          path: 'new/path.png',
+          name: 'n',
+        );
+        avatarStorage.shouldDeleteFail = true;
+
+        await tester.pumpWidget(
+          createTestWidget(initialLocation: AppRoutes.profileEdit),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('profile_avatar_edit_target')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Save Changes'));
+        await tester.tap(find.text('Save Changes'));
+        await tester.pumpAndSettle();
+
+        expect(profileRepo.saveCount, 1);
+        expect(profileRepo.profile?.avatarUri, 'managed/path/to/avatar_1.png');
+        expect(avatarStorage.deletedPaths, ['original/path.png']);
+        expect(
+          find.textContaining("We couldn't save your profile"),
+          findsNothing,
+        );
+        expect(find.byType(EditProfileForm), findsNothing);
       },
     );
   });
@@ -298,6 +331,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Bio'),
+        'Unsaved biography',
+      );
+
       final saveButton = find.text('Save Details');
       await tester.ensureVisible(saveButton);
       await tester.tap(saveButton);
@@ -308,6 +346,14 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(ProfileDetailsForm), findsOneWidget);
+      expect(find.text('Unsaved biography'), findsOneWidget);
+
+      profileRepo.shouldFail = false;
+      await tester.ensureVisible(find.text('Save Details'));
+      await tester.tap(find.text('Save Details'));
+      await tester.pumpAndSettle();
+      expect(profileRepo.saveCount, 2);
+      expect(profileRepo.profile?.bio, 'Unsaved biography');
     });
   });
 }

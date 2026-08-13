@@ -140,27 +140,9 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
       );
 
       await ref.read(profileRepositoryProvider).saveProfile(updatedProfile);
-
-      // Cleanup old avatar ONLY after successful commit.
-      if (stagedAvatarUri != null && oldAvatarUri != null) {
-        await storage.deleteAvatar(
-          identityId: widget.profile.id,
-          avatarPath: oldAvatarUri,
-        );
-      }
-
-      ref.invalidate(currentProfileProvider);
-
-      if (mounted) {
-        context.pop();
-      }
     } catch (e) {
       if (stagedAvatarUri != null) {
-        // Best-effort cleanup of orphan staged avatar.
-        await storage.deleteAvatar(
-          identityId: widget.profile.id,
-          avatarPath: stagedAvatarUri,
-        );
+        await _bestEffortDelete(stagedAvatarUri);
       }
 
       if (mounted) {
@@ -171,6 +153,29 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
           ),
         );
       }
+      return;
+    }
+
+    // The profile is committed. Cleanup must not turn a successful save into
+    // a failure or remove the newly active avatar.
+    if (stagedAvatarUri != null && oldAvatarUri != null) {
+      await _bestEffortDelete(oldAvatarUri);
+    }
+
+    ref.invalidate(currentProfileProvider);
+
+    if (mounted) {
+      context.pop();
+    }
+  }
+
+  Future<void> _bestEffortDelete(String avatarPath) async {
+    try {
+      await ref
+          .read(avatarStorageProvider)
+          .deleteAvatar(identityId: widget.profile.id, avatarPath: avatarPath);
+    } catch (_) {
+      // Avatar cleanup never changes the result of profile persistence.
     }
   }
 

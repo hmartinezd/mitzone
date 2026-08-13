@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/features/profile/data/local_profile_repository.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
@@ -73,6 +75,54 @@ void main() {
       final profile = await repository.getProfile('bad');
       expect(profile, isNull);
     });
+
+    test('malformed required profile fields return null', () async {
+      final malformedProfiles = <Map<String, dynamic>>[
+        {'displayName': 'Hector'},
+        {'id': '', 'displayName': 'Hector'},
+        {'id': 'id-1'},
+        {'id': 'id-1', 'displayName': 'H'},
+      ];
+
+      for (final json in malformedProfiles) {
+        await storage.setString('local_profile.v1.id-1', jsonEncode(json));
+        expect(await repository.getProfile('id-1'), isNull);
+      }
+    });
+
+    test(
+      'minimum then extended profile reload preserves identity and fields',
+      () async {
+        await repository.saveMinimumProfile(
+          identityId: 'id-1',
+          displayName: 'Hector',
+        );
+        await repository.saveProfile(
+          const UserProfile(
+            id: 'id-1',
+            displayName: 'Hector Updated',
+            avatarUri: '/managed/avatar.png',
+            bio: 'Developer',
+            city: 'Tampa',
+            languages: ['English', 'Spanish'],
+            interests: ['Flutter'],
+            connectionGoal: ConnectionGoal.professional,
+          ),
+        );
+
+        final reloadedRepository = LocalProfileRepository(storage);
+        final profile = await reloadedRepository.getProfile('id-1');
+
+        expect(profile?.id, 'id-1');
+        expect(profile?.displayName, 'Hector Updated');
+        expect(profile?.avatarUri, '/managed/avatar.png');
+        expect(profile?.bio, 'Developer');
+        expect(profile?.city, 'Tampa');
+        expect(profile?.languages, ['English', 'Spanish']);
+        expect(profile?.interests, ['Flutter']);
+        expect(profile?.connectionGoal, ConnectionGoal.professional);
+      },
+    );
 
     test('returns null if profile does not exist', () async {
       final profile = await repository.getProfile('non-existent');

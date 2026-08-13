@@ -146,10 +146,52 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.text('Connection Goal'), findsOneWidget);
       });
+
+      testWidgets('Settings layout at ${size.width}x${size.height}', (
+        tester,
+      ) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        await tester.pumpWidget(
+          createTestWidget(initialLocation: AppRoutes.settings),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        final scrollable = find.byType(Scrollable).first;
+        await tester.scrollUntilVisible(
+          find.text('Delete account'),
+          100,
+          scrollable: scrollable,
+        );
+        expect(find.text('Delete account'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
     }
   });
 
   group('Profile Text Scaling 2.0', () {
+    testWidgets('Profile with 2.0 text scale keeps later actions usable', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(initialLocation: AppRoutes.profile, textScale: 2.0),
+      );
+      await tester.pumpAndSettle();
+
+      final scrollable = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(
+        find.text('Edit details'),
+        100,
+        scrollable: scrollable,
+      );
+      expect(find.text('14%'), findsOneWidget);
+      expect(find.text('Edit details'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('Edit Profile with 2.0 text scale remains usable', (
       tester,
     ) async {
@@ -184,6 +226,33 @@ void main() {
 
       expect(find.text('Save Details'), findsOneWidget);
     });
+
+    testWidgets(
+      'Settings with 2.0 text scale keeps deferred actions readable',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestWidget(initialLocation: AppRoutes.settings, textScale: 2.0),
+        );
+        await tester.pumpAndSettle();
+
+        final scrollable = find.byType(Scrollable).first;
+        await tester.scrollUntilVisible(
+          find.text('Delete account'),
+          100,
+          scrollable: scrollable,
+        );
+
+        expect(
+          find.text('Available when account sign-in is enabled.'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Available when permanent accounts are enabled.'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 
   group('ProfileAvatar Accessibility', () {

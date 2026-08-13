@@ -71,6 +71,7 @@ class ProfileAvatar extends StatelessWidget {
             button: true,
             label: 'Change profile photo',
             child: SizedBox(
+              key: const Key('profile_avatar_edit_target'),
               width: 48,
               height: 48,
               child: Material(

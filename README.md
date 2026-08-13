@@ -6,7 +6,10 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Sprint 1 Local Demo Hardening (Completed)
+**Current Phase**: Phase 9 — Sprint 1 Local Demo Hardening
+
+**Baseline**: Sprint 1 local/offline demo baseline — hardened. This is a
+validated demo baseline, not a production-readiness claim.
 
 **Completed Phases**:
 1. **Foundation Hardening**: Repository cleanup, architecture hardening, testable bootstrap, sanitized logging, and CI/CD.
@@ -17,11 +20,11 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 6. **Main Navigation**: Five-destination Material 3 navigation shell using `StatefulShellRoute`, persistent branch state, and responsive navigation bar.
 7. **Full Home Experience**: Personalized discovery dashboard with curated demo events, matches empty state, and product education.
 8. **Profile and Settings**: Fully functional local profile management, derived completion percentage, and comprehensive Settings navigation structure.
-9. **Sprint 1 Local Demo Hardening**: Robust async profile loading, removal of nested scaffolds, centralized validation, improved accessibility, and safe avatar replacement.
+9. **Sprint 1 Local Demo Hardening**: Robust async profile loading, removal of nested scaffolds, centralized validation, improved accessibility, corruption-safe local persistence, and transactional avatar replacement.
 
 **Upcoming Phases**:
-10. **Permanent Authentication** (Deferred)
-11. **Supabase Backend Integration** (Deferred)
+10. **Permanent Authentication — Deferred**
+11. **Supabase Backend Integration — Deferred**
 
 ## Application Entry Policy
 

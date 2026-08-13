@@ -5,15 +5,18 @@ import 'avatar_storage.dart';
 
 /// An implementation of [AvatarStorage] that manages files in the app's local directory.
 class LocalAvatarStorage implements AvatarStorage {
+  LocalAvatarStorage({Future<Directory> Function()? supportDirectoryProvider})
+    : _supportDirectoryProvider =
+          supportDirectoryProvider ?? getApplicationSupportDirectory;
+
+  final Future<Directory> Function() _supportDirectoryProvider;
+
   @override
   Future<String> saveAvatar({
     required String identityId,
     required String sourcePath,
   }) async {
-    final dir = await getApplicationSupportDirectory();
-    final avatarDir = Directory(
-      p.join(dir.path, 'profile_avatars', identityId),
-    );
+    final avatarDir = await _managedIdentityDirectory(identityId);
 
     if (!await avatarDir.exists()) {
       await avatarDir.create(recursive: true);
@@ -35,11 +38,10 @@ class LocalAvatarStorage implements AvatarStorage {
     required String avatarPath,
   }) async {
     try {
-      final dir = await getApplicationSupportDirectory();
       final avatarDir = p.canonicalize(
-        p.join(dir.path, 'profile_avatars', identityId),
+        (await _managedIdentityDirectory(identityId)).path,
       );
-      final normalizedPath = p.canonicalize(avatarPath);
+      final normalizedPath = p.canonicalize(p.absolute(avatarPath));
 
       // Security: Only delete files inside the identity-managed directory.
       if (!p.isWithin(avatarDir, normalizedPath)) {
@@ -53,5 +55,21 @@ class LocalAvatarStorage implements AvatarStorage {
     } catch (e) {
       // Best-effort cleanup. Do not throw if deletion fails.
     }
+  }
+
+  Future<Directory> _managedIdentityDirectory(String identityId) async {
+    final supportDirectory = await _supportDirectoryProvider();
+    final avatarsRoot = p.canonicalize(
+      p.absolute(p.join(supportDirectory.path, 'profile_avatars')),
+    );
+    final identityDirectory = p.canonicalize(
+      p.absolute(p.join(avatarsRoot, identityId)),
+    );
+
+    if (!p.isWithin(avatarsRoot, identityDirectory)) {
+      throw ArgumentError.value(identityId, 'identityId', 'Invalid identity');
+    }
+
+    return Directory(identityDirectory);
   }
 }

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../shared/widgets/mitzone_page_body.dart';
+
+import '../../../app/router/app_routes.dart';
+import '../../../app/theme/app_spacing.dart';
+import '../../../shared/widgets/mitzone_button.dart';
 import '../../../shared/widgets/mitzone_card.dart';
 import '../../../shared/widgets/mitzone_loading_indicator.dart';
-import '../../../shared/widgets/mitzone_button.dart';
-import '../../../app/theme/app_spacing.dart';
-import '../../../app/router/app_routes.dart';
+import '../../../shared/widgets/mitzone_page_body.dart';
+import '../../events/data/event_providers.dart';
 import '../data/profile_providers.dart';
 import '../domain/user_profile.dart';
 import 'widgets/profile_avatar.dart';
@@ -17,94 +19,164 @@ class ProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
-
     return MitzonePageBody(
       title: 'Profile',
       child: profileAsync.when(
-        data: (profile) {
-          if (profile == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Your profile could not be found.'),
-                  const SizedBox(height: AppSpacing.md),
-                  MitzoneButton(
-                    text: 'Finish your profile',
-                    onPressed: () => context.go(AppRoutes.createProfile),
-                  ),
-                ],
-              ),
-            );
-          }
-          return _ProfileContent(profile: profile);
-        },
+        data: (profile) => profile == null
+            ? _MessageState(
+                message: 'Your profile could not be found.',
+                action: 'Finish your profile',
+                onPressed: () => context.go(AppRoutes.createProfile),
+              )
+            : _ProfileContent(profile: profile),
         loading: () => const Center(child: MitzoneLoadingIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text("We couldn't load your profile."),
-              const SizedBox(height: AppSpacing.md),
-              MitzoneButton(
-                text: 'Try again',
-                onPressed: () => ref.invalidate(currentProfileProvider),
-              ),
-            ],
-          ),
+        error: (error, stack) => _MessageState(
+          message: "We couldn't load your profile.",
+          action: 'Try again',
+          onPressed: () => ref.invalidate(currentProfileProvider),
         ),
       ),
     );
   }
 }
 
-class _ProfileContent extends StatelessWidget {
+class _MessageState extends StatelessWidget {
+  const _MessageState({
+    required this.message,
+    required this.action,
+    required this.onPressed,
+  });
+  final String message;
+  final String action;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: AppSpacing.md),
+          MitzoneButton(text: action, onPressed: onPressed, fullWidth: false),
+        ],
+      ),
+    ),
+  );
+}
+
+class _ProfileContent extends ConsumerWidget {
   const _ProfileContent({required this.profile});
   final UserProfile profile;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catalog = ref.watch(eventCatalogProvider);
+    final activity = ref
+        .watch(joinedEventIdsProvider)
+        .whenData(
+          (ids) => ids.where((id) => catalog.getById(id) != null).toSet(),
+        );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: AppSpacing.lg),
-        Center(
-          child: Column(
-            children: [
-              ProfileAvatar(
-                displayName: profile.displayName,
-                avatarUri: profile.avatarUri,
-                radius: 50,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                profile.displayName,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              TextButton.icon(
-                onPressed: () => context.go(AppRoutes.profileEdit),
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Edit profile'),
-              ),
-            ],
-          ),
-        ),
+        _ProfileHeader(profile: profile),
         const SizedBox(height: AppSpacing.xxl),
         _CompletionCard(percentage: profile.completionPercentage),
         const SizedBox(height: AppSpacing.xxl),
-        _ProfileDetailsSection(profile: profile),
+        _AboutSection(bio: profile.bio),
         const SizedBox(height: AppSpacing.xxl),
-        _SettingsAction(),
+        _ChipSection(
+          title: 'Interests',
+          values: profile.interests,
+          emptyMessage:
+              'Add interests so people can quickly understand what you enjoy.',
+          actionLabel: 'Add interests',
+        ),
+        const SizedBox(height: AppSpacing.xxl),
+        _ChipSection(
+          title: 'Languages',
+          values: profile.languages,
+          emptyMessage: 'Add the languages you use to connect with others.',
+          actionLabel: 'Add languages',
+        ),
+        const SizedBox(height: AppSpacing.xxl),
+        _ActivitySection(activity: activity),
+        const SizedBox(height: AppSpacing.xxl),
+        const _SettingsAction(),
         const SizedBox(height: AppSpacing.xxl),
       ],
     );
   }
 }
+
+class _ProfileHeader extends StatelessWidget {
+  const _ProfileHeader({required this.profile});
+  final UserProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final city = profile.city?.trim();
+    final goal = _connectionGoalLabel(profile.connectionGoal);
+    return Center(
+      child: Column(
+        children: [
+          ProfileAvatar(
+            displayName: profile.displayName,
+            avatarUri: profile.avatarUri,
+            radius: 50,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            profile.displayName,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (city != null && city.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              city,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+          if (goal != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Chip(
+              avatar: const Icon(Icons.handshake_outlined, size: 18),
+              label: Text(goal),
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          TextButton.icon(
+            onPressed: () => context.go(AppRoutes.profileEdit),
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            label: const Text('Edit profile'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String? _connectionGoalLabel(ConnectionGoal? goal) => switch (goal) {
+  ConnectionGoal.social => 'Social',
+  ConnectionGoal.professional => 'Professional',
+  ConnectionGoal.both => 'Social + Professional',
+  null => null,
+};
 
 class _CompletionCard extends StatelessWidget {
   const _CompletionCard({required this.percentage});
@@ -113,7 +185,7 @@ class _CompletionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
+    final complete = percentage >= 100;
     return Semantics(
       label: 'Profile $percentage percent complete',
       child: MitzoneCard(
@@ -122,7 +194,6 @@ class _CompletionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
                   child: Text(
@@ -151,11 +222,20 @@ class _CompletionCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              'Add optional details when you\'re ready.',
-              style: theme.textTheme.bodySmall?.copyWith(
+              complete
+                  ? 'Your profile is complete. You can update your details anytime.'
+                  : 'Add a few more details to help people understand who you are.',
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
+            if (!complete) ...[
+              const SizedBox(height: AppSpacing.sm),
+              TextButton(
+                onPressed: () => context.go(AppRoutes.profileDetails),
+                child: const Text('Complete profile'),
+              ),
+            ],
           ],
         ),
       ),
@@ -163,164 +243,173 @@ class _CompletionCard extends StatelessWidget {
   }
 }
 
-class _ProfileDetailsSection extends StatelessWidget {
-  const _ProfileDetailsSection({required this.profile});
-  final UserProfile profile;
+class _AboutSection extends StatelessWidget {
+  const _AboutSection({required this.bio});
+  final String? bio;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = bio?.trim();
+    return _Section(
+      title: 'About',
+      child: value != null && value.isNotEmpty
+          ? Text(value)
+          : const _ProgressiveEmptyState(
+              message: 'Tell people a little about yourself.',
+              actionLabel: 'Add bio',
+            ),
+    );
+  }
+}
+
+class _ChipSection extends StatelessWidget {
+  const _ChipSection({
+    required this.title,
+    required this.values,
+    required this.emptyMessage,
+    required this.actionLabel,
+  });
+  final String title;
+  final List<String> values;
+  final String emptyMessage;
+  final String actionLabel;
+
+  @override
+  Widget build(BuildContext context) => _Section(
+    title: title,
+    child: values.isEmpty
+        ? _ProgressiveEmptyState(
+            message: emptyMessage,
+            actionLabel: actionLabel,
+          )
+        : Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [for (final value in values) Chip(label: Text(value))],
+          ),
+  );
+}
+
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.child});
+  final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(
-                profile.completionPercentage < 100
-                    ? 'Complete your profile'
-                    : 'About you',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () => context.go(AppRoutes.profileDetails),
-              child: const Text('Edit details'),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        MitzoneCard(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            children: [
-              _DetailRow(label: 'Bio', value: profile.bio, icon: Icons.notes),
-              const Divider(),
-              _DetailRow(
-                label: 'City',
-                value: profile.city,
-                icon: Icons.location_on_outlined,
-              ),
-              const Divider(),
-              _DetailRow(
-                label: 'Interests',
-                value: profile.interests.isEmpty
-                    ? null
-                    : profile.interests.join(', '),
-                icon: Icons.interests_outlined,
-              ),
-              const Divider(),
-              _DetailRow(
-                label: 'Languages',
-                value: profile.languages.isEmpty
-                    ? null
-                    : profile.languages.join(', '),
-                icon: Icons.language_outlined,
-              ),
-              const Divider(),
-              _DetailRow(
-                label: 'Connection Goal',
-                value: profile.connectionGoal?.name.toUpperCase(),
-                icon: Icons.handshake_outlined,
-              ),
-            ],
+        Text(
+          title.toUpperCase(),
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.8,
           ),
         ),
+        const SizedBox(height: AppSpacing.md),
+        child,
       ],
     );
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.label,
-    required this.value,
-    required this.icon,
+class _ProgressiveEmptyState extends StatelessWidget {
+  const _ProgressiveEmptyState({
+    required this.message,
+    required this.actionLabel,
   });
-
-  final String label;
-  final String? value;
-  final IconData icon;
+  final String message;
+  final String actionLabel;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(message),
+      const SizedBox(height: AppSpacing.xs),
+      TextButton(
+        onPressed: () => context.go(AppRoutes.profileDetails),
+        child: Text(actionLabel),
+      ),
+    ],
+  );
+}
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+class _ActivitySection extends ConsumerWidget {
+  const _ActivitySection({required this.activity});
+  final AsyncValue<Set<String>> activity;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => _Section(
+    title: 'My activity',
+    child: MitzoneCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: activity.when(
+        loading: () => const Row(
+          children: [
+            MitzoneLoadingIndicator(compact: true),
+            SizedBox(width: AppSpacing.md),
+            Expanded(child: Text('Loading your activity…')),
+          ],
+        ),
+        error: (error, stack) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("We couldn't load your activity."),
+            const SizedBox(height: AppSpacing.xs),
+            TextButton(
+              onPressed: () => ref.invalidate(joinedEventIdsProvider),
+              child: const Text('Try again'),
+            ),
+          ],
+        ),
+        data: (joinedIds) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
+                const Expanded(child: Text('Joined events')),
                 Text(
-                  label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value ?? 'Not added yet',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: value == null
-                        ? theme.colorScheme.onSurfaceVariant.withValues(
-                            alpha: 0.5,
-                          )
-                        : theme.colorScheme.onSurface,
-                    fontStyle: value == null ? FontStyle.italic : null,
+                  '${joinedIds.length}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: AppSpacing.sm),
+            TextButton.icon(
+              onPressed: () => context.go(AppRoutes.events),
+              icon: const Icon(Icons.calendar_month_outlined, size: 18),
+              label: const Text('View events'),
+            ),
+          ],
+        ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _SettingsAction extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  const _SettingsAction();
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => context.go(AppRoutes.settings),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            border: Border.all(color: theme.colorScheme.outlineVariant),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.settings_outlined, color: theme.colorScheme.primary),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Text(
-                  'Settings',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const Icon(Icons.chevron_right),
-            ],
-          ),
+  @override
+  Widget build(BuildContext context) => MitzoneCard(
+    onTap: () => context.go(AppRoutes.settings),
+    padding: const EdgeInsets.all(AppSpacing.lg),
+    child: Row(
+      children: [
+        Icon(
+          Icons.settings_outlined,
+          color: Theme.of(context).colorScheme.primary,
         ),
-      ),
-    );
-  }
+        const SizedBox(width: AppSpacing.md),
+        const Expanded(child: Text('Settings')),
+        const Icon(Icons.chevron_right),
+      ],
+    ),
+  );
 }

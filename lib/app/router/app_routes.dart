@@ -11,7 +11,7 @@ class AppRoutes {
   /// Development-only visual system showcase.
   static const String showcase = '/showcase';
 
-  /// A screen to show when application entry fails (e.g. session creation error).
+  /// A screen shown when local development identity entry cannot be resolved.
   static const String entryFailure = '/entry-failure';
 
   /// Main navigation branch: Home
@@ -64,4 +64,4 @@ class AppRoutes {
       '/app/profile/settings/privacy-policy';
 }
 
-enum EventDetailsOrigin { home, events, direct }
+enum EventDetailsOrigin { home, direct }

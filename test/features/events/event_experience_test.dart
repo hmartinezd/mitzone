@@ -268,6 +268,18 @@ void main() {
       checkIns.records.single.checkedInAt,
       DateTime.utc(2026, 8, 21, 23, 42),
     );
+
+    await revealAndTap(tester, 'Leave event');
+    await tester.pumpAndSettle();
+    expect(find.text('Join event'), findsOneWidget);
+    expect(participation.idsByIdentity['identity-a'], isEmpty);
+    expect(find.text('✓ Checked in locally'), findsOneWidget);
+    expect(find.text('Local demo check-in'), findsNothing);
+    expect(checkIns.records, hasLength(1));
+    expect(
+      checkIns.records.single.checkedInAt,
+      DateTime.utc(2026, 8, 21, 23, 42),
+    );
   });
 
   testWidgets('check-in mutation failure preserves action and allows retry', (
@@ -326,6 +338,51 @@ void main() {
     await revealAndTap(tester, 'Try again');
     await tester.pumpAndSettle();
     expect(find.text('Join event'), findsOneWidget);
+  });
+
+  testWidgets('historical check-in remains visible on participation failure', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    final participation = TestParticipationRepository()..failLoads = true;
+    final checkIns = TestCheckInRepository()
+      ..records.add(
+        EventCheckIn(
+          eventId: 'tech-mixer-2026',
+          identityId: 'identity-a',
+          checkedInAt: DateTime.utc(2026, 8, 21, 23, 42),
+          method: EventCheckInMethod.localDemo,
+        ),
+      );
+    await tester.pumpWidget(
+      appAt('/app/events/tech-mixer-2026', participation, checkIns: checkIns),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tech Mixer 2026'), findsOneWidget);
+    expect(find.text("We couldn't load your participation."), findsOneWidget);
+    expect(find.text('✓ Checked in locally'), findsOneWidget);
+    expect(find.textContaining('Recorded '), findsOneWidget);
+    expect(find.text('Local demo check-in'), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text('✓ Checked in locally'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(EventDetailsScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label == 'Checked in locally to Tech Mixer 2026',
+      ),
+      findsOneWidget,
+    );
+    semantics.dispose();
   });
 
   testWidgets('participation semantics match the available actions', (
@@ -456,6 +513,7 @@ void main() {
   testWidgets('Events and joined details remain usable at 320x480 and 2.0x', (
     tester,
   ) async {
+    final semantics = tester.ensureSemantics();
     tester.view.physicalSize = const Size(320, 480);
     tester.view.devicePixelRatio = 1;
     tester.platformDispatcher.textScaleFactorTestValue = 2;
@@ -486,6 +544,71 @@ void main() {
     );
     expect(find.text("You're participating"), findsOneWidget);
     expect(find.text('Leave event'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Local demo check-in'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(EventDetailsScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.text('Local demo check-in'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            widget.properties.label ==
+                'Local demo check-in for Tech Mixer 2026',
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.text('Local demo check-in'));
+    await tester.pumpAndSettle();
+    expect(find.text('✓ Checked in locally'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    semantics.dispose();
+  });
+
+  testWidgets('checked-in details remain usable at a compact viewport', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 480);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    final checkIns = TestCheckInRepository()
+      ..records.add(
+        EventCheckIn(
+          eventId: 'tech-mixer-2026',
+          identityId: 'identity-a',
+          checkedInAt: DateTime.utc(2026, 8, 21, 23, 42),
+          method: EventCheckInMethod.localDemo,
+        ),
+      );
+    await tester.pumpWidget(
+      appAt(
+        '/app/events/tech-mixer-2026',
+        TestParticipationRepository(),
+        checkIns: checkIns,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('✓ Checked in locally'),
+      200,
+      scrollable: find
+          .descendant(
+            of: find.byType(EventDetailsScreen),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    expect(find.text('✓ Checked in locally'), findsOneWidget);
+    expect(find.text('Local demo check-in'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

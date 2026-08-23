@@ -345,59 +345,56 @@ class _CheckInSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          joinedIds.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => const Text(
-              'Check-in becomes available after participation loads.',
+          checkIns.when(
+            loading: () => Center(
+              child: Semantics(
+                label: 'Loading check-in status',
+                child: const CircularProgressIndicator(),
+              ),
             ),
-            data: (ids) {
-              if (!ids.contains(event.id)) {
-                return const Text('Join this event to enable check-in.');
+            error: (error, stack) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("We couldn't load your check-in status."),
+                TextButton(onPressed: onRetry, child: const Text('Try again')),
+              ],
+            ),
+            data: (records) {
+              EventCheckIn? checkIn;
+              for (final record in records) {
+                if (record.eventId == event.id) checkIn = record;
               }
-              return checkIns.when(
-                loading: () => Center(
-                  child: Semantics(
-                    label: 'Loading check-in status',
-                    child: const CircularProgressIndicator(),
-                  ),
-                ),
-                error: (error, stack) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("We couldn't load your check-in status."),
-                    TextButton(
-                      onPressed: onRetry,
-                      child: const Text('Try again'),
-                    ),
-                  ],
-                ),
-                data: (records) {
-                  EventCheckIn? checkIn;
-                  for (final record in records) {
-                    if (record.eventId == event.id) checkIn = record;
-                  }
-                  if (checkIn != null) {
-                    final local = checkIn.checkedInAt.toLocal();
-                    final minute = local.minute.toString().padLeft(2, '0');
-                    return Semantics(
-                      label: 'Checked in locally to ${event.title}',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '✓ Checked in locally',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            'Recorded ${local.month}/${local.day}/${local.year} '
-                            'at ${local.hour}:$minute',
-                          ),
-                        ],
+              if (checkIn != null) {
+                final local = checkIn.checkedInAt.toLocal();
+                final minute = local.minute.toString().padLeft(2, '0');
+                return Semantics(
+                  label: 'Checked in locally to ${event.title}',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '✓ Checked in locally',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    );
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Recorded ${local.month}/${local.day}/${local.year} '
+                        'at ${local.hour}:$minute',
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return joinedIds.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => const Text(
+                  'Check-in becomes available after participation loads.',
+                ),
+                data: (ids) {
+                  if (!ids.contains(event.id)) {
+                    return const Text('Join this event to enable check-in.');
                   }
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

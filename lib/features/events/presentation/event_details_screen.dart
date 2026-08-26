@@ -8,6 +8,7 @@ import '../../../shared/widgets/mitzone_card.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../data/event_providers.dart';
 import '../domain/event.dart';
+import '../domain/event_check_in.dart';
 import 'event_category_presentation.dart';
 
 class EventDetailsScreen extends ConsumerStatefulWidget {
@@ -26,6 +27,7 @@ class EventDetailsScreen extends ConsumerStatefulWidget {
 
 class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
   bool _isMutating = false;
+  bool _isCheckingIn = false;
 
   void _back() {
     if (widget.origin == EventDetailsOrigin.home) {
@@ -65,6 +67,30 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
     }
   }
 
+  Future<void> _checkIn() async {
+    if (_isCheckingIn) return;
+    setState(() => _isCheckingIn = true);
+    try {
+      final recorded = await ref
+          .read(eventCheckInControllerProvider)
+          .recordLocalDemoCheckIn(widget.eventId);
+      if (!recorded && mounted) return;
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "We couldn't record your check-in. Please try again.",
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCheckingIn = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final event = ref.watch(eventCatalogProvider).getById(widget.eventId);
@@ -72,10 +98,14 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
     return _EventDetailsContent(
       event: event,
       joinedIds: ref.watch(joinedEventIdsProvider),
+      checkIns: ref.watch(eventCheckInsProvider),
       isMutating: _isMutating,
+      isCheckingIn: _isCheckingIn,
       onBack: _back,
       onSetJoined: _setJoined,
+      onCheckIn: _checkIn,
       onRetryParticipation: () => ref.invalidate(joinedEventIdsProvider),
+      onRetryCheckIns: () => ref.invalidate(eventCheckInsProvider),
     );
   }
 }
@@ -84,18 +114,26 @@ class _EventDetailsContent extends StatelessWidget {
   const _EventDetailsContent({
     required this.event,
     required this.joinedIds,
+    required this.checkIns,
     required this.isMutating,
+    required this.isCheckingIn,
     required this.onBack,
     required this.onSetJoined,
+    required this.onCheckIn,
     required this.onRetryParticipation,
+    required this.onRetryCheckIns,
   });
 
   final Event event;
   final AsyncValue<Set<String>> joinedIds;
+  final AsyncValue<List<EventCheckIn>> checkIns;
   final bool isMutating;
+  final bool isCheckingIn;
   final VoidCallback onBack;
   final ValueChanged<bool> onSetJoined;
+  final VoidCallback onCheckIn;
   final VoidCallback onRetryParticipation;
+  final VoidCallback onRetryCheckIns;
 
   @override
   Widget build(BuildContext context) {
@@ -258,7 +296,137 @@ class _EventDetailsContent extends StatelessWidget {
               },
             ),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          _CheckInSection(
+            event: event,
+            joinedIds: joinedIds,
+            checkIns: checkIns,
+            isCheckingIn: isCheckingIn,
+            onCheckIn: onCheckIn,
+            onRetry: onRetryCheckIns,
+          ),
           const SizedBox(height: AppSpacing.xxl),
+        ],
+      ),
+    );
+  }
+}
+
+class _CheckInSection extends StatelessWidget {
+  const _CheckInSection({
+    required this.event,
+    required this.joinedIds,
+    required this.checkIns,
+    required this.isCheckingIn,
+    required this.onCheckIn,
+    required this.onRetry,
+  });
+
+  final Event event;
+  final AsyncValue<Set<String>> joinedIds;
+  final AsyncValue<List<EventCheckIn>> checkIns;
+  final bool isCheckingIn;
+  final VoidCallback onCheckIn;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return MitzoneCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'EVENT CHECK-IN',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          checkIns.when(
+            loading: () => Center(
+              child: Semantics(
+                label: 'Loading check-in status',
+                child: const CircularProgressIndicator(),
+              ),
+            ),
+            error: (error, stack) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("We couldn't load your check-in status."),
+                TextButton(onPressed: onRetry, child: const Text('Try again')),
+              ],
+            ),
+            data: (records) {
+              EventCheckIn? checkIn;
+              for (final record in records) {
+                if (record.eventId == event.id) checkIn = record;
+              }
+              if (checkIn != null) {
+                final local = checkIn.checkedInAt.toLocal();
+                final minute = local.minute.toString().padLeft(2, '0');
+                return Semantics(
+                  label: 'Checked in locally to ${event.title}',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '✓ Checked in locally',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'Recorded ${local.month}/${local.day}/${local.year} '
+                        'at ${local.hour}:$minute',
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return joinedIds.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => const Text(
+                  'Check-in becomes available after participation loads.',
+                ),
+                data: (ids) {
+                  if (!ids.contains(event.id)) {
+                    return const Text('Join this event to enable check-in.');
+                  }
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Records a check-in on this device. Verification will '
+                        'be added later.',
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      Semantics(
+                        label: 'Local demo check-in for ${event.title}',
+                        button: true,
+                        excludeSemantics: true,
+                        child: FilledButton.icon(
+                          onPressed: isCheckingIn ? null : onCheckIn,
+                          icon: isCheckingIn
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.how_to_reg_outlined),
+                          label: const Text('Local demo check-in'),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ],
       ),
     );

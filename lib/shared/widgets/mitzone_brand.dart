@@ -59,8 +59,29 @@ class _BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.22),
+      child: Image.asset(
+        'assets/branding/mitzone_app_icon.png',
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.high,
+        errorBuilder: (context, error, stackTrace) =>
+            _BrandMarkFallback(size: size),
+      ),
+    );
+  }
+}
+
+class _BrandMarkFallback extends StatelessWidget {
+  const _BrandMarkFallback({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Temporary brand mark: A stylized "M" combined with a connection point motif
     return Container(
       width: size,
       height: size,

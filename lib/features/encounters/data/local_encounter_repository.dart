@@ -1,5 +1,5 @@
 import '../../events/domain/event_check_in.dart';
-import '../domain/encounter.dart';
+import 'package:mitzone/features/encounters/domain/encounter.dart';
 import '../domain/encounter_engine.dart';
 import '../domain/encounter_repository.dart';
 

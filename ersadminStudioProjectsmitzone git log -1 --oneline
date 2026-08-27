@@ -1,0 +1,184 @@
+[33mcommit 0ebc35a3a0639c0d0f06d9f0a8258cf80dc4da72[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Jose Maria <josemolina0425@gmail.com>
+Date:   Wed Aug 26 22:36:50 2026 -0400
+
+    number5
+
+[33mcommit 0d8baea3956805f5f86ce4e4e456dcd7d41865e2[m
+Author: Jose Maria <josemolina0425@gmail.com>
+Date:   Wed Aug 26 22:26:12 2026 -0400
+
+    number4
+
+[33mcommit db1038b883fa33455be726640029deb7c44098dd[m
+Author: Jose Maria <josemolina0425@gmail.com>
+Date:   Wed Aug 26 22:20:45 2026 -0400
+
+    number3
+
+[33mcommit da476a858795aaaca50da8ee3d8cef1165bcef0b[m
+Author: Jose Maria <josemolina0425@gmail.com>
+Date:   Wed Aug 26 22:06:54 2026 -0400
+
+    number2
+
+[33mcommit 876fcb893082fb24bb99b429cd1b521640f698af[m
+Author: Jose Maria <josemolina0425@gmail.com>
+Date:   Wed Aug 26 22:06:13 2026 -0400
+
+    number2
+
+[33mcommit e17779b85916f0a51ba82e636565868752699184[m
+Author: Jose Maria <josemolina0425@gmail.com>
+Date:   Wed Aug 26 20:13:42 2026 -0400
+
+    feat: add mock user development foundation
+
+[33mcommit 9d1efa1c6e2226333aff5bdd6bee8446c3f66e52[m
+Merge: b77ab83 786f7a6
+Author: Jose Maria <josemolina0425@gmail.com>
+Date:   Wed Aug 26 19:53:48 2026 -0400
+
+    Merge branch 'main' of https://github.com/hmartinezd/mitzone
+
+[33mcommit b77ab8365064759e6c13b54938dcaee9734ffa47[m
+Author: Jose Maria <josemolina0425@gmail.com>
+Date:   Wed Aug 26 19:49:15 2026 -0400
+
+    updates icon
+
+[33mcommit 786f7a611ffaffbf1f5db9231aceef03bb8b214c[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Sun Aug 23 01:52:34 2026 -0400
+
+    fix(events): preserve historical check-in state
+
+[33mcommit 5c5e613204f458d556abaad422edfba2feb97b92[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Fri Aug 21 19:36:32 2026 -0400
+
+    feat(events): add local event check-in foundation
+
+[33mcommit c23ab2c69e44d3f3a8b98edad33fa0636eb310be[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Mon Aug 17 17:12:57 2026 -0400
+
+    `feat(profile): activate polished profile experience`
+
+[33mcommit b8853f9cefa3c9518287249015f043bc5080e992[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Thu Aug 13 13:11:31 2026 -0400
+
+    Phase 10 closure is implemented and locally green.
+
+[33mcommit ee3358ff1639555eff145829352959e0a3be0089[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Thu Aug 13 10:51:43 2026 -0400
+
+    feat(events): add local event participation experience
+
+[33mcommit e55252730ed30d72de9e7d2cda500f432586c86a[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Thu Aug 13 10:03:53 2026 -0400
+
+    Final git status contains the expected ten modified/new files, all uncommitted. Intentional feature boundaries remain unchanged: no authentication, Supabase backend/migrations, QR scanner, geolocation, matching, notifications, or real Chat implementation.
+
+[33mcommit f0863a8212e2d5855a78d6cd5938dd619fbda02d[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Mon Aug 10 16:32:53 2026 -0400
+
+    The failing cases are now clear
+
+[33mcommit d9931375fe702caaf9047a42efbcd1aadf9f43d4[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Mon Aug 10 16:26:34 2026 -0400
+
+    The failing cases are now clear
+
+[33mcommit 2352b4c2712c9fc896cc65da6ab8b6d565bb010e[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Sat Aug 8 00:52:55 2026 -0400
+
+    I have successfully completed Phase 8 — Profile and Settings.
+
+[33mcommit 6ee8e7ed60c0e3ab6968eac9656bda21c6f2a0be[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Sat Aug 8 00:10:14 2026 -0400
+
+    I have successfully completed Phase 8 — Profile and Settings.
+
+[33mcommit ea373d7460f45f94eb55f68a741ef61c06f55f26[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Fri Aug 7 23:34:22 2026 -0400
+
+    Phase 7 is complete. I have replaced the temporary Home placeholder with a full product discovery dashboard.
+
+[33mcommit 29c70ae31439ab68341de131f457a3dacd870e22[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Fri Aug 7 23:19:40 2026 -0400
+
+    Phase 6 is now fully validated and closed. I am ready to proceed to Phase 7 Home upon your request.
+
+[33mcommit 56fea714dfa895784a75b6147594062e2d46beff[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Fri Aug 7 22:59:27 2026 -0400
+
+    Phase 6 — Main Navigation is complete. I have implemented the core navigation architecture using go_router's StatefulShellRoute to support persistent branch state across the five primary destinations. I also completed the mandatory Phase 5 closure tasks, including correcting the entry-failure routing and removing premature Supabase migrations.
+
+[33mcommit f14859de788277224d7f1c401d57bca5b66b42ec[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Fri Aug 7 22:24:16 2026 -0400
+
+    Phase 6 — Main Navigation is complete. I have implemented the core navigation architecture using go_router's StatefulShellRoute to support persistent branch state across the five primary destinations. I also completed the mandatory Phase 5 closure tasks, including correcting the entry-failure routing and removing premature Supabase migrations.
+
+[33mcommit 1ec90f43a955cf5b310efca6210d9f6c8cba940b[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Fri Aug 7 21:51:29 2026 -0400
+
+    The project now supports a stable, persistent local user identity and a minimum profile creation flow (Display Name + Optional Avatar). This infrastructure allows the team to continue building product features like Main Navigation and Home without blocking on Supabase backend configuration.
+
+[33mcommit e63fcd110f9bfb79da14eb42cd731be9359832b5[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Fri Aug 7 20:51:00 2026 -0400
+
+    The project has undergone a mandatory Visual System closure pass to fix formatting, accessibility, and theme completeness issues, followed by the implementation of a modern, animated Splash Screen feature.
+
+[33mcommit 2d657f2551fdcd64b55b4071cddc04e627b0a075[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Fri Aug 7 20:38:17 2026 -0400
+
+    The project has undergone a mandatory Visual System closure pass to fix formatting, accessibility, and theme completeness issues, followed by the implementation of a modern, animated Splash Screen feature.
+
+[33mcommit 33cf69cd8f27f1949fd4d53823ae584e1b8266fa[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Wed Aug 5 19:05:04 2026 -0400
+
+    The Visual System and Shared Components phase is now complete. Mitzone has a robust, Material 3-compliant dark theme, a comprehensive set of design tokens, and a reusable component library verified by automated tests.
+
+[33mcommit e5cde58873cf0bd62fd84e3c75e38ac5e6b4f708[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Wed Aug 5 18:41:32 2026 -0400
+
+    The Foundation Hardening correction pass is now complete. The project architecture is significantly more robust, testable, and secure.
+
+[33mcommit d34377de97d827951c586b85d610b9b67f97109a[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Wed Aug 5 17:20:29 2026 -0400
+
+    The planned implementation order has been corrected to:
+    1.
+    Foundation hardening (Current)
+    2.
+    Visual system and shared components
+    3.
+    Splash Screen
+    4.
+    Onboarding
+    5.
+    Email/password authentication (with verification) ... and so on.
+
+[33mcommit 9b4596b860c2ee878911191dee02e3943fe73d4f[m
+Author: Hector Martinez <hecoraidis@gmail.com>
+Date:   Wed Aug 5 16:58:23 2026 -0400
+
+    First push

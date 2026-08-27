@@ -91,11 +91,17 @@ class _DeveloperUserSection extends ConsumerWidget {
     final selected = await showModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const ListTile(title: Text('Switch mock user')),
-          for (final user in repository.users)
-            RadioListTile<String>(value: user.id, groupValue: repository.currentUser.id, title: Text(user.displayName), onChanged: (id) => Navigator.pop(context, id)),
-        ]),
+        child: RadioGroup<String>(
+          groupValue: repository.currentUser.id,
+          onChanged: (id) {
+            if (id != null) Navigator.pop(context, id);
+          },
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const ListTile(title: Text('Switch mock user')),
+            for (final user in repository.users)
+              RadioListTile<String>(value: user.id, title: Text(user.displayName)),
+          ]),
+        ),
       ),
     );
     if (selected != null) await repository.setCurrentUser(selected);

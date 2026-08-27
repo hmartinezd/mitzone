@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/identity/mock_identity_repository.dart';
 import '../../../shared/widgets/mitzone_card.dart';
 import '../../../shared/widgets/mitzone_empty_state.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
-import '../../events/data/demo_events.dart';
 import '../data/encounter_providers.dart';
 import '../domain/encounter.dart';
+import '../domain/profile_affinity.dart';
+import '../../profile/domain/user_profile.dart';
 
 class MatchesScreen extends ConsumerWidget {
   const MatchesScreen({super.key});
@@ -31,8 +31,10 @@ class _EncounterCard extends StatelessWidget {
   final Encounter encounter;
   @override
   Widget build(BuildContext context) {
-    final user = MockUsers.all.firstWhere((u) => u.id == encounter.otherUserId);
-    final event = demoEvents.firstWhere((e) => e.id == encounter.eventId);
+    final user = ProviderScope.containerOf(context).read(encounterProfileProvider(encounter.otherUserId));
+    final current = ProviderScope.containerOf(context).read(encounterProfileProvider(encounter.currentUserId));
+    final event = ProviderScope.containerOf(context).read(encounterEventProvider(encounter.eventId));
+    if (event == null) return const SizedBox.shrink();
     final d = encounter.overlapDuration;
     final duration = '${d.inHours > 0 ? '${d.inHours}h ' : ''}${d.inMinutes.remainder(60)}m';
     return MitzoneCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -41,7 +43,7 @@ class _EncounterCard extends StatelessWidget {
       const Text('You were both at'),
       Text(event.title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
       Text('${_time(encounter.overlapStart)} – ${_time(encounter.overlapEnd)} · Shared for $duration'),
-      if (user.interests.isNotEmpty) ...[const SizedBox(height: 8), Text(user.interests.take(3).join(' · '))],
+      if (ProfileAffinity.sharedInterests(current, user).isNotEmpty) ...[const SizedBox(height: 8), Text(ProfileAffinity.sharedInterests(current, user).take(3).join(' · '))],
       const SizedBox(height: 12),
       Row(children: [
         OutlinedButton(onPressed: () => _showProfile(context, user, event.title), child: const Text('View profile')),
@@ -51,5 +53,5 @@ class _EncounterCard extends StatelessWidget {
   }
 
   String _time(DateTime value) { final v = value.toLocal(); final h = v.hour; return '${h % 12 == 0 ? 12 : h % 12}:${v.minute.toString().padLeft(2, '0')} ${h >= 12 ? 'PM' : 'AM'}'; }
-  void _showProfile(BuildContext context, dynamic user, String event) => showDialog<void>(context: context, builder: (_) => AlertDialog(title: Text(user.displayName), content: Text('${user.bio ?? ''}\n\n$event\n\nInterests: ${user.interests.join(' · ')}\nLanguages: ${user.languages.join(' · ')}'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))]));
+  void _showProfile(BuildContext context, UserProfile user, String event) => showDialog<void>(context: context, builder: (_) => AlertDialog(title: Text(user.displayName), content: Text('${user.bio ?? ''}\n${user.city ?? ''}\n\n$event\n\nInterests: ${user.interests.join(' · ')}\nLanguages: ${user.languages.join(' · ')}'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))]));
 }

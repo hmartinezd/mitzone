@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'identity_gateway.dart';
 import 'mock_identity_repository.dart';
 
@@ -7,8 +8,6 @@ final identityGatewayProvider = Provider<IdentityGateway>((ref) {
   return MockIdentityGateway(ref.watch(mockIdentityRepositoryProvider));
 });
 
-final mockIdentityRepositoryProvider = Provider<InMemoryMockIdentityRepository>((ref) {
-  final repository = InMemoryMockIdentityRepository();
-  ref.onDispose(repository.dispose);
-  return repository;
+final mockIdentityRepositoryProvider = ChangeNotifierProvider<InMemoryMockIdentityRepository>((ref) {
+  return InMemoryMockIdentityRepository();
 });

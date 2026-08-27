@@ -29,11 +29,17 @@ class MitzoneBrand extends StatelessWidget {
           _BrandMark(size: size),
           if (showText) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Mitzone',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.2,
+            // The supplied logo already contains the Mitzone wordmark. Keep
+            // the text in the tree for accessibility and backwards
+            // compatibility with callers that request the brand label.
+            Opacity(
+              opacity: 0,
+              child: Text(
+                'Mitzone',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
               ),
             ),
           ],
@@ -60,12 +66,12 @@ class _BrandMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(size * 0.22),
+      borderRadius: BorderRadius.circular(size * 0.12),
       child: Image.asset(
-        'assets/branding/mitzone_app_icon.png',
+        'assets/branding/mitzone_logo.jpg',
         width: size,
         height: size,
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
         filterQuality: FilterQuality.high,
         errorBuilder: (context, error, stackTrace) =>
             _BrandMarkFallback(size: size),

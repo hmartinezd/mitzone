@@ -8,6 +8,7 @@ final identityGatewayProvider = Provider<IdentityGateway>((ref) {
   return MockIdentityGateway(ref.watch(mockIdentityRepositoryProvider));
 });
 
-final mockIdentityRepositoryProvider = ChangeNotifierProvider<InMemoryMockIdentityRepository>((ref) {
-  return InMemoryMockIdentityRepository();
-});
+final mockIdentityRepositoryProvider =
+    ChangeNotifierProvider<InMemoryMockIdentityRepository>((ref) {
+      return InMemoryMockIdentityRepository();
+    });

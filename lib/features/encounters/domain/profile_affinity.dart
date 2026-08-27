@@ -8,7 +8,7 @@ abstract final class ProfileAffinity {
   static bool sharedGoal(UserProfile a, UserProfile b) =>
       a.connectionGoal != null && a.connectionGoal == b.connectionGoal;
   static List<String> _intersection(List<String> a, List<String> b) => [
-        for (final value in a)
-          if (b.contains(value)) value,
-      ];
+    for (final value in a)
+      if (b.contains(value)) value,
+  ];
 }

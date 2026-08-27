@@ -1,6 +1,103 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/identity/mock_identity_repository.dart';
+
+import '../../../core/identity/identity_providers.dart';
 import '../data/chat_providers.dart';
-class ConversationScreen extends ConsumerStatefulWidget { const ConversationScreen({required this.conversationId,super.key}); final String conversationId; @override ConsumerState<ConversationScreen> createState()=>_S(); }
-class _S extends ConsumerState<ConversationScreen> { final input=TextEditingController(); @override void dispose(){input.dispose();super.dispose();} @override Widget build(BuildContext context){final me=ref.watch(mockIdentityRepositoryProvider).currentUser.id; final state=ref.watch(chatMessagesProvider(widget.conversationId)); return Scaffold(appBar:AppBar(title:const Text('Conversation')),body:Column(children:[Expanded(child:state.when(loading:()=>const Center(child:CircularProgressIndicator()),error:(e,_)=>Center(child:Text('$e')),data:(ms)=>ListView(padding:const EdgeInsets.all(16),children:ms.map((m)=>Align(alignment:m.senderUserId==me?Alignment.centerRight:Alignment.centerLeft,child:Container(margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:m.senderUserId==me?Theme.of(context).colorScheme.primaryContainer:Theme.of(context).colorScheme.surfaceContainerHigh,borderRadius:BorderRadius.circular(16)),child:Text(m.text)))).toList()))),SafeArea(child:Row(children:[Expanded(child:TextField(controller:input)),IconButton(icon:const Icon(Icons.send),onPressed:()async{try{await ref.read(chatRepositoryProvider).sendMessage(conversationId:widget.conversationId,senderUserId:me,text:input.text);input.clear();ref.invalidate(chatMessagesProvider(widget.conversationId));ref.invalidate(chatConversationsProvider);}catch(e){if(context.mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('$e')));}})]))]));}}
+
+class ConversationScreen extends ConsumerStatefulWidget {
+  const ConversationScreen({required this.conversationId, super.key});
+  final String conversationId;
+
+  @override
+  ConsumerState<ConversationScreen> createState() => _ConversationScreenState();
+}
+
+class _ConversationScreenState extends ConsumerState<ConversationScreen> {
+  final input = TextEditingController();
+
+  @override
+  void dispose() {
+    input.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUserId = ref
+        .watch(mockIdentityRepositoryProvider)
+        .currentUser
+        .id;
+    final messages = ref.watch(chatMessagesProvider(widget.conversationId));
+    return Scaffold(
+      appBar: AppBar(title: const Text('Conversation')),
+      body: Column(
+        children: [
+          Expanded(
+            child: messages.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (_, _) => const Center(
+                child: Text('This conversation is unavailable right now.'),
+              ),
+              data: (items) => ListView(
+                padding: const EdgeInsets.all(16),
+                children: items.map((message) {
+                  final mine = message.senderUserId == currentUserId;
+                  return Align(
+                    alignment: mine
+                        ? Alignment.centerRight
+                        : Alignment.centerLeft,
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: mine
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(message.text),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Row(
+              children: [
+                Expanded(child: TextField(controller: input)),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: () => _send(currentUserId),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _send(String currentUserId) async {
+    try {
+      await ref
+          .read(chatRepositoryProvider)
+          .sendMessage(
+            conversationId: widget.conversationId,
+            senderUserId: currentUserId,
+            text: input.text,
+          );
+      input.clear();
+      ref.invalidate(chatMessagesProvider(widget.conversationId));
+      ref.invalidate(chatConversationsProvider);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your message could not be sent.')),
+        );
+      }
+    }
+  }
+}

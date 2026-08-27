@@ -1,5 +1,12 @@
 class Encounter {
-  const Encounter({required this.id, required this.currentUserId, required this.otherUserId, required this.eventId, required this.overlapStart, required this.overlapEnd});
+  const Encounter({
+    required this.id,
+    required this.currentUserId,
+    required this.otherUserId,
+    required this.eventId,
+    required this.overlapStart,
+    required this.overlapEnd,
+  });
   final String id;
   final String currentUserId;
   final String otherUserId;

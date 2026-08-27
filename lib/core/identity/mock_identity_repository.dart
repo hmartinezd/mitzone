@@ -14,7 +14,10 @@ class MockIdentityGateway implements IdentityGateway {
   MockIdentityGateway(this._repository);
   final MockIdentityRepository _repository;
 
-  AppIdentity _identity() => AppIdentity(id: _repository.currentUser.id, type: AppIdentityType.localDevelopment);
+  AppIdentity _identity() => AppIdentity(
+    id: _repository.currentUser.id,
+    type: AppIdentityType.localDevelopment,
+  );
 
   @override
   Future<AppIdentity> ensureIdentity() async => _identity();
@@ -59,9 +62,41 @@ abstract final class MockUsers {
   static const emmaId = 'mock-user-emma-v1';
 
   static final all = <UserProfile>[
-    const UserProfile(id: joseId, displayName: 'Jose', bio: 'Always up for a good game and a great meal.', city: 'New York', languages: ['English', 'Spanish'], interests: ['Soccer', 'Tennis', 'Music', 'Food'], connectionGoal: ConnectionGoal.both),
-    const UserProfile(id: sofiaId, displayName: 'Sofia', bio: 'Exploring the city one playlist and trip at a time.', city: 'New York', languages: ['English', 'Spanish'], interests: ['Tennis', 'Music', 'Travel', 'Food'], connectionGoal: ConnectionGoal.social),
-    const UserProfile(id: danielId, displayName: 'Daniel', bio: 'Building things, staying active, and meeting curious people.', city: 'New York', languages: ['English'], interests: ['Soccer', 'Technology', 'Business', 'Fitness'], connectionGoal: ConnectionGoal.professional),
-    const UserProfile(id: emmaId, displayName: 'Emma', bio: 'Creative spirit who loves sharing local discoveries.', city: 'New York', languages: ['English', 'French'], interests: ['Music', 'Art', 'Food', 'Travel'], connectionGoal: ConnectionGoal.social),
+    const UserProfile(
+      id: joseId,
+      displayName: 'Jose',
+      bio: 'Always up for a good game and a great meal.',
+      city: 'New York',
+      languages: ['English', 'Spanish'],
+      interests: ['Soccer', 'Tennis', 'Music', 'Food'],
+      connectionGoal: ConnectionGoal.both,
+    ),
+    const UserProfile(
+      id: sofiaId,
+      displayName: 'Sofia',
+      bio: 'Exploring the city one playlist and trip at a time.',
+      city: 'New York',
+      languages: ['English', 'Spanish'],
+      interests: ['Tennis', 'Music', 'Travel', 'Food'],
+      connectionGoal: ConnectionGoal.social,
+    ),
+    const UserProfile(
+      id: danielId,
+      displayName: 'Daniel',
+      bio: 'Building things, staying active, and meeting curious people.',
+      city: 'New York',
+      languages: ['English'],
+      interests: ['Soccer', 'Technology', 'Business', 'Fitness'],
+      connectionGoal: ConnectionGoal.professional,
+    ),
+    const UserProfile(
+      id: emmaId,
+      displayName: 'Emma',
+      bio: 'Creative spirit who loves sharing local discoveries.',
+      city: 'New York',
+      languages: ['English', 'French'],
+      interests: ['Music', 'Art', 'Food', 'Travel'],
+      connectionGoal: ConnectionGoal.social,
+    ),
   ];
 }

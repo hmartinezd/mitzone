@@ -12,9 +12,22 @@ class EncounterEngine {
     for (final a in mine) {
       for (final b in _presences) {
         if (b.identityId == userId || b.eventId != a.eventId) continue;
-        final overlap = PresenceOverlap.calculate(a, b, referenceTime: referenceTime);
+        final overlap = PresenceOverlap.calculate(
+          a,
+          b,
+          referenceTime: referenceTime,
+        );
         if (!overlap.overlaps) continue;
-        result.add(Encounter(id: '${userId}_${b.identityId}_${a.eventId}', currentUserId: userId, otherUserId: b.identityId, eventId: a.eventId, overlapStart: overlap.overlapStart!, overlapEnd: overlap.overlapEnd!));
+        result.add(
+          Encounter(
+            id: '${userId}_${b.identityId}_${a.eventId}',
+            currentUserId: userId,
+            otherUserId: b.identityId,
+            eventId: a.eventId,
+            overlapStart: overlap.overlapStart!,
+            overlapEnd: overlap.overlapEnd!,
+          ),
+        );
       }
     }
     final merged = <String, Encounter>{};

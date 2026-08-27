@@ -6,6 +6,7 @@ import '../domain/connection_repository.dart';
 import '../domain/connection_request.dart';
 import 'local_connection_repository.dart';
 import '../../encounters/data/encounter_providers.dart';
+import '../../encounters/domain/encounter.dart';
 
 final connectionRepositoryProvider = Provider<ConnectionRepository>((ref) => LocalConnectionRepository(ref.watch(localStorageProvider)));
 final incomingConnectionRequestsProvider = FutureProvider<List<ConnectionRequest>>((ref) {
@@ -20,9 +21,10 @@ final connectionsProvider = FutureProvider<List<Connection>>((ref) {
   final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
   return ref.watch(connectionRepositoryProvider).getConnections(id);
 });
-final relationshipProvider = FutureProvider.family<RelationshipState, String>((ref, otherUserId) {
+final relationshipProvider = FutureProvider.family<RelationshipState, Encounter>((ref, encounter) {
   final current = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
-  return ref.watch(connectionRepositoryProvider).getRelationshipState(userAId: current, userBId: otherUserId);
+  final pair = [current, encounter.otherUserId]..sort();
+  return ref.watch(connectionRepositoryProvider).getRelationshipState(userAId: current, userBId: encounter.otherUserId, encounterId: encounter.id, contextId: '${encounter.eventId}:${pair.join(':')}');
 });
 final connectionControllerProvider = Provider((ref) => ConnectionController(ref));
 

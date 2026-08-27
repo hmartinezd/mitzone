@@ -9,6 +9,8 @@ import '../domain/profile_affinity.dart';
 import '../../profile/domain/user_profile.dart';
 import '../../connections/data/connection_providers.dart';
 import '../../connections/domain/connection_request.dart';
+import 'package:go_router/go_router.dart';
+import '../../chat/data/chat_providers.dart';
 
 class MatchesScreen extends ConsumerWidget {
   const MatchesScreen({super.key});
@@ -41,7 +43,7 @@ class _EncounterCard extends ConsumerWidget {
     final user = ref.watch(encounterProfileProvider(encounter.otherUserId));
     final current = ref.watch(encounterProfileProvider(encounter.currentUserId));
     final event = ref.watch(encounterEventProvider(encounter.eventId));
-    final relationship = ref.watch(relationshipProvider(encounter.otherUserId));
+    final relationship = ref.watch(relationshipProvider(encounter));
     if (event == null) return const SizedBox.shrink();
     final sharedInterests = ProfileAffinity.sharedInterests(current, user);
     final d = encounter.overlapDuration;
@@ -60,7 +62,7 @@ class _EncounterCard extends ConsumerWidget {
         relationship.when(data: (state) => switch (state) {
           RelationshipState.outgoingPending => const Text('Request sent'),
           RelationshipState.incomingPending => const Text('Incoming request'),
-          RelationshipState.connected => const Text('Connected'),
+          RelationshipState.connected => Wrap(spacing: 8, children: [const Text('Connected'), TextButton(onPressed: () async { final connections = await ref.read(connectionsProvider.future); final connection = connections.firstWhere((c) => (c.userAId == encounter.currentUserId && c.userBId == encounter.otherUserId) || (c.userAId == encounter.otherUserId && c.userBId == encounter.currentUserId)); final conversation = await ref.read(chatRepositoryProvider).getOrCreateConversation(connectionId: connection.id, userId: encounter.currentUserId); if (context.mounted) context.push('/app/chat/${conversation.id}'); }, child: const Text('Message')]),
           RelationshipState.declined => const Text('Not now'),
           RelationshipState.none => TextButton(onPressed: () => ref.read(connectionControllerProvider).send(encounter.otherUserId, encounter.id), child: const Text('Say Hi')),
         }, loading: () => const SizedBox.shrink(), error: (_, __) => const Text('Unavailable')),

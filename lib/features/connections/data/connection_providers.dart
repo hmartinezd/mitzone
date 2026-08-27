@@ -20,6 +20,10 @@ final connectionsProvider = FutureProvider<List<Connection>>((ref) {
   final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
   return ref.watch(connectionRepositoryProvider).getConnections(id);
 });
+final relationshipProvider = FutureProvider.family<RelationshipState, String>((ref, otherUserId) {
+  final current = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+  return ref.watch(connectionRepositoryProvider).getRelationshipState(userAId: current, userBId: otherUserId);
+});
 final connectionControllerProvider = Provider((ref) => ConnectionController(ref));
 
 class ConnectionController {
@@ -35,5 +39,5 @@ class ConnectionController {
   }
   Future<ConnectionRequest> accept(String id) async => _refresh(await ref.read(connectionRepositoryProvider).acceptRequest(requestId: id, recipientUserId: ref.read(mockIdentityRepositoryProvider).currentUser.id));
   Future<ConnectionRequest> decline(String id) async => _refresh(await ref.read(connectionRepositoryProvider).declineRequest(requestId: id, recipientUserId: ref.read(mockIdentityRepositoryProvider).currentUser.id));
-  Future<ConnectionRequest> _refresh(ConnectionRequest value) async { ref.invalidate(incomingConnectionRequestsProvider); ref.invalidate(outgoingConnectionRequestsProvider); ref.invalidate(connectionsProvider); return value; }
+  Future<ConnectionRequest> _refresh(ConnectionRequest value) async { ref.invalidate(incomingConnectionRequestsProvider); ref.invalidate(outgoingConnectionRequestsProvider); ref.invalidate(connectionsProvider); ref.invalidate(relationshipProvider); return value; }
 }

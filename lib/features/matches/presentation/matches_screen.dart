@@ -22,7 +22,7 @@ class MatchesScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => const MitzoneEmptyState(title: 'Unable to load encounters', message: 'Please try again later.', icon: Icons.people_outline),
         data: (items) => Column(children: [
-          if (incoming.valueOrNull?.isNotEmpty ?? false) _RequestsSection(requests: incoming.valueOrNull!),
+          if (incoming.hasValue && incoming.value.isNotEmpty) _RequestsSection(requests: incoming.value),
           Expanded(child: items.isEmpty
             ? const MitzoneEmptyState(title: 'No shared moments yet', message: 'Check in at events to discover people you actually crossed paths with.', icon: Icons.people_outline)
             : ListView.separated(padding: const EdgeInsets.only(top: 24, bottom: 32), itemCount: items.length, separatorBuilder: (_, _) => const SizedBox(height: 12), itemBuilder: (context, index) => _EncounterCard(encounter: items[index])),
@@ -41,8 +41,7 @@ class _EncounterCard extends ConsumerWidget {
     final user = ref.watch(encounterProfileProvider(encounter.otherUserId));
     final current = ref.watch(encounterProfileProvider(encounter.currentUserId));
     final event = ref.watch(encounterEventProvider(encounter.eventId));
-    final requests = ref.watch(outgoingConnectionRequestsProvider).valueOrNull ?? const [];
-    final relationship = requests.where((r) => r.encounterId == encounter.id && r.recipientUserId == encounter.otherUserId).firstOrNull;
+    final relationship = ref.watch(relationshipProvider(encounter.otherUserId));
     if (event == null) return const SizedBox.shrink();
     final sharedInterests = ProfileAffinity.sharedInterests(current, user);
     final d = encounter.overlapDuration;
@@ -58,10 +57,13 @@ class _EncounterCard extends ConsumerWidget {
       Row(children: [
         OutlinedButton(onPressed: () => _showProfile(context, user, event.title), child: const Text('View profile')),
         const SizedBox(width: 8),
-        if (relationship?.status == ConnectionRequestStatus.pending) const Text('Request sent')
-        else if (relationship?.status == ConnectionRequestStatus.accepted) const Text('Connected')
-        else if (relationship?.status == ConnectionRequestStatus.declined) const Text('Not now')
-        else TextButton(onPressed: () async { await ref.read(connectionControllerProvider).send(encounter.otherUserId, encounter.id); }, child: const Text('Say Hi')),
+        relationship.when(data: (state) => switch (state) {
+          RelationshipState.outgoingPending => const Text('Request sent'),
+          RelationshipState.incomingPending => const Text('Incoming request'),
+          RelationshipState.connected => const Text('Connected'),
+          RelationshipState.declined => const Text('Not now'),
+          RelationshipState.none => TextButton(onPressed: () => ref.read(connectionControllerProvider).send(encounter.otherUserId, encounter.id), child: const Text('Say Hi')),
+        }, loading: () => const SizedBox.shrink(), error: (_, __) => const Text('Unavailable')),
     ]));
   }
 

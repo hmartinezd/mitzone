@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/identity/identity_providers.dart';
+import '../../../core/identity/mock_identity_repository.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../domain/user_profile.dart';
 import 'avatar_picker.dart';
@@ -27,10 +28,8 @@ final avatarPickerProvider = Provider<AvatarPicker>((ref) {
 
 /// Reusable provider for the profile associated with the current local-development identity.
 final currentProfileProvider = FutureProvider<UserProfile?>((ref) async {
-  final identityGateway = ref.watch(identityGatewayProvider);
+  final mockIdentity = ref.watch(mockIdentityRepositoryProvider);
   final profileRepository = ref.watch(profileRepositoryProvider);
-
-  final identity = await identityGateway.ensureIdentity();
-
-  return profileRepository.getProfile(identity.id);
+  final user = mockIdentity.currentUser;
+  return await profileRepository.getProfile(user.id) ?? user;
 });

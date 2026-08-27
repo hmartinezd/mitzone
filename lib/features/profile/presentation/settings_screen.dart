@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../shared/widgets/mitzone_card.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/router/app_routes.dart';
+import '../../../core/identity/identity_providers.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -38,6 +40,8 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
+          const _DeveloperUserSection(),
+          const SizedBox(height: AppSpacing.xl),
           _SettingsSection(
             title: 'About',
             items: [
@@ -57,6 +61,41 @@ class SettingsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _DeveloperUserSection extends ConsumerWidget {
+  const _DeveloperUserSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repository = ref.watch(mockIdentityRepositoryProvider);
+    return _SettingsSection(
+      title: 'Developer',
+      items: [
+        _SettingsItem(
+          icon: Icons.developer_mode_outlined,
+          title: 'Current User',
+          subtitle: '${repository.currentUser.displayName}  >',
+          onTap: () => _showUserPicker(context, ref),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _showUserPicker(BuildContext context, WidgetRef ref) async {
+    final repository = ref.read(mockIdentityRepositoryProvider);
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const ListTile(title: Text('Switch mock user')),
+          for (final user in repository.users)
+            RadioListTile<String>(value: user.id, groupValue: repository.currentUser.id, title: Text(user.displayName), onChanged: (id) => Navigator.pop(context, id)),
+        ]),
+      ),
+    );
+    if (selected != null) await repository.setCurrentUser(selected);
   }
 }
 
@@ -108,11 +147,13 @@ class _SettingsItem extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.onTap,
+    this.subtitle,
   });
 
   final IconData icon;
   final String title;
   final VoidCallback onTap;
+  final String? subtitle;
 
   @override
   Widget build(BuildContext context) {
@@ -123,6 +164,7 @@ class _SettingsItem extends StatelessWidget {
         title,
         style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
       ),
+      subtitle: subtitle == null ? null : Text(subtitle!),
       trailing: const Icon(Icons.chevron_right, size: 20),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(

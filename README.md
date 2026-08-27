@@ -33,6 +33,10 @@ demo baseline, not a production-readiness claim.
 
 ## Application Entry Policy
 
+### Mock development identities
+
+Authentication and backend services are intentionally inactive. The app uses local mock identities for development, with Jose as the default. Developers can switch between Jose, Sofia, Daniel, and Emma in Settings under Developer → Current User. This supports future multi-user feature simulation without introducing backend dependencies.
+
 The long-term application-entry rules are:
 
 1. **Active session + complete minimum profile** → Home (/app/home)

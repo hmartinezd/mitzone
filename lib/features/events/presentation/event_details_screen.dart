@@ -327,22 +327,35 @@ class _DeveloperPresenceSection extends ConsumerWidget {
     final attendees = ref.watch(mockEventAttendeesProvider(eventId));
     final theme = Theme.of(context);
     return MitzoneCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('DEVELOPER PRESENCE', style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
-        const SizedBox(height: AppSpacing.sm),
-        if (attendees.isEmpty) const Text('No mock attendees configured.'),
-        for (final presence in attendees)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            title: Text(_displayName(presence.identityId)),
-            subtitle: Text('${_format(presence.checkedInAt)} – ${_format(presence.effectiveCheckedOutAt())}'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'DEVELOPER PRESENCE',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
           ),
-      ]),
+          const SizedBox(height: AppSpacing.sm),
+          if (attendees.isEmpty) const Text('No mock attendees configured.'),
+          for (final presence in attendees)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: Text(_displayName(presence.identityId)),
+              subtitle: Text(
+                '${_format(presence.checkedInAt)} – ${_format(presence.effectiveCheckedOutAt())}',
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  String _displayName(String id) => MockUsers.all.firstWhere((user) => user.id == id).displayName;
+  String _displayName(String id) =>
+      MockUsers.all.firstWhere((user) => user.id == id).displayName;
   String _format(DateTime value) {
     final hour = value.toLocal().hour;
     final minute = value.toLocal().minute.toString().padLeft(2, '0');

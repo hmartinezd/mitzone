@@ -96,11 +96,17 @@ class _DeveloperUserSection extends ConsumerWidget {
           onChanged: (id) {
             if (id != null) Navigator.pop(context, id);
           },
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const ListTile(title: Text('Switch mock user')),
-            for (final user in repository.users)
-              RadioListTile<String>(value: user.id, title: Text(user.displayName)),
-          ]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(title: Text('Switch mock user')),
+              for (final user in repository.users)
+                RadioListTile<String>(
+                  value: user.id,
+                  title: Text(user.displayName),
+                ),
+            ],
+          ),
         ),
       ),
     );

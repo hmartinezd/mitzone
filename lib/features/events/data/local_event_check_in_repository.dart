@@ -62,7 +62,9 @@ class LocalEventCheckInRepository implements EventCheckInRepository {
       eventId: normalizedEventId,
       identityId: identityId,
       checkedInAt: parsedTimestamp.toUtc(),
-      checkedOutAt: checkedOutAt is String ? DateTime.tryParse(checkedOutAt)?.toUtc() : null,
+      checkedOutAt: checkedOutAt is String
+          ? DateTime.tryParse(checkedOutAt)?.toUtc()
+          : null,
       method: parsedMethod,
     );
   }
@@ -103,7 +105,8 @@ class LocalEventCheckInRepository implements EventCheckInRepository {
           {
             'eventId': record.eventId,
             'checkedInAt': record.checkedInAt.toUtc().toIso8601String(),
-            if (record.checkedOutAt != null) 'checkedOutAt': record.checkedOutAt!.toUtc().toIso8601String(),
+            if (record.checkedOutAt != null)
+              'checkedOutAt': record.checkedOutAt!.toUtc().toIso8601String(),
             'method': record.method.name,
           },
       ]),

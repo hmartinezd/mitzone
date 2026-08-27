@@ -125,7 +125,14 @@ GoRouter createAppRouter({
               GoRoute(
                 path: AppRoutes.chat,
                 builder: (context, state) => const ChatScreen(),
-                routes: [GoRoute(path: ':conversationId', builder: (context,state)=>ConversationScreen(conversationId: state.pathParameters['conversationId']!))],
+                routes: [
+                  GoRoute(
+                    path: ':conversationId',
+                    builder: (context, state) => ConversationScreen(
+                      conversationId: state.pathParameters['conversationId']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

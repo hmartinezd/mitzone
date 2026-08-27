@@ -4,7 +4,10 @@ import '../domain/encounter_engine.dart';
 import '../domain/encounter_repository.dart';
 
 class LocalEncounterRepository implements EncounterRepository {
-  const LocalEncounterRepository({required this.currentUserPresence, required this.otherUserPresence});
+  const LocalEncounterRepository({
+    required this.currentUserPresence,
+    required this.otherUserPresence,
+  });
   final List<EventCheckIn> currentUserPresence;
   final List<EventCheckIn> otherUserPresence;
   @override

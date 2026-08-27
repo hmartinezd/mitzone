@@ -62,7 +62,7 @@ class _EncounterCard extends ConsumerWidget {
         relationship.when(data: (state) => switch (state) {
           RelationshipState.outgoingPending => const Text('Request sent'),
           RelationshipState.incomingPending => const Text('Incoming request'),
-          RelationshipState.connected => Wrap(spacing: 8, children: [const Text('Connected'), TextButton(onPressed: () async { final connections = await ref.read(connectionsProvider.future); final connection = connections.firstWhere((c) => (c.userAId == encounter.currentUserId && c.userBId == encounter.otherUserId) || (c.userAId == encounter.otherUserId && c.userBId == encounter.currentUserId)); final conversation = await ref.read(chatRepositoryProvider).getOrCreateConversation(connectionId: connection.id, userId: encounter.currentUserId); if (context.mounted) context.push('/app/chat/${conversation.id}'); }, child: const Text('Message')]),
+          RelationshipState.connected => Wrap(spacing: 8, children: [const Text('Connected'), TextButton(onPressed: () => _message(context, ref), child: const Text('Message'))]),
           RelationshipState.declined => const Text('Not now'),
           RelationshipState.none => TextButton(onPressed: () => ref.read(connectionControllerProvider).send(encounter.otherUserId, encounter.id), child: const Text('Say Hi')),
         }, loading: () => const SizedBox.shrink(), error: (_, __) => const Text('Unavailable')),
@@ -70,6 +70,7 @@ class _EncounterCard extends ConsumerWidget {
   }
 
   String _time(DateTime value) { final v = value.toLocal(); final h = v.hour; return '${h % 12 == 0 ? 12 : h % 12}:${v.minute.toString().padLeft(2, '0')} ${h >= 12 ? 'PM' : 'AM'}'; }
+  Future<void> _message(BuildContext context, WidgetRef ref) async { try { final connections = await ref.read(connectionsProvider.future); final connection = connections.firstWhere((c) => (c.userAId == encounter.currentUserId && c.userBId == encounter.otherUserId) || (c.userAId == encounter.otherUserId && c.userBId == encounter.currentUserId)); final conversation = await ref.read(chatRepositoryProvider).getOrCreateConversation(connectionId: connection.id, userId: encounter.currentUserId); if (context.mounted) context.push('/app/chat/${conversation.id}'); } catch (_) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This conversation is unavailable right now.'))); } }
   void _showProfile(BuildContext context, UserProfile user, String event) => showDialog<void>(context: context, builder: (_) => AlertDialog(title: Text(user.displayName), content: Text('${user.bio ?? ''}\n${user.city ?? ''}\n\n$event\n\nInterests: ${user.interests.join(' · ')}\nLanguages: ${user.languages.join(' · ')}'), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))]));
 }
 

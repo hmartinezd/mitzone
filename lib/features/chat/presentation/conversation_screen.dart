@@ -28,10 +28,16 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         .currentUser
         .id;
     final messages = ref.watch(chatMessagesProvider(widget.conversationId));
+    final conversations = ref.watch(chatConversationsProvider);
+    final contextText = ref.watch(conversationContextProvider(widget.conversationId)).valueOrNull;
+    final conversation = conversations.valueOrNull?.where((c) => c.id == widget.conversationId).firstOrNull;
+    final otherId = conversation == null ? null : conversation.userAId == currentUserId ? conversation.userBId : conversation.userAId;
+    final other = otherId == null ? null : ref.watch(mockIdentityRepositoryProvider).users.where((u) => u.id == otherId).firstOrNull;
     return Scaffold(
-      appBar: AppBar(title: const Text('Conversation')),
+      appBar: AppBar(title: Text(other?.displayName ?? 'Conversation')),
       body: Column(
         children: [
+          if (contextText != null) Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: Text(contextText, style: Theme.of(context).textTheme.bodySmall)),
           Expanded(
             child: messages.when(
               loading: () => const Center(child: CircularProgressIndicator()),

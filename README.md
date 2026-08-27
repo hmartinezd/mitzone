@@ -156,3 +156,5 @@ lib/
 ## Local presence
 
 In the local demo, participation means intending to attend an event, while presence/check-in represents actual attendance. Presence is scoped to the active mock identity, and deterministic mock attendee scenarios are available in development builds. Encounter generation is intentionally deferred; QR and geolocation verification remain future work.
+
+The local flow is: participation → presence → encounter. Encounters are generated only from overlapping presence windows. Connection requests, “Say Hi”, and backend matching are not implemented yet.

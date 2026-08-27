@@ -11,10 +11,15 @@ class PresenceOverlapResult {
 }
 
 abstract final class PresenceOverlap {
-  static PresenceOverlapResult calculate(EventCheckIn a, EventCheckIn b) {
+  static PresenceOverlapResult calculate(
+    EventCheckIn a,
+    EventCheckIn b, {
+    DateTime? referenceTime,
+  }) {
     final start = a.checkedInAt.isAfter(b.checkedInAt) ? a.checkedInAt : b.checkedInAt;
-    final end = a.effectiveCheckedOutAt.isBefore(b.effectiveCheckedOutAt)
-        ? a.effectiveCheckedOutAt : b.effectiveCheckedOutAt;
+    final aEnd = a.effectiveCheckedOutAt(referenceTime: referenceTime);
+    final bEnd = b.effectiveCheckedOutAt(referenceTime: referenceTime);
+    final end = aEnd.isBefore(bEnd) ? aEnd : bEnd;
     if (!start.isBefore(end)) return const PresenceOverlapResult(overlaps: false);
     return PresenceOverlapResult(overlaps: true, overlapStart: start, overlapEnd: end);
   }

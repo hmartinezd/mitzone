@@ -16,7 +16,8 @@ class EventCheckIn {
   final EventCheckInMethod method;
   final DateTime? checkedOutAt;
 
-  DateTime get effectiveCheckedOutAt => checkedOutAt ?? DateTime.now().toUtc();
+  DateTime effectiveCheckedOutAt({DateTime? referenceTime}) =>
+      checkedOutAt ?? (referenceTime ?? checkedInAt);
 }
 
 typedef Presence = EventCheckIn;

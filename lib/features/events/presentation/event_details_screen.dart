@@ -10,7 +10,6 @@ import '../../../shared/widgets/mitzone_page_body.dart';
 import '../data/event_providers.dart';
 import '../domain/event.dart';
 import '../domain/event_check_in.dart';
-import '../data/mock_event_attendees.dart';
 import '../../../core/identity/mock_identity_repository.dart';
 import 'event_category_presentation.dart';
 
@@ -319,13 +318,13 @@ class _EventDetailsContent extends StatelessWidget {
   }
 }
 
-class _DeveloperPresenceSection extends StatelessWidget {
+class _DeveloperPresenceSection extends ConsumerWidget {
   const _DeveloperPresenceSection({required this.eventId});
   final String eventId;
 
   @override
-  Widget build(BuildContext context) {
-    final attendees = mockAttendeesForEvent(eventId);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final attendees = ref.watch(mockEventAttendeesProvider(eventId));
     final theme = Theme.of(context);
     return MitzoneCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -337,7 +336,7 @@ class _DeveloperPresenceSection extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             dense: true,
             title: Text(_displayName(presence.identityId)),
-            subtitle: Text('${_format(presence.checkedInAt)} – ${_format(presence.effectiveCheckedOutAt)}'),
+            subtitle: Text('${_format(presence.checkedInAt)} – ${_format(presence.effectiveCheckedOutAt())}'),
           ),
       ]),
     );

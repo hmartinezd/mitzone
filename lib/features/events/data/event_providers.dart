@@ -9,6 +9,11 @@ import '../domain/event_participation_repository.dart';
 import 'demo_events.dart';
 import 'local_event_check_in_repository.dart';
 import 'local_event_participation_repository.dart';
+import 'mock_event_attendees.dart';
+
+final mockEventAttendeesProvider = Provider.family<List<EventCheckIn>, String>(
+  (ref, eventId) => mockAttendeesForEvent(eventId),
+);
 
 final eventCatalogProvider = Provider<EventCatalog>(
   (ref) => const DemoEventCatalog(),

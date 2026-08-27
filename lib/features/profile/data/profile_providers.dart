@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/identity/identity_providers.dart';
-import '../../../core/identity/mock_identity_repository.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../domain/user_profile.dart';
 import 'avatar_picker.dart';

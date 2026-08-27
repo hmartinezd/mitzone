@@ -153,3 +153,6 @@ lib/
     ├── profile/          # User profile management
     └── events/           # Event discovery
 ```
+## Local presence
+
+In the local demo, participation means intending to attend an event, while presence/check-in represents actual attendance. Presence is scoped to the active mock identity, and deterministic mock attendee scenarios are available in development builds. Encounter generation is intentionally deferred; QR and geolocation verification remain future work.

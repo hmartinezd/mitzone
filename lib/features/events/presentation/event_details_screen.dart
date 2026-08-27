@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,8 @@ import '../../../shared/widgets/mitzone_page_body.dart';
 import '../data/event_providers.dart';
 import '../domain/event.dart';
 import '../domain/event_check_in.dart';
+import '../data/mock_event_attendees.dart';
+import '../../../core/identity/mock_identity_repository.dart';
 import 'event_category_presentation.dart';
 
 class EventDetailsScreen extends ConsumerStatefulWidget {
@@ -305,10 +308,48 @@ class _EventDetailsContent extends StatelessWidget {
             onCheckIn: onCheckIn,
             onRetry: onRetryCheckIns,
           ),
+          if (kDebugMode) ...[
+            const SizedBox(height: AppSpacing.lg),
+            _DeveloperPresenceSection(eventId: event.id),
+          ],
           const SizedBox(height: AppSpacing.xxl),
         ],
       ),
     );
+  }
+}
+
+class _DeveloperPresenceSection extends StatelessWidget {
+  const _DeveloperPresenceSection({required this.eventId});
+  final String eventId;
+
+  @override
+  Widget build(BuildContext context) {
+    final attendees = mockAttendeesForEvent(eventId);
+    final theme = Theme.of(context);
+    return MitzoneCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('DEVELOPER PRESENCE', style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+        const SizedBox(height: AppSpacing.sm),
+        if (attendees.isEmpty) const Text('No mock attendees configured.'),
+        for (final presence in attendees)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text(_displayName(presence.identityId)),
+            subtitle: Text('${_format(presence.checkedInAt)} – ${_format(presence.effectiveCheckedOutAt)}'),
+          ),
+      ]),
+    );
+  }
+
+  String _displayName(String id) => MockUsers.all.firstWhere((user) => user.id == id).displayName;
+  String _format(DateTime value) {
+    final hour = value.toLocal().hour;
+    final minute = value.toLocal().minute.toString().padLeft(2, '0');
+    final suffix = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+    return '$displayHour:$minute $suffix';
   }
 }
 

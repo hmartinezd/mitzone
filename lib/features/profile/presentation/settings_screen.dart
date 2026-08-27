@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
@@ -40,8 +41,10 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
-          const _DeveloperUserSection(),
-          const SizedBox(height: AppSpacing.xl),
+          if (kDebugMode) ...[
+            const _DeveloperUserSection(),
+            const SizedBox(height: AppSpacing.xl),
+          ],
           _SettingsSection(
             title: 'About',
             items: [

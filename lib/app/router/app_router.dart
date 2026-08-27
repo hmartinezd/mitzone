@@ -15,6 +15,7 @@ import '../../features/events/presentation/events_screen.dart';
 import '../../features/events/presentation/event_details_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
+import '../../features/chat/presentation/conversation_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/profile_details_screen.dart';
@@ -124,6 +125,7 @@ GoRouter createAppRouter({
               GoRoute(
                 path: AppRoutes.chat,
                 builder: (context, state) => const ChatScreen(),
+                routes: [GoRoute(path: ':conversationId', builder: (context,state)=>ConversationScreen(conversationId: state.pathParameters['conversationId']!))],
               ),
             ],
           ),

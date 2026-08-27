@@ -34,6 +34,7 @@ final conversationContextProvider = FutureProvider.family<String?, String>((ref,
   final connection = (await ref.watch(connectionsProvider.future)).where((c) => c.id == conversation.connectionId).firstOrNull;
   if (connection == null) return null;
   final encounter = (await ref.watch(encountersForCurrentUserProvider.future)).where((e) => e.id == connection.encounterId && (e.currentUserId == me || e.otherUserId == me)).firstOrNull;
-  final event = encounter == null ? null : ref.watch(encounterEventProvider(encounter.eventId));
+  final eventId = connection.contextId?.split(':').first;
+  final event = ref.watch(eventCatalogProvider).getById(eventId ?? encounter?.eventId);
   return event == null ? null : 'You crossed paths at ${event.title}';
 });

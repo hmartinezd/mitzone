@@ -33,7 +33,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     if (raw is! Map || raw['id'] is! String || raw['a'] is! String || raw['b'] is! String || raw['encounter'] is! String || raw['connectedAt'] is! String) return null;
     final date = DateTime.tryParse(raw['connectedAt'] as String);
     if (date == null) return null;
-    return Connection(id: raw['id'] as String, userAId: raw['a'] as String, userBId: raw['b'] as String, encounterId: raw['encounter'] as String, connectedAt: date);
+    return Connection(id: raw['id'] as String, userAId: raw['a'] as String, userBId: raw['b'] as String, encounterId: raw['encounter'] as String, contextId: raw['context'] is String ? raw['context'] as String : null, connectedAt: date);
   }
   List<ConnectionRequest> _parseRequests(Object? raw) => raw is List ? raw.map(_tryRequest).whereType<ConnectionRequest>().toList() : [];
   List<Connection> _parseConnections(Object? raw) => raw is List ? raw.map(_tryConnection).whereType<Connection>().toList() : [];
@@ -55,7 +55,7 @@ class LocalConnectionRepository implements ConnectionRepository {
   Future<ConnectionRequest> _change(String id, String user, ConnectionRequestStatus status) async {
     final data = await _read(); final requests = _parseRequests(data['requests']); final index = requests.indexWhere((r) => r.id == id && r.recipientUserId == user && r.status == ConnectionRequestStatus.pending); if (index < 0) throw StateError('Request is not actionable');
     final old = requests[index]; final updated = ConnectionRequest(id: old.id, senderUserId: old.senderUserId, recipientUserId: old.recipientUserId, encounterId: old.encounterId, contextId: old.contextId, createdAt: old.createdAt, status: status); requests[index] = updated; data['requests'] = requests.map(_requestJson).toList();
-    if (status == ConnectionRequestStatus.accepted) { final a = old.senderUserId.compareTo(old.recipientUserId) < 0 ? old.senderUserId : old.recipientUserId; final b = a == old.senderUserId ? old.recipientUserId : old.senderUserId; final connections = _parseConnections(data['connections']); if (!connections.any((c) => c.userAId == a && c.userBId == b)) { connections.add(Connection(id: '$a-$b', userAId: a, userBId: b, encounterId: old.encounterId, connectedAt: now().toUtc())); } data['connections'] = connections.map((c) => {'id': c.id, 'a': c.userAId, 'b': c.userBId, 'encounter': c.encounterId, 'connectedAt': c.connectedAt.toIso8601String()}).toList(); }
+    if (status == ConnectionRequestStatus.accepted) { final a = old.senderUserId.compareTo(old.recipientUserId) < 0 ? old.senderUserId : old.recipientUserId; final b = a == old.senderUserId ? old.recipientUserId : old.senderUserId; final connections = _parseConnections(data['connections']); if (!connections.any((c) => c.userAId == a && c.userBId == b)) { connections.add(Connection(id: '$a-$b', userAId: a, userBId: b, encounterId: old.encounterId, contextId: old.contextId, connectedAt: now().toUtc())); } data['connections'] = connections.map((c) => {'id': c.id, 'a': c.userAId, 'b': c.userBId, 'encounter': c.encounterId, if (c.contextId != null) 'context': c.contextId, 'connectedAt': c.connectedAt.toIso8601String()}).toList(); }
     await _write(data); return updated;
   }
   @override Future<ConnectionRequest> acceptRequest({required String requestId, required String recipientUserId}) => _change(requestId, recipientUserId, ConnectionRequestStatus.accepted);

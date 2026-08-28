@@ -117,25 +117,105 @@ void main() {
   });
 
   test('declines and pending requests are isolated by context', () async {
-    final request = await repository.sendRequest(senderUserId: 'a', recipientUserId: 'b', encounterId: 'a-1', contextId: 'event-a:a:b');
-    await repository.declineRequest(requestId: request.id, recipientUserId: 'b');
-    expect(await repository.getRelationshipState(userAId: 'a', userBId: 'b', contextId: 'event-a:a:b'), RelationshipState.declined);
-    expect(await repository.getRelationshipState(userAId: 'a', userBId: 'b', contextId: 'event-b:a:b'), RelationshipState.none);
-    final pending = await repository.sendRequest(senderUserId: 'a', recipientUserId: 'b', encounterId: 'a-2', contextId: 'event-b:a:b');
-    expect((await repository.sendRequest(senderUserId: 'b', recipientUserId: 'a', encounterId: 'b-2', contextId: 'event-b:a:b')).id, pending.id);
-    expect((await repository.getOutgoingRequests('a')).where((r) => r.status == ConnectionRequestStatus.pending), hasLength(1));
-    expect(await repository.getRelationshipState(userAId: 'a', userBId: 'b', contextId: 'event-b:a:b'), RelationshipState.outgoingPending);
-    expect(await repository.getRelationshipState(userAId: 'b', userBId: 'a', contextId: 'event-b:a:b'), RelationshipState.incomingPending);
+    final request = await repository.sendRequest(
+      senderUserId: 'a',
+      recipientUserId: 'b',
+      encounterId: 'a-1',
+      contextId: 'event-a:a:b',
+    );
+    await repository.declineRequest(
+      requestId: request.id,
+      recipientUserId: 'b',
+    );
+    expect(
+      await repository.getRelationshipState(
+        userAId: 'a',
+        userBId: 'b',
+        contextId: 'event-a:a:b',
+      ),
+      RelationshipState.declined,
+    );
+    expect(
+      await repository.getRelationshipState(
+        userAId: 'a',
+        userBId: 'b',
+        contextId: 'event-b:a:b',
+      ),
+      RelationshipState.none,
+    );
+    final pending = await repository.sendRequest(
+      senderUserId: 'a',
+      recipientUserId: 'b',
+      encounterId: 'a-2',
+      contextId: 'event-b:a:b',
+    );
+    expect(
+      (await repository.sendRequest(
+        senderUserId: 'b',
+        recipientUserId: 'a',
+        encounterId: 'b-2',
+        contextId: 'event-b:a:b',
+      )).id,
+      pending.id,
+    );
+    expect(
+      (await repository.getOutgoingRequests(
+        'a',
+      )).where((r) => r.status == ConnectionRequestStatus.pending),
+      hasLength(1),
+    );
+    expect(
+      await repository.getRelationshipState(
+        userAId: 'a',
+        userBId: 'b',
+        contextId: 'event-b:a:b',
+      ),
+      RelationshipState.outgoingPending,
+    );
+    expect(
+      await repository.getRelationshipState(
+        userAId: 'b',
+        userBId: 'a',
+        contextId: 'event-b:a:b',
+      ),
+      RelationshipState.incomingPending,
+    );
   });
 
-  test('connection is global and prevents requests in another context', () async {
-    final request = await repository.sendRequest(senderUserId: 'a', recipientUserId: 'b', encounterId: 'a-1', contextId: 'event-a:a:b');
-    await repository.acceptRequest(requestId: request.id, recipientUserId: 'b');
-    expect(await repository.getRelationshipState(userAId: 'a', userBId: 'b', contextId: 'event-b:a:b'), RelationshipState.connected);
-    await expectLater(repository.sendRequest(senderUserId: 'a', recipientUserId: 'b', encounterId: 'a-2', contextId: 'event-b:a:b'), throwsStateError);
-    expect(await repository.getConnections('a'), hasLength(1));
-    expect(await repository.getOutgoingRequests('a'), hasLength(1));
-  });
+  test(
+    'connection is global and prevents requests in another context',
+    () async {
+      final request = await repository.sendRequest(
+        senderUserId: 'a',
+        recipientUserId: 'b',
+        encounterId: 'a-1',
+        contextId: 'event-a:a:b',
+      );
+      await repository.acceptRequest(
+        requestId: request.id,
+        recipientUserId: 'b',
+      );
+      expect(
+        await repository.getRelationshipState(
+          userAId: 'a',
+          userBId: 'b',
+          contextId: 'event-b:a:b',
+        ),
+        RelationshipState.connected,
+      );
+      await expectLater(
+        repository.sendRequest(
+          senderUserId: 'a',
+          recipientUserId: 'b',
+          encounterId: 'a-2',
+          contextId: 'event-b:a:b',
+        ),
+        throwsStateError,
+      );
+      expect(await repository.getConnections('a'), hasLength(1));
+      expect(await repository.getOutgoingRequests('a'), hasLength(1));
+    },
+  );
 }
 
 class MemoryStorage implements LocalStorage {

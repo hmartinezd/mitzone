@@ -8,25 +8,39 @@ import 'local_connection_repository.dart';
 import '../../encounters/data/encounter_providers.dart';
 import '../../encounters/domain/encounter.dart';
 
-final connectionRepositoryProvider = Provider<ConnectionRepository>((ref) => LocalConnectionRepository(ref.watch(localStorageProvider)));
-final incomingConnectionRequestsProvider = FutureProvider<List<ConnectionRequest>>((ref) {
-  final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
-  return ref.watch(connectionRepositoryProvider).getIncomingRequests(id);
-});
-final outgoingConnectionRequestsProvider = FutureProvider<List<ConnectionRequest>>((ref) {
-  final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
-  return ref.watch(connectionRepositoryProvider).getOutgoingRequests(id);
-});
+final connectionRepositoryProvider = Provider<ConnectionRepository>(
+  (ref) => LocalConnectionRepository(ref.watch(localStorageProvider)),
+);
+final incomingConnectionRequestsProvider =
+    FutureProvider<List<ConnectionRequest>>((ref) {
+      final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      return ref.watch(connectionRepositoryProvider).getIncomingRequests(id);
+    });
+final outgoingConnectionRequestsProvider =
+    FutureProvider<List<ConnectionRequest>>((ref) {
+      final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      return ref.watch(connectionRepositoryProvider).getOutgoingRequests(id);
+    });
 final connectionsProvider = FutureProvider<List<Connection>>((ref) {
   final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
   return ref.watch(connectionRepositoryProvider).getConnections(id);
 });
-final relationshipProvider = FutureProvider.family<RelationshipState, Encounter>((ref, encounter) {
-  final current = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
-  final pair = [current, encounter.otherUserId]..sort();
-  return ref.watch(connectionRepositoryProvider).getRelationshipState(userAId: current, userBId: encounter.otherUserId, encounterId: encounter.id, contextId: '${encounter.eventId}:${pair.join(':')}');
-});
-final connectionControllerProvider = Provider((ref) => ConnectionController(ref));
+final relationshipProvider =
+    FutureProvider.family<RelationshipState, Encounter>((ref, encounter) {
+      final current = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      final pair = [current, encounter.otherUserId]..sort();
+      return ref
+          .watch(connectionRepositoryProvider)
+          .getRelationshipState(
+            userAId: current,
+            userBId: encounter.otherUserId,
+            encounterId: encounter.id,
+            contextId: '${encounter.eventId}:${pair.join(':')}',
+          );
+    });
+final connectionControllerProvider = Provider(
+  (ref) => ConnectionController(ref),
+);
 
 class ConnectionController {
   ConnectionController(this.ref);
@@ -34,14 +48,55 @@ class ConnectionController {
   Future<ConnectionRequest> send(String recipient, String encounter) async {
     final sender = ref.read(mockIdentityRepositoryProvider).currentUser.id;
     final valid = (await ref.read(encountersForCurrentUserProvider.future)).any(
-      (item) => item.id == encounter && item.currentUserId == sender && item.otherUserId == recipient,
+      (item) =>
+          item.id == encounter &&
+          item.currentUserId == sender &&
+          item.otherUserId == recipient,
     );
     if (!valid) throw StateError('Connection requires a valid encounter');
-    final encounterData = (await ref.read(encountersForCurrentUserProvider.future)).firstWhere((item) => item.id == encounter);
+    final encounterData = (await ref.read(
+      encountersForCurrentUserProvider.future,
+    )).firstWhere((item) => item.id == encounter);
     final pair = [sender, recipient]..sort();
-    return _refresh(await ref.read(connectionRepositoryProvider).sendRequest(senderUserId: sender, recipientUserId: recipient, encounterId: encounter, contextId: '${encounterData.eventId}:${pair.join(':')}'));
+    return _refresh(
+      await ref
+          .read(connectionRepositoryProvider)
+          .sendRequest(
+            senderUserId: sender,
+            recipientUserId: recipient,
+            encounterId: encounter,
+            contextId: '${encounterData.eventId}:${pair.join(':')}',
+          ),
+    );
   }
-  Future<ConnectionRequest> accept(String id) async => _refresh(await ref.read(connectionRepositoryProvider).acceptRequest(requestId: id, recipientUserId: ref.read(mockIdentityRepositoryProvider).currentUser.id));
-  Future<ConnectionRequest> decline(String id) async => _refresh(await ref.read(connectionRepositoryProvider).declineRequest(requestId: id, recipientUserId: ref.read(mockIdentityRepositoryProvider).currentUser.id));
-  Future<ConnectionRequest> _refresh(ConnectionRequest value) async { ref.invalidate(incomingConnectionRequestsProvider); ref.invalidate(outgoingConnectionRequestsProvider); ref.invalidate(connectionsProvider); ref.invalidate(relationshipProvider); return value; }
+
+  Future<ConnectionRequest> accept(String id) async => _refresh(
+    await ref
+        .read(connectionRepositoryProvider)
+        .acceptRequest(
+          requestId: id,
+          recipientUserId: ref
+              .read(mockIdentityRepositoryProvider)
+              .currentUser
+              .id,
+        ),
+  );
+  Future<ConnectionRequest> decline(String id) async => _refresh(
+    await ref
+        .read(connectionRepositoryProvider)
+        .declineRequest(
+          requestId: id,
+          recipientUserId: ref
+              .read(mockIdentityRepositoryProvider)
+              .currentUser
+              .id,
+        ),
+  );
+  Future<ConnectionRequest> _refresh(ConnectionRequest value) async {
+    ref.invalidate(incomingConnectionRequestsProvider);
+    ref.invalidate(outgoingConnectionRequestsProvider);
+    ref.invalidate(connectionsProvider);
+    ref.invalidate(relationshipProvider);
+    return value;
+  }
 }

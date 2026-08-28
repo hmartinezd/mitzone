@@ -27,14 +27,29 @@ final chatMessagesProvider = FutureProvider.family<List<Message>, String>(
   (ref, id) => ref.watch(chatRepositoryProvider).getMessages(id),
 );
 
-final conversationContextProvider = FutureProvider.family<String?, String>((ref, id) async {
+final conversationContextProvider = FutureProvider.family<String?, String>((
+  ref,
+  id,
+) async {
   final me = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
-  final conversation = (await ref.watch(chatConversationsProvider.future)).where((c) => c.id == id).firstOrNull;
+  final conversation = (await ref.watch(
+    chatConversationsProvider.future,
+  )).where((c) => c.id == id).firstOrNull;
   if (conversation == null) return null;
-  final connection = (await ref.watch(connectionsProvider.future)).where((c) => c.id == conversation.connectionId).firstOrNull;
+  final connection = (await ref.watch(
+    connectionsProvider.future,
+  )).where((c) => c.id == conversation.connectionId).firstOrNull;
   if (connection == null) return null;
-  final encounter = (await ref.watch(encountersForCurrentUserProvider.future)).where((e) => e.id == connection.encounterId && (e.currentUserId == me || e.otherUserId == me)).firstOrNull;
+  final encounter = (await ref.watch(encountersForCurrentUserProvider.future))
+      .where(
+        (e) =>
+            e.id == connection.encounterId &&
+            (e.currentUserId == me || e.otherUserId == me),
+      )
+      .firstOrNull;
   final eventId = connection.contextId?.split(':').first;
-  final event = ref.watch(eventCatalogProvider).getById(eventId ?? encounter?.eventId);
+  final resolvedEventId = eventId ?? encounter?.eventId;
+  if (resolvedEventId == null) return null;
+  final event = ref.watch(eventCatalogProvider).getById(resolvedEventId);
   return event == null ? null : 'You crossed paths at ${event.title}';
 });

@@ -29,15 +29,39 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         .id;
     final messages = ref.watch(chatMessagesProvider(widget.conversationId));
     final conversations = ref.watch(chatConversationsProvider);
-    final contextText = ref.watch(conversationContextProvider(widget.conversationId)).valueOrNull;
-    final conversation = conversations.valueOrNull?.where((c) => c.id == widget.conversationId).firstOrNull;
-    final otherId = conversation == null ? null : conversation.userAId == currentUserId ? conversation.userBId : conversation.userAId;
-    final other = otherId == null ? null : ref.watch(mockIdentityRepositoryProvider).users.where((u) => u.id == otherId).firstOrNull;
+    final contextState = ref.watch(
+      conversationContextProvider(widget.conversationId),
+    );
+    final contextText = contextState.hasValue ? contextState.value : null;
+    final conversation = conversations.hasValue
+        ? (conversations.value ?? const [])
+              .where((c) => c.id == widget.conversationId)
+              .firstOrNull
+        : null;
+    final otherId = conversation == null
+        ? null
+        : conversation.userAId == currentUserId
+        ? conversation.userBId
+        : conversation.userAId;
+    final other = otherId == null
+        ? null
+        : ref
+              .watch(mockIdentityRepositoryProvider)
+              .users
+              .where((u) => u.id == otherId)
+              .firstOrNull;
     return Scaffold(
       appBar: AppBar(title: Text(other?.displayName ?? 'Conversation')),
       body: Column(
         children: [
-          if (contextText != null) Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: Text(contextText, style: Theme.of(context).textTheme.bodySmall)),
+          if (contextText != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Text(
+                contextText,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
           Expanded(
             child: messages.when(
               loading: () => const Center(child: CircularProgressIndicator()),

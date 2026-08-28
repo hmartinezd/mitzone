@@ -31,8 +31,29 @@ class EncounterEngine {
       }
     }
     final merged = <String, Encounter>{};
-    for (final encounter in result) { final key = '${encounter.currentUserId}:${encounter.otherUserId}:${encounter.eventId}'; final old = merged[key]; if (old == null) { merged[key] = encounter; } else { merged[key] = Encounter(id: old.id, currentUserId: old.currentUserId, otherUserId: old.otherUserId, eventId: old.eventId, overlapStart: old.overlapStart.isBefore(encounter.overlapStart) ? old.overlapStart : encounter.overlapStart, overlapEnd: old.overlapEnd.isAfter(encounter.overlapEnd) ? old.overlapEnd : encounter.overlapEnd); } }
-    final deduped = merged.values.toList()..sort((a, b) => b.overlapStart.compareTo(a.overlapStart));
+    for (final encounter in result) {
+      final key =
+          '${encounter.currentUserId}:${encounter.otherUserId}:${encounter.eventId}';
+      final old = merged[key];
+      if (old == null) {
+        merged[key] = encounter;
+      } else {
+        merged[key] = Encounter(
+          id: old.id,
+          currentUserId: old.currentUserId,
+          otherUserId: old.otherUserId,
+          eventId: old.eventId,
+          overlapStart: old.overlapStart.isBefore(encounter.overlapStart)
+              ? old.overlapStart
+              : encounter.overlapStart,
+          overlapEnd: old.overlapEnd.isAfter(encounter.overlapEnd)
+              ? old.overlapEnd
+              : encounter.overlapEnd,
+        );
+      }
+    }
+    final deduped = merged.values.toList()
+      ..sort((a, b) => b.overlapStart.compareTo(a.overlapStart));
     return deduped;
   }
 }

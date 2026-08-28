@@ -154,12 +154,13 @@ class _EncounterCard extends ConsumerWidget {
           );
       if (context.mounted) context.push('/app/chat/${chat.id}');
     } catch (_) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('This conversation is unavailable right now.'),
           ),
         );
+      }
     }
   }
 

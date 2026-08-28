@@ -43,8 +43,9 @@ class LocalConnectionRepository implements ConnectionRepository {
         raw['recipient'] is! String ||
         raw['encounter'] is! String ||
         raw['createdAt'] is! String ||
-        raw['status'] is! String)
+        raw['status'] is! String) {
       return null;
+    }
     final date = DateTime.tryParse(raw['createdAt'] as String);
     final status = ConnectionRequestStatus.values
         .where((s) => s.name == raw['status'])
@@ -67,10 +68,13 @@ class LocalConnectionRepository implements ConnectionRepository {
         raw['a'] is! String ||
         raw['b'] is! String ||
         raw['encounter'] is! String ||
-        raw['connectedAt'] is! String)
+        raw['connectedAt'] is! String) {
       return null;
+    }
     final date = DateTime.tryParse(raw['connectedAt'] as String);
-    if (date == null) return null;
+    if (date == null) {
+      return null;
+    }
     return Connection(
       id: raw['id'] as String,
       userAId: raw['a'] as String,
@@ -119,16 +123,18 @@ class LocalConnectionRepository implements ConnectionRepository {
     required String encounterId,
     String? contextId,
   }) async {
-    if (senderUserId == recipientUserId || encounterId.isEmpty)
+    if (senderUserId == recipientUserId || encounterId.isEmpty) {
       throw ArgumentError('Invalid connection request');
+    }
     final data = await _read();
     final connections = _parseConnections(data['connections']);
     if (connections.any(
       (c) =>
           (c.userAId == senderUserId && c.userBId == recipientUserId) ||
           (c.userAId == recipientUserId && c.userBId == senderUserId),
-    ))
+    )) {
       throw StateError('Users are already connected');
+    }
     final requests = _parseRequests(data['requests']);
     final context = contextId ?? encounterId;
     final existing = requests
@@ -258,8 +264,9 @@ class LocalConnectionRepository implements ConnectionRepository {
       (c) =>
           (c.userAId == userAId && c.userBId == userBId) ||
           (c.userAId == userBId && c.userBId == userAId),
-    ))
+    )) {
       return RelationshipState.connected;
+    }
     final all = _parseRequests((await _read())['requests']).where(
       (r) =>
           (r.senderUserId == userAId && r.recipientUserId == userBId) ||
@@ -271,12 +278,14 @@ class LocalConnectionRepository implements ConnectionRepository {
     final pending = requests
         .where((r) => r.status == ConnectionRequestStatus.pending)
         .firstOrNull;
-    if (pending != null)
+    if (pending != null) {
       return pending.senderUserId == userAId
           ? RelationshipState.outgoingPending
           : RelationshipState.incomingPending;
-    if (requests.any((r) => r.status == ConnectionRequestStatus.declined))
+    }
+    if (requests.any((r) => r.status == ConnectionRequestStatus.declined)) {
       return RelationshipState.declined;
+    }
     return RelationshipState.none;
   }
 }

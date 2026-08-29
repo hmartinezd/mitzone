@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/router/app_routes.dart';
+import '../../../core/identity/identity_providers.dart';
+import '../../chat/data/chat_providers.dart';
+import '../../connections/data/connection_providers.dart';
+import '../../encounters/data/encounter_providers.dart';
 import '../../profile/data/profile_providers.dart';
 import '../../events/data/demo_events.dart';
 import '../../events/data/event_providers.dart';
@@ -11,8 +15,8 @@ import '../../events/domain/event.dart';
 import 'widgets/home_header.dart';
 import 'widgets/home_welcome_card.dart';
 import 'widgets/home_event_section.dart';
-import 'widgets/home_matches_card.dart';
 import 'widgets/home_profile_card.dart';
+import 'widgets/home_social_summary.dart';
 import 'widgets/how_mitzone_works.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -23,6 +27,11 @@ class HomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
     final joinedIdsAsync = ref.watch(joinedEventIdsProvider);
     final catalog = ref.watch(eventCatalogProvider);
+    final identity = ref.watch(mockIdentityRepositoryProvider);
+    final encounters = ref.watch(encountersForCurrentUserProvider);
+    final incomingRequests = ref.watch(incomingConnectionRequestsProvider);
+    final connections = ref.watch(connectionsProvider);
+    final conversations = ref.watch(chatConversationsProvider);
     void openEvent(Event event) => context.go(
       AppRoutes.eventDetails(event.id, origin: EventDetailsOrigin.home),
     );
@@ -101,16 +110,20 @@ class HomeScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: AppSpacing.xxl),
-          HomeMatchesCard(
+          HomeSocialSummary(
+            encounters: encounters,
+            incomingRequests: incomingRequests,
+            connections: connections,
+            conversations: conversations,
+            currentUserId: identity.currentUser.id,
+            users: identity.users,
+            eventCatalog: catalog,
             onExploreEvents: () => context.go(AppRoutes.events),
-            onScanQR: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('QR scanning is coming soon.'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onViewMatches: () => context.go(AppRoutes.matches),
+            onOpenChat: () => context.go(AppRoutes.chat),
+            onOpenConversation: (id) => context.go('${AppRoutes.chat}/$id'),
+            onRetryEncounters: () =>
+                ref.invalidate(encountersForCurrentUserProvider),
           ),
           const SizedBox(height: AppSpacing.xxl),
           HomeProfileCard(onViewProfile: () => context.go(AppRoutes.profile)),

@@ -35,22 +35,22 @@ class MatchesScreen extends ConsumerWidget {
               _RequestsSection(
                 requests: incoming.value ?? const <ConnectionRequest>[],
               ),
-            Expanded(
-              child: items.isEmpty
-                  ? const MitzoneEmptyState(
-                      title: 'No shared moments yet',
-                      message:
-                          'Check in at events to discover people you actually crossed paths with.',
-                      icon: Icons.people_outline,
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.only(top: 24, bottom: 32),
-                      itemCount: items.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 12),
-                      itemBuilder: (_, i) =>
-                          _EncounterCard(encounter: items[i]),
-                    ),
-            ),
+            if (items.isEmpty)
+              const MitzoneEmptyState(
+                title: 'No shared moments yet',
+                message:
+                    'Check in at events to discover people you actually crossed paths with.',
+                icon: Icons.people_outline,
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.only(top: 24, bottom: 32),
+                itemCount: items.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (_, i) => _EncounterCard(encounter: items[i]),
+              ),
           ],
         ),
       ),

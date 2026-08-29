@@ -18,7 +18,7 @@ demo baseline, not a production-readiness claim.
 4. **Onboarding**: Three-page product introduction with custom illustrations, local persistence, and application-entry resolution.
 5. **Local Development Identity + Minimum Profile**: Stable local user identity (UUID v4), profile creation (Display Name + Optional Avatar), and managed local storage.
 6. **Main Navigation**: Five-destination Material 3 navigation shell using `StatefulShellRoute`, persistent branch state, and responsive navigation bar.
-7. **Full Home Experience**: Personalized discovery dashboard with curated demo events, matches empty state, and product education.
+7. **Connected Home Experience**: Personalized discovery dashboard with curated demo events and live summaries of local encounters, requests, connections, and conversations.
 8. **Profile and Settings**: Fully functional local profile management, derived completion percentage, and comprehensive Settings navigation structure.
 9. **Sprint 1 Local Demo Hardening**: Robust async profile loading, removal of nested scaffolds, centralized validation, improved accessibility, corruption-safe local persistence, and transactional avatar replacement.
 10. **Event Experience & Local Participation Foundation — Complete**: Event details, stable local catalog IDs, identity-scoped participation, and participation-aware upcoming activities.
@@ -27,7 +27,7 @@ demo baseline, not a production-readiness claim.
 - **Permanent Authentication — Deferred**
 - **Supabase Backend Integration — Deferred**
 - **Verified Event Presence — Future**
-- **Matching — Future**
+- **Production Matching — Future**
 - **QR Check-in — Future**
 - **Geolocation — Future**
 
@@ -51,8 +51,8 @@ The long-term application-entry rules are:
 Mitzone features exactly five primary destinations accessible via a Material 3 bottom navigation bar:
 - **Home**: The central discovery dashboard. Features personalized greeting and curated discovery sections.
 - **Events**: Interactive discovery and details backed by deterministic demo data, with local participation.
-- **Matches**: Connections from shared experiences (currently an intentional empty state).
-- **Chat**: Conversations with connections (currently an intentional empty state).
+- **Matches**: Encounters derived from shared event presence, plus local connection-request management.
+- **Chat**: Local conversations and messages between established connections.
 - **Profile**: Functional profile management and application settings.
 
 ## Profile and Settings
@@ -77,16 +77,20 @@ For this development phase, the following boundaries apply:
 - Personalized discovery dashboard with demo content.
 - Identity-scoped event participation persisted as event IDs under `local_event_participation.v1.<identityId>`.
 - Upcoming activities synchronized with joined events without restarting.
+- Local/demo check-in presence and deterministic encounters derived from real interval overlap.
+- Local contextual connection requests and established connections.
+- Authorized local conversations and messages between active connections.
+- Home summaries that react to encounters, incoming requests, connections, and recent conversations.
 
 ### Intentionally Deferred
 - **Permanent Authentication — Deferred**: Permanent accounts, sign-out, and deletion are unavailable.
 - **Supabase Backend Integration — Deferred**: All data is local; Supabase is integrated but inactive.
 - **Verified Event Presence — Future**: Participation records intent only and never claims verified attendance.
-- **Matching — Future**: No people discovery or matching is implemented.
+- **Production Matching — Future**: Encounter data is a deterministic local demo, not a production recommendation or matching system.
 - **QR Check-in — Future**: Scanner functionality is not implemented.
 - **Geolocation — Future**: GPS functionality is not implemented.
 - **Event Content**: The catalog remains deterministic demo data; participation is local intent, not verified presence.
-- **Matching and Chat**: No people discovery, matching, or conversations are implemented.
+- **Backend Sync**: Encounters, requests, connections, conversations, and messages remain local to the device.
 - **Web**: Only Android/iOS platforms are currently targeted.
 
 ## Local Development Identity
@@ -151,12 +155,15 @@ lib/
     ├── onboarding/       # Product onboarding
     ├── home/             # Discovery dashboard
     ├── profile/          # User profile management
-    └── events/           # Event discovery
+    ├── events/           # Event discovery and local participation
+    ├── encounters/       # Presence-overlap encounter generation
+    ├── connections/      # Local requests and connections
+    └── chat/             # Authorized local conversations/messages
 ```
 ## Local presence
 
-In the local demo, participation means intending to attend an event, while presence/check-in represents actual attendance. Presence is scoped to the active mock identity, and deterministic mock attendee scenarios are available in development builds. Encounter generation is intentionally deferred; QR and geolocation verification remain future work.
+In the local demo, participation means intending to attend an event, while presence/check-in represents demo attendance. Presence is scoped to the active mock identity. Deterministic mock attendee windows are generated relative to the local check-in, and encounters are derived from genuine interval overlap. QR, geolocation, and independently verified presence remain future work.
 
-The local flow is: participation → presence → encounter. Encounters are generated only from overlapping presence windows. Connection requests, “Say Hi”, and backend matching are not implemented yet.
+The working local flow is: participation → presence → encounter → “Say Hi” request → connection → conversation → messages. These records are local demo data; permanent authentication, backend synchronization, and production presence verification are not implemented.
 
 The active user's encounters use their real local identity-scoped check-ins; other users remain deterministic development fixtures.

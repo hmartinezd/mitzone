@@ -1,5 +1,5 @@
 {
-    "dart.flutterSdkPath": "C:\\flutter",
+    "dart.flutterSdkPath": "/Users/hector/Projects/flutter",
     "chat.tools.terminal.autoApprove": {
         "dart": true,
         "flutter": true

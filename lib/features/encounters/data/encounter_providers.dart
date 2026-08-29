@@ -5,6 +5,12 @@ import '../../events/domain/event_check_in.dart';
 import 'package:mitzone/features/encounters/domain/encounter.dart';
 import 'local_encounter_repository.dart';
 
+/// Local-demo encounters are observed after deterministic simulated elapsed
+/// time so a fresh check-in immediately demonstrates meaningful overlap.
+final demoEncounterObservationOffsetProvider = Provider<Duration>(
+  (ref) => const Duration(minutes: 45),
+);
+
 final encounterRepositoryProvider = Provider((ref) {
   final checkIns = ref.watch(eventCheckInsProvider);
   final local = checkIns.when(
@@ -21,10 +27,19 @@ final encounterRepositoryProvider = Provider((ref) {
         )),
       ),
   ];
+  final latestCheckIn = local.fold<DateTime?>(
+    null,
+    (latest, checkIn) => latest == null || checkIn.checkedInAt.isAfter(latest)
+        ? checkIn.checkedInAt
+        : latest,
+  );
+  final observationTime = latestCheckIn == null
+      ? ref.watch(utcNowProvider)().toUtc()
+      : latestCheckIn.add(ref.watch(demoEncounterObservationOffsetProvider));
   return LocalEncounterRepository(
     currentUserPresence: local,
     otherUserPresence: demoPresence,
-    referenceTime: ref.watch(utcNowProvider)().toUtc(),
+    referenceTime: observationTime,
   );
 });
 final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((

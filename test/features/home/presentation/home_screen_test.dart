@@ -3,6 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/app/router/app_router.dart';
 import 'package:mitzone/app/router/app_routes.dart';
+import 'package:mitzone/core/identity/mock_identity_repository.dart';
+import 'package:mitzone/features/chat/data/chat_providers.dart';
+import 'package:mitzone/features/chat/domain/chat_models.dart';
+import 'package:mitzone/features/chat/presentation/conversation_screen.dart';
+import 'package:mitzone/features/connections/data/connection_providers.dart';
+import 'package:mitzone/features/connections/domain/connection.dart';
+import 'package:mitzone/features/connections/domain/connection_request.dart';
+import 'package:mitzone/features/encounters/data/encounter_providers.dart';
+import 'package:mitzone/features/encounters/domain/encounter.dart';
 import 'package:mitzone/features/events/data/event_providers.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
@@ -14,12 +23,24 @@ void main() {
     AsyncValue<Set<String>> joinedEventIdsState = const AsyncValue.data(
       <String>{},
     ),
+    AsyncValue<List<Encounter>> encounterState = const AsyncValue.data([]),
+    AsyncValue<List<ConnectionRequest>> requestState = const AsyncValue.data(
+      [],
+    ),
+    AsyncValue<List<Connection>> connectionState = const AsyncValue.data([]),
+    AsyncValue<List<Conversation>> conversationState = const AsyncValue.data(
+      [],
+    ),
     String initialLocation = AppRoutes.home,
   }) {
     return ProviderScope(
       overrides: [
         currentProfileProvider.overrideWithValue(profileState),
         joinedEventIdsProvider.overrideWithValue(joinedEventIdsState),
+        encountersForCurrentUserProvider.overrideWithValue(encounterState),
+        incomingConnectionRequestsProvider.overrideWithValue(requestState),
+        connectionsProvider.overrideWithValue(connectionState),
+        chatConversationsProvider.overrideWithValue(conversationState),
         routerInitialLocationProvider.overrideWithValue(initialLocation),
       ],
       child: Consumer(
@@ -276,25 +297,226 @@ void main() {
       final nav = tester.widget<NavigationBar>(find.byType(NavigationBar));
       expect(nav.selectedIndex, 4);
     });
+  });
 
-    testWidgets('Home -> Scan QR -> SnackBar and remain on Home', (
+  group('HomeScreen - Social summary', () {
+    final observedAt = DateTime.utc(2027, 3, 4, 12, 45);
+    final encounter = Encounter(
+      id: 'encounter',
+      currentUserId: MockUsers.joseId,
+      otherUserId: MockUsers.sofiaId,
+      eventId: 'urban-art-opening',
+      overlapStart: observedAt.subtract(const Duration(minutes: 45)),
+      overlapEnd: observedAt,
+    );
+    final connection = Connection(
+      id: 'connection',
+      userAId: MockUsers.joseId,
+      userBId: MockUsers.sofiaId,
+      encounterId: encounter.id,
+      contextId: 'urban-art-opening:${MockUsers.joseId}:${MockUsers.sofiaId}',
+      connectedAt: observedAt,
+    );
+
+    testWidgets('empty social state explains check-in and offers Events', (
       tester,
     ) async {
-      const profile = UserProfile(id: '1', displayName: 'Hector');
       await tester.pumpWidget(
-        createHomeScreen(profileState: const AsyncValue.data(profile)),
+        createHomeScreen(profileState: const AsyncValue.data(null)),
       );
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText('No shared moments yet'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
 
-      final scrollable = findHomeScrollable();
-      final scanQRBtn = findHomeText('Scan QR');
+      expect(
+        findHomeText(
+          'Check in at an event to discover people you crossed paths with.',
+        ),
+        findsOneWidget,
+      );
+      expect(findHomeText('Explore events'), findsOneWidget);
+    });
 
-      await tester.scrollUntilVisible(scanQRBtn, 200, scrollable: scrollable);
-      await tester.tap(scanQRBtn);
-      await tester.pump(); // SnackBar appears
+    testWidgets('encounters resolve person and event without obsolete copy', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          encounterState: AsyncValue.data([encounter]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText('People you crossed paths with'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
 
-      expect(find.text('QR scanning is coming soon.'), findsOneWidget);
-      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(findHomeText('Sofia'), findsOneWidget);
+      expect(findHomeText('Urban Art Gallery Opening'), findsWidgets);
+      expect(findHomeText('No matches yet'), findsNothing);
+      expect(findHomeText('1 person from your recent moments'), findsOneWidget);
+    });
+
+    testWidgets('incoming request is prioritized with review navigation', (
+      tester,
+    ) async {
+      final request = ConnectionRequest(
+        id: 'request',
+        senderUserId: MockUsers.sofiaId,
+        recipientUserId: MockUsers.joseId,
+        encounterId: encounter.id,
+        createdAt: observedAt,
+        status: ConnectionRequestStatus.pending,
+      );
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          encounterState: AsyncValue.data([encounter]),
+          requestState: AsyncValue.data([request]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText('Review request'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      expect(findHomeText('1 person wants to connect'), findsOneWidget);
+      await tester.tap(findHomeText('Review request'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        2,
+      );
+    });
+
+    testWidgets('established connections have distinct product copy', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          connectionState: AsyncValue.data([connection]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText("1 person you've connected with"),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      expect(findHomeText('No shared moments yet'), findsNothing);
+    });
+
+    testWidgets('recent conversation resolves context and opens its route', (
+      tester,
+    ) async {
+      final conversation = Conversation(
+        id: 'conversation',
+        connectionId: connection.id,
+        userAId: MockUsers.joseId,
+        userBId: MockUsers.sofiaId,
+        createdAt: observedAt,
+        lastMessageAt: observedAt,
+      );
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          connectionState: AsyncValue.data([connection]),
+          conversationState: AsyncValue.data([conversation]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText('Recent conversations'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      expect(findHomeText('Sofia'), findsOneWidget);
+      expect(findHomeText('Urban Art Gallery Opening'), findsWidgets);
+      await tester.tap(findHomeText('Sofia'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ConversationScreen), findsOneWidget);
+    });
+
+    testWidgets('general conversation CTA opens the Chat branch', (
+      tester,
+    ) async {
+      final conversation = Conversation(
+        id: 'conversation',
+        connectionId: connection.id,
+        userAId: MockUsers.joseId,
+        userBId: MockUsers.sofiaId,
+        createdAt: observedAt,
+      );
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          connectionState: AsyncValue.data([connection]),
+          conversationState: AsyncValue.data([conversation]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        findHomeText('Open chat'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      await tester.tap(findHomeText('Open chat'));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        3,
+      );
+    });
+
+    testWidgets('loading never masquerades as an empty social state', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          encounterState: const AsyncValue.loading(),
+        ),
+      );
+      await tester.pump();
+      await tester.scrollUntilVisible(
+        findHomeText('Loading shared moments…'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      expect(findHomeText('No shared moments yet'), findsNothing);
+    });
+
+    testWidgets('chat failure leaves profile and event discovery usable', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(
+            UserProfile(id: '1', displayName: 'Hector'),
+          ),
+          conversationState: AsyncValue.error(
+            Exception('chat failed'),
+            StackTrace.empty,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(findHomeText('Hi, Hector'), findsOneWidget);
+      expect(findHomeText('Events near you'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        findHomeText('Recent conversations are unavailable right now.'),
+        200,
+        scrollable: findHomeScrollable(),
+      );
+      expect(findHomeText('No shared moments yet'), findsOneWidget);
     });
   });
 
@@ -350,7 +572,7 @@ void main() {
         'Real moments.\nMeaningful connections.',
         'Events near you',
         'Upcoming activities',
-        'Matches',
+        'Your connections',
         'Complete your profile',
         'How Mitzone works',
       ];

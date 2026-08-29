@@ -6,7 +6,10 @@ abstract interface class ChatRepository {
     required String connectionId,
     required String userId,
   });
-  Future<List<Message>> getMessages(String conversationId);
+  Future<List<Message>> getMessages({
+    required String conversationId,
+    required String userId,
+  });
   Future<Message> sendMessage({
     required String conversationId,
     required String senderUserId,

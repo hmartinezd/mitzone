@@ -52,23 +52,23 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
               .firstOrNull;
     return Scaffold(
       appBar: AppBar(title: Text(other?.displayName ?? 'Conversation')),
-      body: Column(
-        children: [
-          if (contextText != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              child: Text(
-                contextText,
-                style: Theme.of(context).textTheme.bodySmall,
+      body: messages.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (_, _) => const Center(
+          child: Text('This conversation is unavailable right now.'),
+        ),
+        data: (items) => Column(
+          children: [
+            if (contextText != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Text(
+                  contextText,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
-            ),
-          Expanded(
-            child: messages.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, _) => const Center(
-                child: Text('This conversation is unavailable right now.'),
-              ),
-              data: (items) => ListView(
+            Expanded(
+              child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: items.map((message) {
                   final mine = message.senderUserId == currentUserId;
@@ -93,19 +93,19 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 }).toList(),
               ),
             ),
-          ),
-          SafeArea(
-            child: Row(
-              children: [
-                Expanded(child: TextField(controller: input)),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: () => _send(currentUserId),
-                ),
-              ],
+            SafeArea(
+              child: Row(
+                children: [
+                  Expanded(child: TextField(controller: input)),
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: () => _send(currentUserId),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

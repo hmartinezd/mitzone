@@ -24,7 +24,12 @@ final chatConversationsProvider = FutureProvider<List<Conversation>>(
 );
 
 final chatMessagesProvider = FutureProvider.family<List<Message>, String>(
-  (ref, id) => ref.watch(chatRepositoryProvider).getMessages(id),
+  (ref, id) => ref
+      .watch(chatRepositoryProvider)
+      .getMessages(
+        conversationId: id,
+        userId: ref.watch(mockIdentityRepositoryProvider).currentUser.id,
+      ),
 );
 
 final conversationContextProvider = FutureProvider.family<String?, String>((

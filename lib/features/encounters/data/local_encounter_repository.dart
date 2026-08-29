@@ -7,13 +7,15 @@ class LocalEncounterRepository implements EncounterRepository {
   const LocalEncounterRepository({
     required this.currentUserPresence,
     required this.otherUserPresence,
+    required this.referenceTime,
   });
   final List<EventCheckIn> currentUserPresence;
   final List<EventCheckIn> otherUserPresence;
+  final DateTime referenceTime;
   @override
   Future<List<Encounter>> getEncountersForUser(String userId) async =>
       EncounterEngine([
         ...currentUserPresence.where((p) => p.identityId == userId),
         ...otherUserPresence.where((p) => p.identityId != userId),
-      ]).forUser(userId);
+      ]).forUser(userId, referenceTime: referenceTime);
 }

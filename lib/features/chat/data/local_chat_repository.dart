@@ -149,11 +149,25 @@ class LocalChatRepository implements ChatRepository {
   }
 
   @override
-  Future<List<Message>> getMessages(String id) async =>
-      _messages(
-          (await _read())['messages'],
-        ).where((m) => m.conversationId == id).toList()
-        ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
+  Future<List<Message>> getMessages({
+    required String conversationId,
+    required String userId,
+  }) async {
+    final data = await _read();
+    final conversation = _conversations(
+      data['conversations'],
+    ).where((item) => item.id == conversationId).firstOrNull;
+    if (conversation == null) throw StateError('Conversation was not found');
+    if (conversation.userAId != userId && conversation.userBId != userId) {
+      throw StateError('User is not in conversation');
+    }
+    await _authorized(conversation.connectionId, userId);
+    return _messages(
+        data['messages'],
+      ).where((message) => message.conversationId == conversationId).toList()
+      ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
+  }
+
   @override
   Future<Message> sendMessage({
     required String conversationId,

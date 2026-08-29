@@ -11,9 +11,15 @@ import 'local_event_check_in_repository.dart';
 import 'local_event_participation_repository.dart';
 import 'mock_event_attendees.dart';
 
-final mockEventAttendeesProvider = Provider.family<List<EventCheckIn>, String>(
-  (ref, eventId) => mockAttendeesForEvent(eventId),
-);
+typedef DemoPresenceRequest = ({String eventId, DateTime referenceTime});
+
+final mockEventAttendeesProvider =
+    Provider.family<List<EventCheckIn>, DemoPresenceRequest>(
+      (ref, request) => mockAttendeesForEvent(
+        eventId: request.eventId,
+        referenceTime: request.referenceTime,
+      ),
+    );
 
 final eventCatalogProvider = Provider<EventCatalog>(
   (ref) => const DemoEventCatalog(),

@@ -57,7 +57,10 @@ void main() {
     );
     expect(second.id, first.id);
     expect(await chat.getConversations('a'), hasLength(1));
-    expect(await chat.getMessages(first.id), isEmpty);
+    expect(
+      await chat.getMessages(conversationId: first.id, userId: 'a'),
+      isEmpty,
+    );
   });
 
   test(
@@ -81,16 +84,49 @@ void main() {
       expect(first.text, 'hello');
       expect(first.sentAt.isUtc, isTrue);
       final reloaded = LocalChatRepository(storage, connections);
-      expect((await reloaded.getMessages(conversation.id)).map((m) => m.id), [
-        first.id,
-        second.id,
-      ]);
+      expect(
+        (await reloaded.getMessages(
+          conversationId: conversation.id,
+          userId: 'a',
+        )).map((m) => m.id),
+        [first.id, second.id],
+      );
       expect(
         (await reloaded.getConversations('a')).single.lastMessageAt,
         second.sentAt,
       );
     },
   );
+
+  test('only connected conversation participants can read messages', () async {
+    final connectionId = await connect('a', 'b');
+    final conversation = await chat.getOrCreateConversation(
+      connectionId: connectionId,
+      userId: 'a',
+    );
+    await chat.sendMessage(
+      conversationId: conversation.id,
+      senderUserId: 'a',
+      text: 'private content',
+    );
+
+    expect(
+      await chat.getMessages(conversationId: conversation.id, userId: 'b'),
+      hasLength(1),
+    );
+    await expectLater(
+      chat.getMessages(conversationId: conversation.id, userId: 'outsider'),
+      throwsStateError,
+    );
+    await storage.setString(
+      LocalConnectionRepository.key,
+      jsonEncode({'requests': [], 'connections': []}),
+    );
+    await expectLater(
+      chat.getMessages(conversationId: conversation.id, userId: 'a'),
+      throwsStateError,
+    );
+  });
 
   test(
     'rejects empty messages, outsiders, and disconnected participants',
@@ -156,7 +192,10 @@ void main() {
   test('malformed persisted chat state fails safely', () async {
     await storage.setString(LocalChatRepository.key, '{not json');
     expect(await chat.getConversations('a'), isEmpty);
-    expect(await chat.getMessages('conversation'), isEmpty);
+    await expectLater(
+      chat.getMessages(conversationId: 'conversation', userId: 'a'),
+      throwsStateError,
+    );
 
     await storage.setString(
       LocalChatRepository.key,
@@ -172,7 +211,10 @@ void main() {
       }),
     );
     expect(await chat.getConversations('a'), isEmpty);
-    expect(await chat.getMessages('conversation'), isEmpty);
+    await expectLater(
+      chat.getMessages(conversationId: 'conversation', userId: 'a'),
+      throwsStateError,
+    );
   });
 }
 

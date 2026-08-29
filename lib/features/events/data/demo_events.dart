@@ -17,7 +17,7 @@ const demoArtOpening = Event(
   id: 'urban-art-opening',
   title: 'Urban Art Gallery Opening',
   venue: 'Metropolis Arts',
-  timeLabel: 'Sat, Aug 15, 6:00 PM',
+  timeLabel: 'Tonight, 6:00 PM',
   category: 'Art',
   locationLabel: 'Arts District',
   description:

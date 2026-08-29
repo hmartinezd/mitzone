@@ -324,7 +324,12 @@ class _DeveloperPresenceSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final attendees = ref.watch(mockEventAttendeesProvider(eventId));
+    final attendees = ref.watch(
+      mockEventAttendeesProvider((
+        eventId: eventId,
+        referenceTime: ref.watch(utcNowProvider)().toUtc(),
+      )),
+    );
     final theme = Theme.of(context);
     return MitzoneCard(
       child: Column(

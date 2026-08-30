@@ -7,6 +7,7 @@ import '../../connections/data/connection_providers.dart';
 import '../../profile/presentation/widgets/profile_avatar.dart';
 import '../data/chat_providers.dart';
 import '../domain/chat_models.dart';
+import '../../notifications/data/notification_providers.dart';
 
 class ChatScreen extends ConsumerWidget {
   const ChatScreen({super.key});
@@ -18,7 +19,19 @@ class ChatScreen extends ConsumerWidget {
     final identity = ref.watch(mockIdentityRepositoryProvider);
     final currentUserId = identity.currentUser.id;
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
+      appBar: AppBar(
+        title: const Text('Chat'),
+        actions: [
+          IconButton(
+            onPressed: () => context.push('/app/notifications'),
+            icon: Badge(
+              isLabelVisible: ref.watch(unreadNotificationCountProvider) > 0,
+              label: Text('${ref.watch(unreadNotificationCountProvider)}'),
+              child: const Icon(Icons.notifications_outlined),
+            ),
+          ),
+        ],
+      ),
       body: conversations.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const Center(

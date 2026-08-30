@@ -14,7 +14,11 @@ import '../../profile/domain/user_profile.dart';
 import 'widgets/profile_avatar.dart';
 
 class OtherUserProfileScreen extends ConsumerWidget {
-  const OtherUserProfileScreen({required this.userId, required this.encounterId, super.key});
+  const OtherUserProfileScreen({
+    required this.userId,
+    required this.encounterId,
+    super.key,
+  });
   final String userId;
   final String encounterId;
 
@@ -22,18 +26,31 @@ class OtherUserProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final encounterState = ref.watch(encountersForCurrentUserProvider);
     return encounterState.when(
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (_, _) => const Scaffold(body: Center(child: Text('This encounter is no longer available.'))),
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, _) => const Scaffold(
+        body: Center(child: Text('This encounter is no longer available.')),
+      ),
       data: (encounters) {
-        final encounter = encounters.where((e) => e.id == encounterId && e.otherUserId == userId).firstOrNull;
-        if (encounter == null) return const Scaffold(body: Center(child: Text('This encounter is no longer available.')));
+        final encounter = encounters
+            .where((e) => e.id == encounterId && e.otherUserId == userId)
+            .firstOrNull;
+        if (encounter == null)
+          return const Scaffold(
+            body: Center(child: Text('This encounter is no longer available.')),
+          );
         final profile = ref.watch(encounterProfileProvider(userId));
         return _content(context, ref, profile, encounter);
       },
     );
   }
 
-  Widget _content(BuildContext context, WidgetRef ref, UserProfile profile, Encounter encounter) {
+  Widget _content(
+    BuildContext context,
+    WidgetRef ref,
+    UserProfile profile,
+    Encounter encounter,
+  ) {
     final current = ref.watch(
       encounterProfileProvider(encounter.currentUserId),
     );
@@ -120,15 +137,23 @@ class _Action extends ConsumerStatefulWidget {
   final RelationshipState state;
   final Encounter encounter;
   final UserProfile profile;
-  @override ConsumerState<_Action> createState() => _ActionState();
+  @override
+  ConsumerState<_Action> createState() => _ActionState();
 }
 
 class _ActionState extends ConsumerState<_Action> {
   bool busy = false;
-  @override Widget build(BuildContext context) => switch (widget.state) {
+  @override
+  Widget build(BuildContext context) => switch (widget.state) {
     RelationshipState.none => FilledButton(
       onPressed: busy ? null : _sayHi,
-      child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator()) : const Text('Say Hi'),
+      child: busy
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(),
+            )
+          : const Text('Say Hi'),
     ),
     RelationshipState.outgoingPending => const Center(
       child: Text('Request sent'),
@@ -141,13 +166,14 @@ class _ActionState extends ConsumerState<_Action> {
       onPressed: () async {
         final cs = await ref.read(connectionsProvider.future);
         final c = cs.firstWhere(
-          (c) => c.userAId == widget.profile.id || c.userBId == widget.profile.id,
+          (c) =>
+              c.userAId == widget.profile.id || c.userBId == widget.profile.id,
         );
         final chat = await ref
             .read(chatRepositoryProvider)
             .getOrCreateConversation(
               connectionId: c.id,
-            userId: widget.encounter.currentUserId,
+              userId: widget.encounter.currentUserId,
             );
         if (context.mounted) context.push('/app/chat/${chat.id}');
       },
@@ -158,10 +184,15 @@ class _ActionState extends ConsumerState<_Action> {
   Future<void> _sayHi() async {
     setState(() => busy = true);
     try {
-      await ref.read(connectionControllerProvider).send(widget.profile.id, widget.encounter.id);
+      await ref
+          .read(connectionControllerProvider)
+          .send(widget.profile.id, widget.encounter.id);
       ref.invalidate(relationshipProvider(widget.encounter));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('We could not send your request.')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('We could not send your request.')),
+        );
     } finally {
       if (mounted) setState(() => busy = false);
     }

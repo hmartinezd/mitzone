@@ -43,7 +43,10 @@ GoRouter createAppRouter({
     initialLocation: initialLocation,
     errorBuilder: (context, state) => RouteErrorScreen(error: state.error),
     routes: [
-      GoRoute(path: '/app/notifications', builder: (context, state) => const NotificationCenterScreen()),
+      GoRoute(
+        path: '/app/notifications',
+        builder: (context, state) => const NotificationCenterScreen(),
+      ),
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) {
@@ -126,11 +129,18 @@ GoRouter createAppRouter({
                     builder: (context, state) {
                       final userId = state.pathParameters['userId'];
                       final encounterId = state.pathParameters['encounterId'];
-                      if (userId == null || encounterId == null ||
-                          !ref.read(mockIdentityRepositoryProvider).users.any((u) => u.id == userId)) {
+                      if (userId == null ||
+                          encounterId == null ||
+                          !ref
+                              .read(mockIdentityRepositoryProvider)
+                              .users
+                              .any((u) => u.id == userId)) {
                         return const RouteErrorScreen(error: null);
                       }
-                      return OtherUserProfileScreen(userId: userId, encounterId: encounterId);
+                      return OtherUserProfileScreen(
+                        userId: userId,
+                        encounterId: encounterId,
+                      );
                     },
                   ),
                 ],

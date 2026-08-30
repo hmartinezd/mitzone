@@ -214,7 +214,16 @@ class LocalChatRepository implements ChatRepository {
     d['messages'] = [..._messages(d['messages']).map(_mj), _mj(m)];
     await _write(d);
     final other = c.userAId == senderUserId ? c.userBId : c.userAId;
-    await notifications?.add(LocalNotification(id: 'message_${m.id}', type: LocalNotificationType.newMessage, userId: other, timestamp: timestamp, entityId: conversationId, destination: '/app/chat/$conversationId'));
+    await notifications?.add(
+      LocalNotification(
+        id: 'message_${m.id}',
+        type: LocalNotificationType.newMessage,
+        userId: other,
+        timestamp: timestamp,
+        entityId: conversationId,
+        destination: '/app/chat/$conversationId',
+      ),
+    );
     return m;
   }
 }

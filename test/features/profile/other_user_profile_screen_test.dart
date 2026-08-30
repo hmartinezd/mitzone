@@ -20,7 +20,9 @@ void main() {
   Widget buildScreen({RelationshipState state = RelationshipState.none}) {
     return ProviderScope(
       overrides: [
-        encountersForCurrentUserProvider.overrideWith((ref) async => [encounter]),
+        encountersForCurrentUserProvider.overrideWith(
+          (ref) async => [encounter],
+        ),
         relationshipProvider(encounter).overrideWith((ref) async => state),
       ],
       child: const MaterialApp(
@@ -32,7 +34,9 @@ void main() {
     );
   }
 
-  testWidgets('reconstructs from identifiers without navigation extra', (tester) async {
+  testWidgets('reconstructs from identifiers without navigation extra', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildScreen());
     await tester.pumpAndSettle();
     expect(find.text('Sofia'), findsOneWidget);
@@ -41,7 +45,9 @@ void main() {
     expect(find.text('Say Hi'), findsOneWidget);
   });
 
-  testWidgets('handles unavailable encounter and optional fields safely', (tester) async {
+  testWidgets('handles unavailable encounter and optional fields safely', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [

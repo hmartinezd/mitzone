@@ -61,14 +61,25 @@ class ConnectionController {
     )).firstWhere((item) => item.id == encounter);
     final pair = [sender, recipient]..sort();
     final request = await ref
-          .read(connectionRepositoryProvider)
-          .sendRequest(
-            senderUserId: sender,
-            recipientUserId: recipient,
-            encounterId: encounter,
-            contextId: '${encounterData.eventId}:${pair.join(':')}',
-            );
-    await ref.read(notificationRepositoryProvider).add(LocalNotification(id: 'request_${request.id}', type: LocalNotificationType.connectionRequest, userId: recipient, timestamp: request.createdAt, entityId: request.id, destination: '/app/matches'));
+        .read(connectionRepositoryProvider)
+        .sendRequest(
+          senderUserId: sender,
+          recipientUserId: recipient,
+          encounterId: encounter,
+          contextId: '${encounterData.eventId}:${pair.join(':')}',
+        );
+    await ref
+        .read(notificationRepositoryProvider)
+        .add(
+          LocalNotification(
+            id: 'request_${request.id}',
+            type: LocalNotificationType.connectionRequest,
+            userId: recipient,
+            timestamp: request.createdAt,
+            entityId: request.id,
+            destination: '/app/matches',
+          ),
+        );
     return _refresh(request);
   }
 
@@ -81,11 +92,22 @@ class ConnectionController {
               .read(mockIdentityRepositoryProvider)
               .currentUser
               .id,
-        ),
-    ;
-    await ref.read(notificationRepositoryProvider).add(LocalNotification(id: 'accepted_$id', type: LocalNotificationType.connectionAccepted, userId: result.senderUserId, timestamp: result.createdAt, entityId: id, destination: '/app/chat'));
+        );
+    await ref
+        .read(notificationRepositoryProvider)
+        .add(
+          LocalNotification(
+            id: 'accepted_$id',
+            type: LocalNotificationType.connectionAccepted,
+            userId: result.senderUserId,
+            timestamp: result.createdAt,
+            entityId: id,
+            destination: '/app/chat',
+          ),
+        );
     return _refresh(result);
   }
+
   Future<ConnectionRequest> decline(String id) async => _refresh(
     await ref
         .read(connectionRepositoryProvider)

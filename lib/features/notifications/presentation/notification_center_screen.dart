@@ -2,15 +2,82 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/identity/identity_providers.dart';
+import '../../chat/data/chat_providers.dart';
 import '../data/notification_providers.dart';
+import '../domain/local_notification.dart';
 
 class NotificationCenterScreen extends ConsumerWidget {
   const NotificationCenterScreen({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(notificationsProvider);
     final user = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
-    return Scaffold(appBar: AppBar(title: const Text('Notifications'), actions: [TextButton(onPressed: () async { await ref.read(notificationRepositoryProvider).markAllRead(user); ref.invalidate(notificationsProvider); }, child: const Text('Mark all read'))]), body: state.when(loading: () => const Center(child: CircularProgressIndicator()), error: (_, _) => const Center(child: Text('Notifications unavailable')), data: (items) => items.isEmpty ? const Center(child: Text('No notifications yet.')) : ListView(children: items.map((n) => ListTile(title: Text(_title(n.type)), subtitle: Text(n.timestamp.toLocal().toString()), leading: Icon(n.read ? Icons.notifications_none : Icons.notifications_active), onTap: () async { await ref.read(notificationRepositoryProvider).markRead(user, n.id); ref.invalidate(notificationsProvider); if (context.mounted) context.push(n.destination); })).toList()));
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                ref.read(notificationRepositoryProvider).markAllRead(user),
+            child: const Text('Mark all read'),
+          ),
+        ],
+      ),
+      body: ref
+          .watch(notificationsProvider)
+          .when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) =>
+                const Center(child: Text('Notifications unavailable')),
+            data: (items) => items.isEmpty
+                ? const Center(child: Text('No notifications yet.'))
+                : ListView(
+                    children: items
+                        .map(
+                          (n) => ListTile(
+                            title: Text(_title(n.type)),
+                            subtitle: Text(n.timestamp.toLocal().toString()),
+                            leading: Icon(
+                              n.read
+                                  ? Icons.notifications_none
+                                  : Icons.notifications_active,
+                            ),
+                            onTap: () => _open(context, ref, n, user),
+                          ),
+                        )
+                        .toList(),
+                  ),
+          ),
+    );
   }
-  static String _title(type) => switch (type.name) { 'connectionRequest' => 'New connection request', 'connectionAccepted' => 'Connection accepted', _ => 'New message' };
+
+  Future<void> _open(
+    BuildContext context,
+    WidgetRef ref,
+    LocalNotification n,
+    String user,
+  ) async {
+    await ref.read(notificationRepositoryProvider).markRead(user, n.id);
+    if (!context.mounted) return;
+    if (n.type == LocalNotificationType.newMessage) {
+      try {
+        await ref
+            .read(chatRepositoryProvider)
+            .getMessages(conversationId: n.entityId, userId: user);
+      } catch (_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This conversation is no longer available.'),
+          ),
+        );
+        return;
+      }
+    }
+    context.push(n.destination);
+  }
+
+  static String _title(LocalNotificationType type) => switch (type) {
+    LocalNotificationType.connectionRequest => 'New connection request',
+    LocalNotificationType.connectionAccepted => 'Connection accepted',
+    LocalNotificationType.newMessage => 'New message',
+  };
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../features/notifications/data/notification_providers.dart';
 
 /// The primary navigation shell for the application, providing the bottom navigation bar.
 class MainNavigationShell extends ConsumerWidget {
@@ -23,9 +22,7 @@ class MainNavigationShell extends ConsumerWidget {
     // At very narrow widths, only show the selected label.
     final bool isNarrow = MediaQuery.sizeOf(context).width < 360;
 
-    final unread = ref.watch(unreadNotificationCountProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Mitzone'), actions: [IconButton(onPressed: () => context.push('/app/notifications'), icon: Badge(isLabelVisible: unread > 0, label: Text('$unread'), child: const Icon(Icons.notifications_outlined)))]),
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,

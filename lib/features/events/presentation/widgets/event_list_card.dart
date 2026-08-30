@@ -5,10 +5,11 @@ import '../../domain/event.dart';
 import '../event_category_presentation.dart';
 
 class EventListCard extends StatelessWidget {
-  const EventListCard({required this.event, required this.onTap, super.key});
+  const EventListCard({required this.event, required this.onTap, this.isJoined = false, super.key});
 
   final Event event;
   final VoidCallback onTap;
+  final bool isJoined;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +49,7 @@ class EventListCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (isJoined) const Text('JOINED', style: TextStyle(fontWeight: FontWeight.bold)),
                       Text(
                         event.category.toUpperCase(),
                         style: theme.textTheme.labelSmall?.copyWith(

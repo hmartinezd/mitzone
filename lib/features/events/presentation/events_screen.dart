@@ -8,13 +8,24 @@ import '../../../shared/widgets/mitzone_page_body.dart';
 import '../data/event_providers.dart';
 import 'widgets/event_list_card.dart';
 
-class EventsScreen extends ConsumerWidget {
+class EventsScreen extends ConsumerStatefulWidget {
   const EventsScreen({super.key});
 
+  @override State<EventsScreen> createState() => _EventsScreenState();
+}
+class _EventsScreenState extends ConsumerState<EventsScreen> {
+  final search = TextEditingController();
+  String? category;
+  bool joinedOnly = false;
+  @override void dispose() { search.dispose(); super.dispose(); }
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final events = ref.watch(eventCatalogProvider).getAll();
+    final all = ref.watch(eventCatalogProvider).getAll();
+    final joined = ref.watch(joinedEventIdsProvider);
+    final categories = all.map((e) => e.category).toSet().toList();
+    final query = search.text.trim().toLowerCase();
+    final filtered = all.where((e) => (query.isEmpty || e.title.toLowerCase().contains(query) || e.venue.toLowerCase().contains(query)) && (category == null || e.category == category) && (!joinedOnly || (joined.valueOrNull?.contains(e.id) ?? false))).toList();
 
     return MitzonePageBody(
       title: 'Events',
@@ -28,16 +39,23 @@ class EventsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          ListView.separated(
+          TextField(controller: search, onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Search events or venues', prefixIcon: Icon(Icons.search))),
+          const SizedBox(height: AppSpacing.md),
+          Wrap(spacing: AppSpacing.sm, children: [FilterChip(label: const Text('All'), selected: !joinedOnly, onSelected: (_) => setState(() => joinedOnly = false)), FilterChip(label: const Text('Joined'), selected: joinedOnly, onSelected: (_) => setState(() => joinedOnly = true)), DropdownButton<String>(hint: const Text('Category'), value: category, items: [const DropdownMenuItem(value: null, child: Text('All categories')), ...categories.map((c) => DropdownMenuItem(value: c, child: Text(c)))], onChanged: (v) => setState(() => category = v))]),
+          const SizedBox(height: AppSpacing.lg),
+          if (joined.isLoading) const LinearProgressIndicator(),
+          if (filtered.isEmpty) _EmptyEvents(onClear: () => setState(() { search.clear(); category = null; joinedOnly = false; })),
+          if (filtered.isNotEmpty) ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: events.length,
+            itemCount: filtered.length,
             separatorBuilder: (context, index) =>
                 const SizedBox(height: AppSpacing.md),
             itemBuilder: (context, index) {
-              final event = events[index];
+              final event = filtered[index];
               return EventListCard(
                 event: event,
+                isJoined: joined.valueOrNull?.contains(event.id) ?? false,
                 onTap: () => context.push(AppRoutes.eventDetails(event.id)),
               );
             },
@@ -57,3 +75,5 @@ class EventsScreen extends ConsumerWidget {
     );
   }
 }
+
+class _EmptyEvents extends StatelessWidget { const _EmptyEvents({required this.onClear}); final VoidCallback onClear; @override Widget build(BuildContext context) => Center(child: Column(children: [const SizedBox(height: 24), const Text('No events match your filters.'), TextButton(onPressed: onClear, child: const Text('Clear filters'))])); }

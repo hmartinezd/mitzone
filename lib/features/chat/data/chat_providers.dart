@@ -26,12 +26,14 @@ final chatConversationsProvider = FutureProvider<List<Conversation>>(
 );
 
 final chatMessagesProvider = FutureProvider.family<List<Message>, String>(
-  (ref, id) => ref
-      .watch(chatRepositoryProvider)
-      .getMessages(
+  (ref, id) {
+    // An open conversation must be re-authorized when its connection changes.
+    ref.watch(connectionsProvider);
+    return ref.watch(chatRepositoryProvider).getMessages(
         conversationId: id,
         userId: ref.watch(mockIdentityRepositoryProvider).currentUser.id,
-      ),
+      );
+  },
 );
 
 final conversationContextProvider = FutureProvider.family<String?, String>((

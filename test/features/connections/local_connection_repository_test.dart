@@ -116,6 +116,26 @@ void main() {
     );
   });
 
+  test('participants can remove a connection and reconnect in the same context', () async {
+    final request = await repository.sendRequest(senderUserId: 'a', recipientUserId: 'b', encounterId: 'encounter', contextId: 'event:a:b');
+    await repository.acceptRequest(requestId: request.id, recipientUserId: 'b');
+    final connection = (await repository.getConnections('a')).single;
+    await repository.removeConnection(connectionId: connection.id, userId: 'b');
+    expect(await repository.getConnections('a'), isEmpty);
+    expect(await repository.getRelationshipState(userAId: 'a', userBId: 'b', contextId: 'event:a:b'), RelationshipState.none);
+    final fresh = await repository.sendRequest(senderUserId: 'a', recipientUserId: 'b', encounterId: 'encounter', contextId: 'event:a:b');
+    expect(fresh.status, ConnectionRequestStatus.pending);
+  });
+
+  test('removal rejects unrelated and missing connections', () async {
+    final request = await repository.sendRequest(senderUserId: 'a', recipientUserId: 'b', encounterId: 'encounter');
+    await repository.acceptRequest(requestId: request.id, recipientUserId: 'b');
+    final connection = (await repository.getConnections('a')).single;
+    await expectLater(repository.removeConnection(connectionId: connection.id, userId: 'c'), throwsStateError);
+    await repository.removeConnection(connectionId: connection.id, userId: 'a');
+    await expectLater(repository.removeConnection(connectionId: connection.id, userId: 'a'), throwsStateError);
+  });
+
   test('declines and pending requests are isolated by context', () async {
     final request = await repository.sendRequest(
       senderUserId: 'a',

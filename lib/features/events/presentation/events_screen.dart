@@ -43,8 +43,9 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
           const SizedBox(height: AppSpacing.md),
           Wrap(spacing: AppSpacing.sm, children: [FilterChip(label: const Text('All'), selected: !joinedOnly, onSelected: (_) => setState(() => joinedOnly = false)), FilterChip(label: const Text('Joined'), selected: joinedOnly, onSelected: (_) => setState(() => joinedOnly = true)), DropdownButton<String>(hint: const Text('Category'), value: category, items: [const DropdownMenuItem(value: null, child: Text('All categories')), ...categories.map((c) => DropdownMenuItem(value: c, child: Text(c)))], onChanged: (v) => setState(() => category = v))]),
           const SizedBox(height: AppSpacing.lg),
-          if (joined.isLoading) const LinearProgressIndicator(),
-          if (filtered.isEmpty) _EmptyEvents(onClear: () => setState(() { search.clear(); category = null; joinedOnly = false; })),
+          if (joinedOnly && joined.isLoading) const _ParticipationLoading(),
+          if (joinedOnly && joined.hasError) _ParticipationError(onRetry: () => ref.invalidate(joinedEventIdsProvider)),
+          if ((!joinedOnly || joined.hasValue) && filtered.isEmpty) _EmptyEvents(message: joinedOnly ? 'No joined events match your filters.' : 'No events match your filters.', onClear: () => setState(() { search.clear(); category = null; joinedOnly = false; })),
           if (filtered.isNotEmpty) ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -76,4 +77,6 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
   }
 }
 
-class _EmptyEvents extends StatelessWidget { const _EmptyEvents({required this.onClear}); final VoidCallback onClear; @override Widget build(BuildContext context) => Center(child: Column(children: [const SizedBox(height: 24), const Text('No events match your filters.'), TextButton(onPressed: onClear, child: const Text('Clear filters'))])); }
+class _EmptyEvents extends StatelessWidget { const _EmptyEvents({required this.message, required this.onClear}); final String message; final VoidCallback onClear; @override Widget build(BuildContext context) => Center(child: Column(children: [const SizedBox(height: 24), Text(message), TextButton(onPressed: onClear, child: const Text('Clear filters'))])); }
+class _ParticipationLoading extends StatelessWidget { const _ParticipationLoading(); @override Widget build(BuildContext context) => const Padding(padding: EdgeInsets.all(24), child: Center(child: Column(children: [CircularProgressIndicator(), SizedBox(height: 12), Text('Loading joined events...')] ))); }
+class _ParticipationError extends StatelessWidget { const _ParticipationError({required this.onRetry}); final VoidCallback onRetry; @override Widget build(BuildContext context) => Padding(padding: const EdgeInsets.all(24), child: Center(child: Column(children: [const Text("Couldn't load joined events."), TextButton(onPressed: onRetry, child: const Text('Try again'))]))); }

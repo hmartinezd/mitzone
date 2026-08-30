@@ -164,6 +164,31 @@ void main() {
     expect(find.text("Discover what's happening."), findsOneWidget);
   });
 
+  testWidgets('discovery searches title and venue and filters joined events', (tester) async {
+    final repo = TestParticipationRepository()..idsByIdentity['identity-a'] = {'tech-mixer-2026'};
+    await tester.pumpWidget(appAt(AppRoutes.events, repo));
+    await tester.pumpAndSettle();
+    expect(find.text('Tech Mixer 2026'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Innovation Hub');
+    expect(find.text('Tech Mixer 2026'), findsOneWidget);
+    expect(find.text('Urban Art Gallery Opening'), findsNothing);
+    await tester.tap(find.text('Joined'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tech Mixer 2026'), findsOneWidget);
+    expect(find.text('Live Jazz Night'), findsNothing);
+  });
+
+  testWidgets('joined participation loading is not shown as false empty state', (tester) async {
+    final repo = TestParticipationRepository()..failLoads = true;
+    await tester.pumpWidget(appAt(AppRoutes.events, repo));
+    await tester.pump();
+    await tester.tap(find.text('Joined'));
+    await tester.pump();
+    expect(find.text('No joined events match your filters.'), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.text("Couldn't load joined events."), findsOneWidget);
+  });
+
   testWidgets('direct valid and invalid routes are safe', (tester) async {
     await tester.pumpWidget(
       appAt('/app/events/live-jazz-night', TestParticipationRepository()),

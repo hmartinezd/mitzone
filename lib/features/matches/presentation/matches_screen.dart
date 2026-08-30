@@ -12,7 +12,7 @@ import '../../encounters/data/encounter_providers.dart';
 import '../../encounters/data/encounter_resolvers.dart';
 import '../../encounters/domain/encounter.dart';
 import '../../encounters/domain/profile_affinity.dart';
-import '../../profile/domain/user_profile.dart';
+import '../../profile/presentation/other_user_profile_screen.dart';
 
 class MatchesScreen extends ConsumerWidget {
   const MatchesScreen({super.key});
@@ -96,7 +96,10 @@ class _EncounterCard extends ConsumerWidget {
           Row(
             children: [
               OutlinedButton(
-                onPressed: () => _showProfile(context, user, event.title),
+                onPressed: () => context.push(
+                  '/app/matches/profile/${user.id}',
+                  extra: encounter,
+                ),
                 child: const Text('View profile'),
               ),
               const SizedBox(width: 8),
@@ -163,21 +166,6 @@ class _EncounterCard extends ConsumerWidget {
       }
     }
   }
-
-  void _showProfile(BuildContext context, UserProfile user, String event) =>
-      showDialog<void>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: Text(user.displayName),
-          content: Text('${user.bio ?? ''}\n${user.city ?? ''}\n\n$event'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
 }
 
 class _RequestsSection extends ConsumerWidget {

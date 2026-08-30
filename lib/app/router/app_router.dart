@@ -14,11 +14,13 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
 import '../../features/events/presentation/event_details_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
+import '../../features/encounters/domain/encounter.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/chat/presentation/conversation_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/profile_details_screen.dart';
+import '../../features/profile/presentation/other_user_profile_screen.dart';
 import '../../features/profile/presentation/settings_screen.dart';
 import '../../features/profile/presentation/settings_placeholders.dart';
 import '../../features/navigation/presentation/main_navigation_shell.dart';
@@ -117,6 +119,26 @@ GoRouter createAppRouter({
               GoRoute(
                 path: AppRoutes.matches,
                 builder: (context, state) => const MatchesScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'profile/:userId',
+                    builder: (context, state) {
+                      final encounter = state.extra as Encounter?;
+                      final user = ref
+                          .read(mockIdentityRepositoryProvider)
+                          .users
+                          .firstWhere(
+                            (u) => u.id == state.pathParameters['userId'],
+                          );
+                      return encounter == null
+                          ? const RouteErrorScreen(error: null)
+                          : OtherUserProfileScreen(
+                              profile: user,
+                              encounter: encounter,
+                            );
+                    },
+                  ),
+                ],
               ),
             ],
           ),

@@ -253,6 +253,20 @@ class LocalConnectionRepository implements ConnectionRepository {
     (await _read())['connections'],
   ).where((c) => c.userAId == id || c.userBId == id).toList();
   @override
+  Future<void> removeConnection({required String connectionId, required String userId}) async {
+    final data = await _read();
+    final connections = _parseConnections(data['connections']);
+    final index = connections.indexWhere((c) => c.id == connectionId);
+    if (index < 0) throw StateError('Connection was not found');
+    final connection = connections[index];
+    if (connection.userAId != userId && connection.userBId != userId) {
+      throw StateError('User is not part of this connection');
+    }
+    connections.removeAt(index);
+    data['connections'] = connections.map((c) => {'id': c.id, 'a': c.userAId, 'b': c.userBId, 'encounter': c.encounterId, if (c.contextId != null) 'context': c.contextId, 'connectedAt': c.connectedAt.toIso8601String()}).toList();
+    await _write(data);
+  }
+  @override
   Future<RelationshipState> getRelationshipState({
     required String userAId,
     required String userBId,

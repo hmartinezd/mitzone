@@ -119,6 +119,11 @@ class ConnectionController {
               .id,
         ),
   );
+  Future<void> remove(String connectionId) async {
+    await ref.read(connectionRepositoryProvider).removeConnection(connectionId: connectionId, userId: ref.read(mockIdentityRepositoryProvider).currentUser.id);
+    ref.invalidate(connectionsProvider);
+    ref.invalidate(relationshipProvider);
+  }
   Future<ConnectionRequest> _refresh(ConnectionRequest value) async {
     ref.invalidate(incomingConnectionRequestsProvider);
     ref.invalidate(outgoingConnectionRequestsProvider);

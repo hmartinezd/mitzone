@@ -33,6 +33,7 @@ abstract interface class ConnectionRepository {
     required String recipientUserId,
   });
   Future<List<Connection>> getConnections(String userId);
+  Future<void> removeConnection({required String connectionId, required String userId});
   Future<RelationshipState> getRelationshipState({
     required String userAId,
     required String userBId,

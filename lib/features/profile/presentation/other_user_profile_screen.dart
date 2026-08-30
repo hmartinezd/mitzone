@@ -162,7 +162,8 @@ class _ActionState extends ConsumerState<_Action> {
       child: Text('Review this request in Matches'),
     ),
     RelationshipState.declined => const Center(child: Text('Not now')),
-    RelationshipState.connected => FilledButton(
+    RelationshipState.connected => Column(children: [
+      FilledButton(
       onPressed: () async {
         final cs = await ref.read(connectionsProvider.future);
         final c = cs.firstWhere(
@@ -179,7 +180,23 @@ class _ActionState extends ConsumerState<_Action> {
       },
       child: const Text('Message'),
     ),
+      TextButton(onPressed: busy ? null : _remove, child: const Text('Remove connection')),
+    ]),
   };
+
+  Future<void> _remove() async {
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: const Text('Remove connection?'), content: const Text('This will end the connection for both people.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove'))])) ?? false;
+    if (!confirmed || !mounted) return;
+    setState(() => busy = true);
+    try {
+      final cs = await ref.read(connectionsProvider.future);
+      final c = cs.firstWhere((c) => c.userAId == widget.profile.id || c.userBId == widget.profile.id);
+      await ref.read(connectionControllerProvider).remove(c.id);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connection removed.')));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This connection is no longer available.')));
+    } finally { if (mounted) setState(() => busy = false); }
+  }
 
   Future<void> _sayHi() async {
     setState(() => busy = true);

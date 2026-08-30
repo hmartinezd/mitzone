@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/identity/identity_providers.dart';
+import '../../blocking/data/block_providers.dart';
 
 class AccountSettingsScreen extends StatelessWidget {
   const AccountSettingsScreen({super.key});
@@ -45,15 +48,43 @@ class AccountSettingsScreen extends StatelessWidget {
   }
 }
 
-class PrivacySettingsScreen extends StatelessWidget {
+class PrivacySettingsScreen extends ConsumerWidget {
   const PrivacySettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MitzonePageBody(
       title: 'Privacy',
       onBack: () => context.pop(),
-      child: const Text('Privacy controls are coming in a later phase.'),
+      child: ref
+          .watch(blockedUsersProvider)
+          .when(
+            data: (ids) => Column(
+              children: [
+                for (final id in ids)
+                  ListTile(
+                    title: Text(id),
+                    trailing: TextButton(
+                      onPressed: () async {
+                        await ref
+                            .read(blockRepositoryProvider)
+                            .unblock(
+                              blockerUserId: ref
+                                  .read(mockIdentityRepositoryProvider)
+                                  .currentUser
+                                  .id,
+                              blockedUserId: id,
+                            );
+                        ref.invalidate(blockedUsersProvider);
+                      },
+                      child: const Text('Unblock'),
+                    ),
+                  ),
+              ],
+            ),
+            loading: () => const CircularProgressIndicator(),
+            error: (_, _) => const Text('Privacy controls unavailable.'),
+          ),
     );
   }
 }

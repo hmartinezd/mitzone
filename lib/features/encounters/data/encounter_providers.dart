@@ -4,6 +4,7 @@ import '../../events/data/event_providers.dart';
 import '../../events/domain/event_check_in.dart';
 import 'package:mitzone/features/encounters/domain/encounter.dart';
 import 'local_encounter_repository.dart';
+import '../../blocking/data/block_providers.dart';
 
 /// Local-demo encounters are observed after deterministic simulated elapsed
 /// time so a fresh check-in immediately demonstrates meaningful overlap.
@@ -46,5 +47,9 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
   ref,
 ) async {
   final user = ref.watch(mockIdentityRepositoryProvider).currentUser;
-  return ref.watch(encounterRepositoryProvider).getEncountersForUser(user.id);
+  final blocked = await ref.watch(blockedUsersProvider.future);
+  final encounters = await ref
+      .watch(encounterRepositoryProvider)
+      .getEncountersForUser(user.id);
+  return encounters.where((e) => !blocked.contains(e.otherUserId)).toList();
 });

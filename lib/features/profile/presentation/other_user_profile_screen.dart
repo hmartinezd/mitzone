@@ -12,6 +12,8 @@ import '../../encounters/domain/encounter.dart';
 import '../../encounters/domain/profile_affinity.dart';
 import '../../profile/domain/user_profile.dart';
 import 'widgets/profile_avatar.dart';
+import '../../blocking/data/block_providers.dart';
+import '../../../core/identity/identity_providers.dart';
 
 class OtherUserProfileScreen extends ConsumerWidget {
   const OtherUserProfileScreen({
@@ -114,6 +116,7 @@ class OtherUserProfileScreen extends ConsumerWidget {
             data: (state) =>
                 _Action(state: state, encounter: encounter, profile: profile),
           ),
+          _BlockAction(userId: profile.id),
         ],
       ),
     );
@@ -126,6 +129,70 @@ class OtherUserProfileScreen extends ConsumerWidget {
     ConnectionGoal.professional => 'Professional',
     ConnectionGoal.both => 'Social + Professional',
   };
+}
+
+class _BlockAction extends ConsumerStatefulWidget {
+  const _BlockAction({required this.userId});
+  final String userId;
+  @override
+  ConsumerState<_BlockAction> createState() => _BlockActionState();
+}
+
+class _BlockActionState extends ConsumerState<_BlockAction> {
+  bool busy = false;
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: busy ? null : _block,
+    child: const Text('Block user'),
+  );
+  Future<void> _block() async {
+    final ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text('Block user?'),
+            content: const Text(
+              'Blocking prevents future interaction with this person.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(c, true),
+                child: const Text('Block'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok || !mounted) return;
+    setState(() => busy = true);
+    try {
+      await ref
+          .read(blockRepositoryProvider)
+          .block(
+            blockerUserId: ref
+                .read(mockIdentityRepositoryProvider)
+                .currentUser
+                .id,
+            blockedUserId: widget.userId,
+          );
+      ref.invalidate(blockedUsersProvider);
+      ref.invalidate(encountersForCurrentUserProvider);
+      ref.invalidate(connectionsProvider);
+      ref.invalidate(relationshipProvider);
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This user could not be blocked.')),
+        );
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
 }
 
 class _Action extends ConsumerStatefulWidget {
@@ -162,40 +229,78 @@ class _ActionState extends ConsumerState<_Action> {
       child: Text('Review this request in Matches'),
     ),
     RelationshipState.declined => const Center(child: Text('Not now')),
-    RelationshipState.connected => Column(children: [
-      FilledButton(
-      onPressed: () async {
-        final cs = await ref.read(connectionsProvider.future);
-        final c = cs.firstWhere(
-          (c) =>
-              c.userAId == widget.profile.id || c.userBId == widget.profile.id,
-        );
-        final chat = await ref
-            .read(chatRepositoryProvider)
-            .getOrCreateConversation(
-              connectionId: c.id,
-              userId: widget.encounter.currentUserId,
+    RelationshipState.connected => Column(
+      children: [
+        FilledButton(
+          onPressed: () async {
+            final cs = await ref.read(connectionsProvider.future);
+            final c = cs.firstWhere(
+              (c) =>
+                  c.userAId == widget.profile.id ||
+                  c.userBId == widget.profile.id,
             );
-        if (context.mounted) context.push('/app/chat/${chat.id}');
-      },
-      child: const Text('Message'),
+            final chat = await ref
+                .read(chatRepositoryProvider)
+                .getOrCreateConversation(
+                  connectionId: c.id,
+                  userId: widget.encounter.currentUserId,
+                );
+            if (context.mounted) context.push('/app/chat/${chat.id}');
+          },
+          child: const Text('Message'),
+        ),
+        TextButton(
+          onPressed: busy ? null : _remove,
+          child: const Text('Remove connection'),
+        ),
+      ],
     ),
-      TextButton(onPressed: busy ? null : _remove, child: const Text('Remove connection')),
-    ]),
   };
 
   Future<void> _remove() async {
-    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(title: const Text('Remove connection?'), content: const Text('This will end the connection for both people.'), actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove'))])) ?? false;
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Remove connection?'),
+            content: const Text(
+              'This will end the connection for both people.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Remove'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
     if (!confirmed || !mounted) return;
     setState(() => busy = true);
     try {
       final cs = await ref.read(connectionsProvider.future);
-      final c = cs.firstWhere((c) => c.userAId == widget.profile.id || c.userBId == widget.profile.id);
+      final c = cs.firstWhere(
+        (c) => c.userAId == widget.profile.id || c.userBId == widget.profile.id,
+      );
       await ref.read(connectionControllerProvider).remove(c.id);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connection removed.')));
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Connection removed.')));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This connection is no longer available.')));
-    } finally { if (mounted) setState(() => busy = false); }
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This connection is no longer available.'),
+          ),
+        );
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   Future<void> _sayHi() async {

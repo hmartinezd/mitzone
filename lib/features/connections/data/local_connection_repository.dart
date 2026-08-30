@@ -3,10 +3,16 @@ import '../../../core/storage/local_storage.dart';
 import '../domain/connection.dart';
 import '../domain/connection_repository.dart';
 import '../domain/connection_request.dart';
+import '../../blocking/domain/block_repository.dart';
 
 class LocalConnectionRepository implements ConnectionRepository {
-  const LocalConnectionRepository(this.storage, {this.now = _defaultNow});
+  const LocalConnectionRepository(
+    this.storage, {
+    this.now = _defaultNow,
+    this.blocks,
+  });
   final LocalStorage storage;
+  final BlockRepository? blocks;
   final DateTime Function() now;
   static const key = 'local_connections.v1';
   static DateTime _defaultNow() => DateTime.now().toUtc();
@@ -123,6 +129,9 @@ class LocalConnectionRepository implements ConnectionRepository {
     required String encounterId,
     String? contextId,
   }) async {
+    if (await blocks?.isBlocked(senderUserId, recipientUserId) == true ||
+        await blocks?.isBlocked(recipientUserId, senderUserId) == true)
+      throw StateError('Interaction is unavailable');
     if (senderUserId == recipientUserId || encounterId.isEmpty) {
       throw ArgumentError('Invalid connection request');
     }
@@ -192,6 +201,10 @@ class LocalConnectionRepository implements ConnectionRepository {
     );
     if (index < 0) throw StateError('Request is not actionable');
     final old = requests[index];
+    if (await blocks?.isBlocked(old.senderUserId, old.recipientUserId) ==
+            true ||
+        await blocks?.isBlocked(old.recipientUserId, old.senderUserId) == true)
+      throw StateError('Interaction is unavailable');
     final updated = ConnectionRequest(
       id: old.id,
       senderUserId: old.senderUserId,
@@ -249,11 +262,26 @@ class LocalConnectionRepository implements ConnectionRepository {
     required String recipientUserId,
   }) => _change(requestId, recipientUserId, ConnectionRequestStatus.declined);
   @override
-  Future<List<Connection>> getConnections(String id) async => _parseConnections(
-    (await _read())['connections'],
-  ).where((c) => c.userAId == id || c.userBId == id).toList();
+  Future<List<Connection>> getConnections(String id) async {
+    final all = _parseConnections(
+      (await _read())['connections'],
+    ).where((c) => c.userAId == id || c.userBId == id);
+    final visible = <Connection>[];
+    for (final c in all) {
+      final other = c.userAId == id ? c.userBId : c.userAId;
+      if (await blocks?.isBlocked(id, other) == true ||
+          await blocks?.isBlocked(other, id) == true)
+        continue;
+      visible.add(c);
+    }
+    return visible;
+  }
+
   @override
-  Future<void> removeConnection({required String connectionId, required String userId}) async {
+  Future<void> removeConnection({
+    required String connectionId,
+    required String userId,
+  }) async {
     final data = await _read();
     final connections = _parseConnections(data['connections']);
     final index = connections.indexWhere((c) => c.id == connectionId);
@@ -263,9 +291,21 @@ class LocalConnectionRepository implements ConnectionRepository {
       throw StateError('User is not part of this connection');
     }
     connections.removeAt(index);
-    data['connections'] = connections.map((c) => {'id': c.id, 'a': c.userAId, 'b': c.userBId, 'encounter': c.encounterId, if (c.contextId != null) 'context': c.contextId, 'connectedAt': c.connectedAt.toIso8601String()}).toList();
+    data['connections'] = connections
+        .map(
+          (c) => {
+            'id': c.id,
+            'a': c.userAId,
+            'b': c.userBId,
+            'encounter': c.encounterId,
+            if (c.contextId != null) 'context': c.contextId,
+            'connectedAt': c.connectedAt.toIso8601String(),
+          },
+        )
+        .toList();
     await _write(data);
   }
+
   @override
   Future<RelationshipState> getRelationshipState({
     required String userAId,
@@ -273,6 +313,9 @@ class LocalConnectionRepository implements ConnectionRepository {
     String? contextId,
     String? encounterId,
   }) async {
+    if (await blocks?.isBlocked(userAId, userBId) == true ||
+        await blocks?.isBlocked(userBId, userAId) == true)
+      return RelationshipState.none;
     final connections = await getConnections(userAId);
     if (connections.any(
       (c) =>

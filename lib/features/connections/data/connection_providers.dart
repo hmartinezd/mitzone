@@ -9,9 +9,13 @@ import '../../encounters/data/encounter_providers.dart';
 import '../../encounters/domain/encounter.dart';
 import '../../notifications/data/notification_providers.dart';
 import '../../notifications/domain/local_notification.dart';
+import '../../blocking/data/block_providers.dart';
 
 final connectionRepositoryProvider = Provider<ConnectionRepository>(
-  (ref) => LocalConnectionRepository(ref.watch(localStorageProvider)),
+  (ref) => LocalConnectionRepository(
+    ref.watch(localStorageProvider),
+    blocks: ref.watch(blockRepositoryProvider),
+  ),
 );
 final incomingConnectionRequestsProvider =
     FutureProvider<List<ConnectionRequest>>((ref) {
@@ -120,10 +124,16 @@ class ConnectionController {
         ),
   );
   Future<void> remove(String connectionId) async {
-    await ref.read(connectionRepositoryProvider).removeConnection(connectionId: connectionId, userId: ref.read(mockIdentityRepositoryProvider).currentUser.id);
+    await ref
+        .read(connectionRepositoryProvider)
+        .removeConnection(
+          connectionId: connectionId,
+          userId: ref.read(mockIdentityRepositoryProvider).currentUser.id,
+        );
     ref.invalidate(connectionsProvider);
     ref.invalidate(relationshipProvider);
   }
+
   Future<ConnectionRequest> _refresh(ConnectionRequest value) async {
     ref.invalidate(incomingConnectionRequestsProvider);
     ref.invalidate(outgoingConnectionRequestsProvider);

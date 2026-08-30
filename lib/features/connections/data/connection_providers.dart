@@ -7,6 +7,8 @@ import '../domain/connection_request.dart';
 import 'local_connection_repository.dart';
 import '../../encounters/data/encounter_providers.dart';
 import '../../encounters/domain/encounter.dart';
+import '../../notifications/data/notification_providers.dart';
+import '../../notifications/domain/local_notification.dart';
 
 final connectionRepositoryProvider = Provider<ConnectionRepository>(
   (ref) => LocalConnectionRepository(ref.watch(localStorageProvider)),
@@ -58,20 +60,20 @@ class ConnectionController {
       encountersForCurrentUserProvider.future,
     )).firstWhere((item) => item.id == encounter);
     final pair = [sender, recipient]..sort();
-    return _refresh(
-      await ref
+    final request = await ref
           .read(connectionRepositoryProvider)
           .sendRequest(
             senderUserId: sender,
             recipientUserId: recipient,
             encounterId: encounter,
             contextId: '${encounterData.eventId}:${pair.join(':')}',
-          ),
-    );
+            );
+    await ref.read(notificationRepositoryProvider).add(LocalNotification(id: 'request_${request.id}', type: LocalNotificationType.connectionRequest, userId: recipient, timestamp: request.createdAt, entityId: request.id, destination: '/app/matches'));
+    return _refresh(request);
   }
 
-  Future<ConnectionRequest> accept(String id) async => _refresh(
-    await ref
+  Future<ConnectionRequest> accept(String id) async {
+    final result = await ref
         .read(connectionRepositoryProvider)
         .acceptRequest(
           requestId: id,
@@ -80,7 +82,10 @@ class ConnectionController {
               .currentUser
               .id,
         ),
-  );
+    ;
+    await ref.read(notificationRepositoryProvider).add(LocalNotification(id: 'accepted_$id', type: LocalNotificationType.connectionAccepted, userId: result.senderUserId, timestamp: result.createdAt, entityId: id, destination: '/app/chat'));
+    return _refresh(result);
+  }
   Future<ConnectionRequest> decline(String id) async => _refresh(
     await ref
         .read(connectionRepositoryProvider)

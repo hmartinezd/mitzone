@@ -23,6 +23,7 @@ import '../../features/profile/presentation/other_user_profile_screen.dart';
 import '../../features/profile/presentation/settings_screen.dart';
 import '../../features/profile/presentation/settings_placeholders.dart';
 import '../../features/navigation/presentation/main_navigation_shell.dart';
+import '../../features/notifications/presentation/notification_center_screen.dart';
 import 'app_entry_resolver.dart';
 import 'app_routes.dart';
 import 'app_entry_coordinator.dart';
@@ -42,6 +43,7 @@ GoRouter createAppRouter({
     initialLocation: initialLocation,
     errorBuilder: (context, state) => RouteErrorScreen(error: state.error),
     routes: [
+      GoRoute(path: '/app/notifications', builder: (context, state) => const NotificationCenterScreen()),
       GoRoute(
         path: AppRoutes.splash,
         builder: (context, state) {

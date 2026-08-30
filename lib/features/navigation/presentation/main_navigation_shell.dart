@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../features/notifications/data/notification_providers.dart';
 
 /// The primary navigation shell for the application, providing the bottom navigation bar.
-class MainNavigationShell extends StatelessWidget {
+class MainNavigationShell extends ConsumerWidget {
   const MainNavigationShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
@@ -16,12 +18,14 @@ class MainNavigationShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Use a responsive strategy for labels on narrow devices.
     // At very narrow widths, only show the selected label.
     final bool isNarrow = MediaQuery.sizeOf(context).width < 360;
 
+    final unread = ref.watch(unreadNotificationCountProvider);
     return Scaffold(
+      appBar: AppBar(title: const Text('Mitzone'), actions: [IconButton(onPressed: () => context.push('/app/notifications'), icon: Badge(isLabelVisible: unread > 0, label: Text('$unread'), child: const Icon(Icons.notifications_outlined)))]),
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
@@ -29,7 +33,7 @@ class MainNavigationShell extends StatelessWidget {
         labelBehavior: isNarrow
             ? NavigationDestinationLabelBehavior.onlyShowSelected
             : NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),

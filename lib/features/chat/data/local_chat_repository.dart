@@ -4,16 +4,20 @@ import '../../connections/domain/connection_repository.dart';
 import 'package:mitzone/features/connections/domain/connection.dart';
 import '../domain/chat_models.dart';
 import '../domain/chat_repository.dart';
+import '../../notifications/domain/notification_repository.dart';
+import '../../notifications/domain/local_notification.dart';
 
 class LocalChatRepository implements ChatRepository {
   LocalChatRepository(
     this.storage,
     this.connections, {
     DateTime Function()? now,
+    this.notifications,
   }) : now = now ?? (() => DateTime.now().toUtc());
   final LocalStorage storage;
   final ConnectionRepository connections;
   final DateTime Function() now;
+  final NotificationRepository? notifications;
   static const key = 'local_chat.v1';
   Future<Map<String, dynamic>> _read() async {
     try {
@@ -209,6 +213,8 @@ class LocalChatRepository implements ChatRepository {
     d['conversations'] = cs.map(_cj).toList();
     d['messages'] = [..._messages(d['messages']).map(_mj), _mj(m)];
     await _write(d);
+    final other = c.userAId == senderUserId ? c.userBId : c.userAId;
+    await notifications?.add(LocalNotification(id: 'message_${m.id}', type: LocalNotificationType.newMessage, userId: other, timestamp: timestamp, entityId: conversationId, destination: '/app/chat/$conversationId'));
     return m;
   }
 }

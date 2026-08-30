@@ -7,11 +7,13 @@ import '../domain/chat_repository.dart';
 import 'local_chat_repository.dart';
 import '../../encounters/data/encounter_providers.dart';
 import '../../events/data/event_providers.dart';
+import '../../notifications/data/notification_providers.dart';
 
 final chatRepositoryProvider = Provider<ChatRepository>(
   (ref) => LocalChatRepository(
     ref.watch(localStorageProvider),
     ref.watch(connectionRepositoryProvider),
+    notifications: ref.watch(notificationRepositoryProvider),
   ),
 );
 

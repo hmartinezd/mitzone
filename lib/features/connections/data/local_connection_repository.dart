@@ -129,8 +129,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     required String encounterId,
     String? contextId,
   }) async {
-    if (await blocks?.isBlocked(senderUserId, recipientUserId) == true ||
-        await blocks?.isBlocked(recipientUserId, senderUserId) == true)
+    if (await blocks?.isPairBlocked(senderUserId, recipientUserId) == true)
       throw StateError('Interaction is unavailable');
     if (senderUserId == recipientUserId || encounterId.isEmpty) {
       throw ArgumentError('Invalid connection request');
@@ -173,19 +172,21 @@ class LocalConnectionRepository implements ConnectionRepository {
   }
 
   @override
-  Future<List<ConnectionRequest>> getIncomingRequests(String id) async =>
-      _parseRequests((await _read())['requests'])
-          .where(
-            (r) =>
-                r.recipientUserId == id &&
-                r.status == ConnectionRequestStatus.pending,
-          )
-          .toList();
+  Future<List<ConnectionRequest>> getIncomingRequests(String id) async {
+    final result = <ConnectionRequest>[];
+    for (final r in _parseRequests((await _read())['requests'])) {
+      if (r.recipientUserId == id && r.status == ConnectionRequestStatus.pending && !(await blocks?.isPairBlocked(r.senderUserId, r.recipientUserId) ?? false)) result.add(r);
+    }
+    return result;
+  }
   @override
-  Future<List<ConnectionRequest>> getOutgoingRequests(String id) async =>
-      _parseRequests(
-        (await _read())['requests'],
-      ).where((r) => r.senderUserId == id).toList();
+  Future<List<ConnectionRequest>> getOutgoingRequests(String id) async {
+    final result = <ConnectionRequest>[];
+    for (final r in _parseRequests((await _read())['requests'])) {
+      if (r.senderUserId == id && !(await blocks?.isPairBlocked(r.senderUserId, r.recipientUserId) ?? false)) result.add(r);
+    }
+    return result;
+  }
   Future<ConnectionRequest> _change(
     String id,
     String user,
@@ -201,9 +202,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     );
     if (index < 0) throw StateError('Request is not actionable');
     final old = requests[index];
-    if (await blocks?.isBlocked(old.senderUserId, old.recipientUserId) ==
-            true ||
-        await blocks?.isBlocked(old.recipientUserId, old.senderUserId) == true)
+    if (await blocks?.isPairBlocked(old.senderUserId, old.recipientUserId) == true)
       throw StateError('Interaction is unavailable');
     final updated = ConnectionRequest(
       id: old.id,
@@ -269,8 +268,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     final visible = <Connection>[];
     for (final c in all) {
       final other = c.userAId == id ? c.userBId : c.userAId;
-      if (await blocks?.isBlocked(id, other) == true ||
-          await blocks?.isBlocked(other, id) == true)
+      if (await blocks?.isPairBlocked(id, other) == true)
         continue;
       visible.add(c);
     }
@@ -313,8 +311,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     String? contextId,
     String? encounterId,
   }) async {
-    if (await blocks?.isBlocked(userAId, userBId) == true ||
-        await blocks?.isBlocked(userBId, userAId) == true)
+    if (await blocks?.isPairBlocked(userAId, userBId) == true)
       return RelationshipState.none;
     final connections = await getConnections(userAId);
     if (connections.any(

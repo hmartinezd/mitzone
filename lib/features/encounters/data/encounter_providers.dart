@@ -47,9 +47,12 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
   ref,
 ) async {
   final user = ref.watch(mockIdentityRepositoryProvider).currentUser;
-  final blocked = await ref.watch(blockedUsersProvider.future);
   final encounters = await ref
       .watch(encounterRepositoryProvider)
       .getEncountersForUser(user.id);
-  return encounters.where((e) => !blocked.contains(e.otherUserId)).toList();
+  final result = <Encounter>[];
+  for (final encounter in encounters) {
+    if (!await ref.read(blockRepositoryProvider).isPairBlocked(user.id, encounter.otherUserId)) result.add(encounter);
+  }
+  return result;
 });

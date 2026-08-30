@@ -10,9 +10,11 @@ void main() {
     await repo.block(blockerUserId: 'a', blockedUserId: 'b');
     expect(await repo.isBlocked('a', 'b'), isTrue);
     expect(await repo.isBlocked('b', 'a'), isFalse);
+    expect(await repo.isPairBlocked('b', 'a'), isTrue);
     expect(await LocalBlockRepository(storage).getBlocked('a'), ['b']);
     await repo.unblock(blockerUserId: 'a', blockedUserId: 'b');
     expect(await repo.isBlocked('a', 'b'), isFalse);
+    expect(await repo.isPairBlocked('a', 'b'), isFalse);
   });
   test(
     'rejects self block',

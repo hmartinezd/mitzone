@@ -12,3 +12,4 @@ final blockedUsersProvider = FutureProvider<List<String>>(
       .watch(blockRepositoryProvider)
       .getBlocked(ref.watch(mockIdentityRepositoryProvider).currentUser.id),
 );
+final interactionBlockedProvider = FutureProvider.family<bool, ({String a, String b})>((ref, pair) => ref.watch(blockRepositoryProvider).isPairBlocked(pair.a, pair.b));

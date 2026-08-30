@@ -19,20 +19,24 @@ final connectionRepositoryProvider = Provider<ConnectionRepository>(
 );
 final incomingConnectionRequestsProvider =
     FutureProvider<List<ConnectionRequest>>((ref) {
+      ref.watch(blockedUsersProvider);
       final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
       return ref.watch(connectionRepositoryProvider).getIncomingRequests(id);
     });
 final outgoingConnectionRequestsProvider =
     FutureProvider<List<ConnectionRequest>>((ref) {
+      ref.watch(blockedUsersProvider);
       final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
       return ref.watch(connectionRepositoryProvider).getOutgoingRequests(id);
     });
 final connectionsProvider = FutureProvider<List<Connection>>((ref) {
+  ref.watch(blockedUsersProvider);
   final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
   return ref.watch(connectionRepositoryProvider).getConnections(id);
 });
 final relationshipProvider =
     FutureProvider.family<RelationshipState, Encounter>((ref, encounter) {
+      ref.watch(blockedUsersProvider);
       final current = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
       final pair = [current, encounter.otherUserId]..sort();
       return ref

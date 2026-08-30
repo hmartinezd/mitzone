@@ -5,6 +5,8 @@ import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/identity/identity_providers.dart';
 import '../../blocking/data/block_providers.dart';
+import '../domain/user_profile.dart';
+import 'widgets/profile_avatar.dart';
 
 class AccountSettingsScreen extends StatelessWidget {
   const AccountSettingsScreen({super.key});
@@ -61,9 +63,10 @@ class PrivacySettingsScreen extends ConsumerWidget {
           .when(
             data: (ids) => Column(
               children: [
-                for (final id in ids)
-                  ListTile(
-                    title: Text(id),
+            for (final id in ids)
+              ListTile(
+                leading: ProfileAvatar(displayName: MockUsers.all.firstWhere((u) => u.id == id, orElse: () => UserProfile(id: id, displayName: id)).displayName, radius: 20),
+                title: Text(MockUsers.all.firstWhere((u) => u.id == id, orElse: () => UserProfile(id: id, displayName: id)).displayName),
                     trailing: TextButton(
                       onPressed: () async {
                         await ref

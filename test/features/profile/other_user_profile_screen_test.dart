@@ -8,7 +8,7 @@ import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/features/profile/presentation/other_user_profile_screen.dart';
 
 void main() {
-  const encounter = Encounter(
+  final encounter = Encounter(
     id: 'jose-sofia-event-1',
     currentUserId: MockUsers.joseId,
     otherUserId: MockUsers.sofiaId,
@@ -25,7 +25,7 @@ void main() {
         ),
         relationshipProvider(encounter).overrideWith((ref) async => state),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         home: OtherUserProfileScreen(
           userId: MockUsers.sofiaId,
           encounterId: encounter.id,

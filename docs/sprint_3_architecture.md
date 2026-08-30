@@ -2,6 +2,8 @@
 
 Status: planning only. This document defines boundaries; it does not activate a backend, authentication, GPS, QR, push notifications, or production matching.
 
+The initial backend/auth foundation now exists without activation: compile-time Supabase URL and publishable key configuration is optional, and a backend-neutral email/password session contract wraps Supabase infrastructure types. Missing configuration continues to run the local demo. No service-role key belongs in the client, and all social repositories remain local until later migration blocks.
+
 ## Sprint 2 audit
 
 The supported local flow is:

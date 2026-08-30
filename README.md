@@ -162,6 +162,10 @@ lib/
 ```
 ## Local presence
 
+## Sprint 3 backend/auth foundation
+
+Supabase configuration and a backend-neutral authentication contract are now present, but backend authentication is not activated for the local demo. Configure `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_PUBLISHABLE_KEY=...` only for an authenticated environment; never use a service-role key in the client. The current social records remain local, and the mock identity/demo mode remains the default when configuration is absent. Email/password is the initial auth adapter; login/profile entry integration and remote data migration remain future Sprint 3 blocks.
+
 In the local demo, participation means intending to attend an event, while presence/check-in represents demo attendance. Presence is scoped to the active mock identity. Deterministic mock attendee windows are generated relative to the local check-in, and encounters are derived from genuine interval overlap. QR, geolocation, and independently verified presence remain future work.
 
 The working local flow is: participation → presence → encounter → “Say Hi” request → connection → conversation → messages. These records are local demo data; permanent authentication, backend synchronization, and production presence verification are not implemented.

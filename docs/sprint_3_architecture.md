@@ -40,3 +40,9 @@ Remote implementations will eventually replace the local repositories for identi
 8. Add privacy, migration, observability, rollout, and operational testing.
 
 GPS, QR, production matching, personality questionnaires/scoring, Report User, moderation, and push delivery remain deferred to dedicated future blocks.
+
+## Initial contract decisions
+
+The first contract block adds a source-neutral `PresenceEvidence` value with an opaque evidence ID, subject user, context ID, bounded UTC interval, extensible source enum, optional confidence, consent scope, and expiration. `Encounter` remains a derived pair result and now rejects self-pairs and reversed intervals. A small `DomainError` vocabulary is available for not-found, unauthorized, interaction-unavailable, invalid-state, and validation failures; existing local adapters may continue translating their current errors until each contract is migrated.
+
+Existing local IDs remain valid. New IDs must be opaque and independent of display names, list order, and timestamps alone. Domain timestamps are UTC; lifecycle timestamps retain their meaning instead of being overloaded. No local persistence schema migration is required by these contracts.

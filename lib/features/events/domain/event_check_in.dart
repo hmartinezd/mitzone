@@ -8,7 +8,7 @@ class EventCheckIn {
     required this.checkedInAt,
     required this.method,
     this.checkedOutAt,
-  });
+  }) : assert(eventId != ''), assert(identityId != ''), assert(checkedInAt.isUtc), assert(checkedOutAt == null || !checkedOutAt!.isBefore(checkedInAt));
 
   final String eventId;
   final String identityId;

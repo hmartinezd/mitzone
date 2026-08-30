@@ -6,7 +6,7 @@ class Encounter {
     required this.eventId,
     required this.overlapStart,
     required this.overlapEnd,
-  });
+  }) : assert(id != ''), assert(currentUserId != ''), assert(otherUserId != ''), assert(currentUserId != otherUserId), assert(eventId != ''), assert(!overlapEnd.isBefore(overlapStart));
   final String id;
   final String currentUserId;
   final String otherUserId;

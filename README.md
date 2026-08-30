@@ -6,7 +6,7 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Sprint 2 — active
+**Current Phase**: Sprint 2 — complete; Sprint 3 architecture defined
 
 **Baseline**: Sprint 1 local/offline demo — closed and validated. This is a
 demo baseline, not a production-readiness claim.
@@ -167,3 +167,9 @@ In the local demo, participation means intending to attend an event, while prese
 The working local flow is: participation → presence → encounter → “Say Hi” request → connection → conversation → messages. These records are local demo data; permanent authentication, backend synchronization, and production presence verification are not implemented.
 
 The active user's encounters use their real local identity-scoped check-ins; other users remain deterministic development fixtures.
+
+## Sprint 2 status
+
+Sprint 2 is formally complete. The supported local flow is event discovery → participation → demo presence → encounter → other-user profile → Say Hi → request → connection → conversation → messages → local notifications → disconnect/block.
+
+The local safety primitives are connection removal by either participant, directional blocking with symmetric interaction restrictions, and authorized chat. Report User and moderation remain explicitly deferred. The production-boundary plan for Sprint 3 is documented in [docs/sprint_3_architecture.md](docs/sprint_3_architecture.md).

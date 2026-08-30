@@ -97,8 +97,7 @@ class _EncounterCard extends ConsumerWidget {
             children: [
               OutlinedButton(
                 onPressed: () => context.push(
-                  '/app/matches/profile/${user.id}',
-                  extra: encounter,
+                  '/app/matches/profile/${user.id}/${encounter.id}',
                 ),
                 child: const Text('View profile'),
               ),

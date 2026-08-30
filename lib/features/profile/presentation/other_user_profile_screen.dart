@@ -7,22 +7,33 @@ import '../../connections/data/connection_providers.dart';
 import '../../connections/domain/connection_repository.dart';
 import '../../chat/data/chat_providers.dart';
 import '../../encounters/data/encounter_resolvers.dart';
+import '../../encounters/data/encounter_providers.dart';
 import '../../encounters/domain/encounter.dart';
 import '../../encounters/domain/profile_affinity.dart';
 import '../../profile/domain/user_profile.dart';
 import 'widgets/profile_avatar.dart';
 
 class OtherUserProfileScreen extends ConsumerWidget {
-  const OtherUserProfileScreen({
-    required this.profile,
-    required this.encounter,
-    super.key,
-  });
-  final UserProfile profile;
-  final Encounter encounter;
+  const OtherUserProfileScreen({required this.userId, required this.encounterId, super.key});
+  final String userId;
+  final String encounterId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final encounterState = ref.watch(encountersForCurrentUserProvider);
+    return encounterState.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, _) => const Scaffold(body: Center(child: Text('This encounter is no longer available.'))),
+      data: (encounters) {
+        final encounter = encounters.where((e) => e.id == encounterId && e.otherUserId == userId).firstOrNull;
+        if (encounter == null) return const Scaffold(body: Center(child: Text('This encounter is no longer available.')));
+        final profile = ref.watch(encounterProfileProvider(userId));
+        return _content(context, ref, profile, encounter);
+      },
+    );
+  }
+
+  Widget _content(BuildContext context, WidgetRef ref, UserProfile profile, Encounter encounter) {
     final current = ref.watch(
       encounterProfileProvider(encounter.currentUserId),
     );
@@ -100,7 +111,7 @@ class OtherUserProfileScreen extends ConsumerWidget {
   };
 }
 
-class _Action extends ConsumerWidget {
+class _Action extends ConsumerStatefulWidget {
   const _Action({
     required this.state,
     required this.encounter,
@@ -109,12 +120,15 @@ class _Action extends ConsumerWidget {
   final RelationshipState state;
   final Encounter encounter;
   final UserProfile profile;
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => switch (state) {
+  @override ConsumerState<_Action> createState() => _ActionState();
+}
+
+class _ActionState extends ConsumerState<_Action> {
+  bool busy = false;
+  @override Widget build(BuildContext context) => switch (widget.state) {
     RelationshipState.none => FilledButton(
-      onPressed: () =>
-          ref.read(connectionControllerProvider).send(profile.id, encounter.id),
-      child: const Text('Say Hi'),
+      onPressed: busy ? null : _sayHi,
+      child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator()) : const Text('Say Hi'),
     ),
     RelationshipState.outgoingPending => const Center(
       child: Text('Request sent'),
@@ -127,19 +141,31 @@ class _Action extends ConsumerWidget {
       onPressed: () async {
         final cs = await ref.read(connectionsProvider.future);
         final c = cs.firstWhere(
-          (c) => c.userAId == profile.id || c.userBId == profile.id,
+          (c) => c.userAId == widget.profile.id || c.userBId == widget.profile.id,
         );
         final chat = await ref
             .read(chatRepositoryProvider)
             .getOrCreateConversation(
               connectionId: c.id,
-              userId: encounter.currentUserId,
+            userId: widget.encounter.currentUserId,
             );
         if (context.mounted) context.push('/app/chat/${chat.id}');
       },
       child: const Text('Message'),
     ),
   };
+
+  Future<void> _sayHi() async {
+    setState(() => busy = true);
+    try {
+      await ref.read(connectionControllerProvider).send(widget.profile.id, widget.encounter.id);
+      ref.invalidate(relationshipProvider(widget.encounter));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('We could not send your request.')));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
 }
 
 class _InfoSection extends StatelessWidget {

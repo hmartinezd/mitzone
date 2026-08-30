@@ -14,7 +14,6 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
 import '../../features/events/presentation/event_details_screen.dart';
 import '../../features/matches/presentation/matches_screen.dart';
-import '../../features/encounters/domain/encounter.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/chat/presentation/conversation_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -121,21 +120,15 @@ GoRouter createAppRouter({
                 builder: (context, state) => const MatchesScreen(),
                 routes: [
                   GoRoute(
-                    path: 'profile/:userId',
+                    path: 'profile/:userId/:encounterId',
                     builder: (context, state) {
-                      final encounter = state.extra as Encounter?;
-                      final user = ref
-                          .read(mockIdentityRepositoryProvider)
-                          .users
-                          .firstWhere(
-                            (u) => u.id == state.pathParameters['userId'],
-                          );
-                      return encounter == null
-                          ? const RouteErrorScreen(error: null)
-                          : OtherUserProfileScreen(
-                              profile: user,
-                              encounter: encounter,
-                            );
+                      final userId = state.pathParameters['userId'];
+                      final encounterId = state.pathParameters['encounterId'];
+                      if (userId == null || encounterId == null ||
+                          !ref.read(mockIdentityRepositoryProvider).users.any((u) => u.id == userId)) {
+                        return const RouteErrorScreen(error: null);
+                      }
+                      return OtherUserProfileScreen(userId: userId, encounterId: encounterId);
                     },
                   ),
                 ],

@@ -45,6 +45,49 @@ void main() {
     );
   });
 
+  test(
+    'messages require the current user to own an active connection',
+    () async {
+      final connectionId = await connect('a', 'b');
+      final conversation = await chat.getOrCreateConversation(
+        connectionId: connectionId,
+        userId: 'a',
+      );
+      expect(
+        await chat.getMessages(conversationId: conversation.id, userId: 'b'),
+        isEmpty,
+      );
+      await expectLater(
+        chat.getMessages(conversationId: conversation.id, userId: 'outsider'),
+        throwsStateError,
+      );
+      await storage.setString(
+        LocalConnectionRepository.key,
+        jsonEncode({'requests': [], 'connections': []}),
+      );
+      await expectLater(
+        chat.getMessages(conversationId: conversation.id, userId: 'a'),
+        throwsStateError,
+      );
+    },
+  );
+
+  test(
+    'conversation list hides orphaned conversations after disconnection',
+    () async {
+      final connectionId = await connect('a', 'b');
+      await chat.getOrCreateConversation(
+        connectionId: connectionId,
+        userId: 'a',
+      );
+      await storage.setString(
+        LocalConnectionRepository.key,
+        jsonEncode({'requests': [], 'connections': []}),
+      );
+      expect(await chat.getConversations('a'), isEmpty);
+    },
+  );
+
   test('creates exactly one usable conversation per connection', () async {
     final connectionId = await connect('a', 'b');
     final first = await chat.getOrCreateConversation(

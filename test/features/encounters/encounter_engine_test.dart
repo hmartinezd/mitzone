@@ -16,10 +16,7 @@ void main() {
       attendees.first.checkedInAt,
       anchor.subtract(const Duration(minutes: 45)),
     );
-    expect(
-      attendees.first.checkedOutAt,
-      anchor.add(const Duration(hours: 2)),
-    );
+    expect(attendees.first.checkedOutAt, anchor.add(const Duration(hours: 2)));
   });
 
   test('does not invent attendees for an event without a demo schedule', () {
@@ -49,11 +46,10 @@ void main() {
     ]).forUser('local-user', referenceTime: observedAt);
 
     expect(encounters, hasLength(3));
-    expect(encounters.map((encounter) => encounter.otherUserId), containsAll([
-      MockUsers.emmaId,
-      MockUsers.sofiaId,
-      MockUsers.joseId,
-    ]));
+    expect(
+      encounters.map((encounter) => encounter.otherUserId),
+      containsAll([MockUsers.emmaId, MockUsers.sofiaId, MockUsers.joseId]),
+    );
     expect(
       encounters
           .singleWhere((e) => e.otherUserId == MockUsers.joseId)

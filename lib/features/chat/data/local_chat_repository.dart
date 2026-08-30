@@ -107,9 +107,14 @@ class LocalChatRepository implements ChatRepository {
 
   @override
   Future<List<Conversation>> getConversations(String userId) async {
-    final conversations = _conversations(
+    final all = _conversations(
       (await _read())['conversations'],
     ).where((c) => c.userAId == userId || c.userBId == userId).toList();
+    final active = await connections.getConnections(userId);
+    final activeIds = active.map((c) => c.id).toSet();
+    final conversations = all
+        .where((c) => activeIds.contains(c.connectionId))
+        .toList();
     conversations.sort((a, b) {
       final aActivity = a.lastMessageAt ?? a.createdAt;
       final bActivity = b.lastMessageAt ?? b.createdAt;

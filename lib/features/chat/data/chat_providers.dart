@@ -8,34 +8,38 @@ import 'local_chat_repository.dart';
 import '../../encounters/data/encounter_providers.dart';
 import '../../events/data/event_providers.dart';
 import '../../notifications/data/notification_providers.dart';
+import '../../../core/auth/auth_providers.dart';
+import 'supabase_chat_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/identity/current_user_provider.dart';
 
-final chatRepositoryProvider = Provider<ChatRepository>(
-  (ref) => LocalChatRepository(
+final chatRepositoryProvider = Provider<ChatRepository>((ref) => ref.watch(productionModeProvider)
+  ? SupabaseChatRepository(Supabase.instance.client)
+  : LocalChatRepository(
     ref.watch(localStorageProvider),
     ref.watch(connectionRepositoryProvider),
     notifications: ref.watch(notificationRepositoryProvider),
-  ),
-);
+  ));
 
 final chatConversationsProvider = FutureProvider<List<Conversation>>(
-  (ref) => ref
+  (ref) async => ref
       .watch(chatRepositoryProvider)
       .getConversations(
-        ref.watch(mockIdentityRepositoryProvider).currentUser.id,
+        ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id,
       ),
 );
 
 final chatMessagesProvider = FutureProvider.family<List<Message>, String>((
   ref,
   id,
-) {
+) async {
   // An open conversation must be re-authorized when its connection changes.
   ref.watch(connectionsProvider);
   return ref
       .watch(chatRepositoryProvider)
       .getMessages(
         conversationId: id,
-        userId: ref.watch(mockIdentityRepositoryProvider).currentUser.id,
+        userId: ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id,
       );
 });
 

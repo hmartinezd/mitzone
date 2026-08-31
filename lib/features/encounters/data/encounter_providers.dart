@@ -8,6 +8,7 @@ import '../../blocking/data/block_providers.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
 import 'supabase_encounter_repository.dart';
+import '../domain/encounter_eligibility.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Local-demo encounters are observed after deterministic simulated elapsed
@@ -61,9 +62,9 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
       .getEncountersForUser(userId);
   final result = <Encounter>[];
   for (final encounter in encounters) {
-    if (!await ref
-        .read(blockRepositoryProvider)
-        .isPairBlocked(userId, encounter.otherUserId))
+    if (await EncounterEligibilityPolicy(ref.read(blockRepositoryProvider))
+            .evaluate(encounter) !=
+        EncounterEligibility.unavailable)
       result.add(encounter);
   }
   return result;

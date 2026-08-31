@@ -7,12 +7,13 @@ import '../../../core/identity/identity_providers.dart';
 import '../../blocking/data/block_providers.dart';
 import '../domain/user_profile.dart';
 import 'widgets/profile_avatar.dart';
+import '../../../core/auth/auth_providers.dart';
 
-class AccountSettingsScreen extends StatelessWidget {
+class AccountSettingsScreen extends ConsumerWidget {
   const AccountSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return MitzonePageBody(
       title: 'Account',
@@ -29,9 +30,9 @@ class AccountSettingsScreen extends StatelessWidget {
           const SizedBox(height: AppSpacing.xxl),
           ListTile(
             title: const Text('Sign out'),
-            subtitle: const Text('Authentication deferred'),
-            enabled: false,
-            onTap: () {},
+            subtitle: Text(ref.watch(productionModeProvider) ? 'End this session' : 'Authentication deferred'),
+            enabled: ref.watch(productionModeProvider),
+            onTap: () async { await ref.read(authRepositoryProvider)?.signOut(); ref.invalidate(authSessionProvider); if (context.mounted) context.go('/login'); },
           ),
           ListTile(
             title: Text(

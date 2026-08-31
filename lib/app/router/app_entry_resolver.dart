@@ -1,6 +1,7 @@
 import '../../core/identity/identity_gateway.dart';
 import '../../features/onboarding/data/onboarding_status_store.dart';
 import '../../features/profile/data/profile_repository.dart';
+import '../../core/auth/auth_repository.dart';
 
 /// Possible destinations after the application startup/splash sequence.
 enum AppEntryTarget {
@@ -15,6 +16,7 @@ enum AppEntryTarget {
 
   /// A critical failure occurred during entry resolution.
   entryFailure,
+  unauthenticated,
 }
 
 /// Resolves where the user should be directed after the splash screen.
@@ -23,11 +25,13 @@ class AppEntryResolver {
     required this.onboardingStatusStore,
     required this.identityGateway,
     required this.profileRepository,
+    this.authRepository,
   });
 
   final OnboardingStatusStore onboardingStatusStore;
   final IdentityGateway identityGateway;
   final ProfileRepository profileRepository;
+  final AuthRepository? authRepository;
 
   /// Determines the next [AppEntryTarget] based on application and backend state.
   Future<AppEntryTarget> resolve() async {
@@ -40,7 +44,8 @@ class AppEntryResolver {
     }
 
     try {
-      // For this phase, we always use the Local Identity Gateway.
+      if (authRepository != null && await authRepository!.restoreSession() == null) return AppEntryTarget.unauthenticated;
+      // Local identity remains the demo identity until profile migration.
       final identity = await identityGateway.ensureIdentity();
       final profile = await profileRepository.getProfile(identity.id);
 

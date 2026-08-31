@@ -27,6 +27,8 @@ import '../../features/notifications/presentation/notification_center_screen.dar
 import 'app_entry_resolver.dart';
 import 'app_routes.dart';
 import 'app_entry_coordinator.dart';
+import '../../features/auth/presentation/login_screen.dart';
+import '../../core/auth/auth_providers.dart';
 
 /// Global key for the root navigator.
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
@@ -56,6 +58,7 @@ GoRouter createAppRouter({
                 onboardingStatusStore: ref.read(onboardingStatusStoreProvider),
                 identityGateway: ref.read(identityGatewayProvider),
                 profileRepository: ref.read(profileRepositoryProvider),
+                authRepository: ref.read(authRepositoryProvider),
               );
 
               final target = await resolver.resolve();
@@ -71,6 +74,10 @@ GoRouter createAppRouter({
       GoRoute(
         path: AppRoutes.onboarding,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: AppRoutes.createProfile,

@@ -8,6 +8,7 @@ final authRepositoryProvider = Provider<AuthRepository?>((ref) {
   final config = ref.watch(appConfigProvider);
   return config.isSupabaseConfigured ? SupabaseAuthRepository(Supabase.instance.client) : null;
 });
+final productionModeProvider = Provider<bool>((ref) => ref.watch(authRepositoryProvider) != null);
 final authSessionProvider = StreamProvider<AuthSession?>((ref) async* {
   final repo = ref.watch(authRepositoryProvider);
   if (repo == null) { yield null; return; }

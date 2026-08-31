@@ -15,6 +15,8 @@ class AppEntryCoordinator {
         return AppRoutes.home;
       case AppEntryTarget.entryFailure:
         return AppRoutes.entryFailure;
+      case AppEntryTarget.unauthenticated:
+        return AppRoutes.login;
     }
   }
 }

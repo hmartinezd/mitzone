@@ -4,6 +4,7 @@ class AppRoutes {
 
   /// The product onboarding sequence.
   static const String onboarding = '/onboarding';
+  static const String login = '/login';
 
   /// The minimum profile creation screen.
   static const String createProfile = '/profile/create';

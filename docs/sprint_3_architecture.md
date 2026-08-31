@@ -2,7 +2,7 @@
 
 Status: planning only. This document defines boundaries; it does not activate a backend, authentication, GPS, QR, push notifications, or production matching.
 
-The initial backend/auth foundation now includes an email/password vertical slice: compile-time Supabase URL and publishable key configuration is optional, and a backend-neutral session contract wraps Supabase infrastructure types. In configured mode, restoration, login routing, and sign out use authenticated session state; missing configuration continues to run the local demo. No service-role key belongs in the client, and all social repositories remain local until later migration blocks.
+The initial backend/auth foundation now includes an email/password vertical slice: compile-time Supabase URL and publishable key configuration is optional, and a backend-neutral session contract wraps Supabase infrastructure types. In configured mode, restoration, login routing, sign out, and the authenticated user's profile use session state; missing configuration continues to run the local demo. Profiles are the first production-backed record, owned by `auth.users.id`, with RLS. All social repositories remain local until later migration blocks.
 
 ## Sprint 2 audit
 

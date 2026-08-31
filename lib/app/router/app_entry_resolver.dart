@@ -1,6 +1,7 @@
 import '../../core/identity/identity_gateway.dart';
 import '../../features/onboarding/data/onboarding_status_store.dart';
 import '../../features/profile/data/profile_repository.dart';
+import '../../features/profile/domain/profile_validation.dart';
 import '../../core/auth/auth_repository.dart';
 
 /// Possible destinations after the application startup/splash sequence.
@@ -49,7 +50,7 @@ class AppEntryResolver {
       final identity = await identityGateway.ensureIdentity();
       final profile = await profileRepository.getProfile(identity.id);
 
-      if (profile == null || profile.displayName.trim().length < 2) {
+      if (profile == null || !ProfileValidation.hasMinimumProfile(profile.displayName)) {
         return AppEntryTarget.createProfile;
       }
 

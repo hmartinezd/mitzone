@@ -12,6 +12,7 @@ import '../../../shared/widgets/mitzone_page_scaffold.dart';
 import '../../../shared/widgets/mitzone_text_field.dart';
 import '../data/avatar_picker.dart';
 import '../data/profile_providers.dart';
+import '../../../core/auth/auth_providers.dart';
 
 /// Screen for creating the user's initial local development profile.
 class CreateMinimumProfileScreen extends ConsumerStatefulWidget {
@@ -70,15 +71,15 @@ class _CreateMinimumProfileScreenState
     });
 
     try {
-      final identityGateway = ref.read(identityGatewayProvider);
       final profileRepo = ref.read(profileRepositoryProvider);
       final avatarStorage = ref.read(avatarStorageProvider);
 
-      final identity = await identityGateway.ensureIdentity();
+      final session = await ref.read(authSessionProvider.future);
+      final identityId = session?.user.id ?? (await ref.read(identityGatewayProvider).ensureIdentity()).id;
 
       // 1. Save the minimum profile first (ensures core data is persisted)
       await profileRepo.saveMinimumProfile(
-        identityId: identity.id,
+        identityId: identityId,
         displayName: _nameController.text.trim(),
         avatarUri: null,
       );
@@ -87,7 +88,7 @@ class _CreateMinimumProfileScreenState
       if (_selectedAvatar != null) {
         try {
           final avatarUri = await avatarStorage.saveAvatar(
-            identityId: identity.id,
+            identityId: identityId,
             sourcePath: _selectedAvatar!.path,
           );
 

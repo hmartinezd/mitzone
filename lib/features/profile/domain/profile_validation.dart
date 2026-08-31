@@ -1,5 +1,7 @@
 /// Centralized validation logic for user profiles.
 abstract final class ProfileValidation {
+  static bool hasMinimumProfile(String? displayName) =>
+      isValidDisplayName(displayName);
   /// Minimum display name length.
   static const int minDisplayNameLength = 2;
 

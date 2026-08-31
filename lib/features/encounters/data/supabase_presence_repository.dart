@@ -28,8 +28,9 @@ class SupabasePresenceRepository implements PresenceRepository {
     expiresAt: r['expires_at'] == null ? null : DateTime.parse(r['expires_at']),
   );
   void owner(String id) {
-    if (client.auth.currentUser?.id != id)
+    if (client.auth.currentUser?.id != id) {
       throw StateError('Presence ownership mismatch');
+    }
   }
 
   @override
@@ -63,8 +64,9 @@ class SupabasePresenceRepository implements PresenceRepository {
     required String actorUserId,
   }) async {
     owner(actorUserId);
-    if (e.subjectUserId != actorUserId)
+    if (e.subjectUserId != actorUserId) {
       throw StateError('Presence ownership mismatch');
+    }
     final r = await client
         .from('presence_evidence')
         .upsert(row(e), onConflict: 'subject_user_id,context_id')

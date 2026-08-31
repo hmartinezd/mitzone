@@ -1,4 +1,5 @@
 /// How a presence was verified. Only manual/local demo is implemented today.
+library;
 import '../../../core/errors/domain_error.dart';
 
 enum EventCheckInMethod { manual, localDemo, qr, geofence }
@@ -14,16 +15,18 @@ class EventCheckIn {
     if (eventId.trim().isEmpty ||
         identityId.trim().isEmpty ||
         !checkedInAt.isUtc ||
-        (checkedOutAt != null && !checkedOutAt!.isUtc))
+        (checkedOutAt != null && !checkedOutAt!.isUtc)) {
       throw const DomainError(
         DomainErrorCode.validation,
         'Check-in has invalid identity or timestamp',
       );
-    if (checkedOutAt != null && checkedOutAt!.isBefore(checkedInAt))
+    }
+    if (checkedOutAt != null && checkedOutAt!.isBefore(checkedInAt)) {
       throw const DomainError(
         DomainErrorCode.validation,
         'Check-in interval is reversed',
       );
+    }
     return EventCheckIn._(
       eventId,
       identityId,

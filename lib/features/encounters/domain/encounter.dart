@@ -15,18 +15,20 @@ class Encounter {
           otherUserId,
           eventId,
         ].any((v) => v.trim().isEmpty) ||
-        currentUserId == otherUserId)
+        currentUserId == otherUserId) {
       throw const DomainError(
         DomainErrorCode.validation,
         'Encounter has invalid participants or identifiers',
       );
+    }
     if (!overlapStart.isUtc ||
         !overlapEnd.isUtc ||
-        overlapEnd.isBefore(overlapStart))
+        overlapEnd.isBefore(overlapStart)) {
       throw const DomainError(
         DomainErrorCode.validation,
         'Encounter interval must be valid UTC',
       );
+    }
     return Encounter._(
       id,
       currentUserId,

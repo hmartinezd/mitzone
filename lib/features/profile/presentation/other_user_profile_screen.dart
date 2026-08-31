@@ -37,10 +37,11 @@ class OtherUserProfileScreen extends ConsumerWidget {
         final encounter = encounters
             .where((e) => e.id == encounterId && e.otherUserId == userId)
             .firstOrNull;
-        if (encounter == null)
+        if (encounter == null) {
           return const Scaffold(
             body: Center(child: Text('This encounter is no longer available.')),
           );
+        }
         final profile = ref.watch(encounterProfileProvider(userId));
         return _content(context, ref, profile, encounter);
       },
@@ -185,10 +186,11 @@ class _BlockActionState extends ConsumerState<_BlockAction> {
       ref.invalidate(relationshipProvider);
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('This user could not be blocked.')),
         );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -287,17 +289,19 @@ class _ActionState extends ConsumerState<_Action> {
         (c) => c.userAId == widget.profile.id || c.userBId == widget.profile.id,
       );
       await ref.read(connectionControllerProvider).remove(c.id);
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Connection removed.')));
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('This connection is no longer available.'),
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
@@ -311,10 +315,11 @@ class _ActionState extends ConsumerState<_Action> {
           .send(widget.profile.id, widget.encounter.id);
       ref.invalidate(relationshipProvider(widget.encounter));
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('We could not send your request.')),
         );
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }

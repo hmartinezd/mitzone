@@ -9,6 +9,7 @@ import '../../../core/auth/auth_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
 import 'supabase_encounter_repository.dart';
 import '../domain/encounter_eligibility.dart';
+import '../domain/encounter_relevance.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Local-demo encounters are observed after deterministic simulated elapsed
@@ -67,5 +68,16 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
         EncounterEligibility.unavailable)
       result.add(encounter);
   }
-  return result;
+  final identity = ref.watch(mockIdentityRepositoryProvider);
+  final current = identity.currentUser;
+  final profiles = {
+    for (final profile in identity.users) profile.id: profile,
+  };
+  return [
+    for (final ranked in const EncounterRankingService().rank(
+      eligibleEncounters: result,
+      currentUser: current,
+      profiles: profiles,
+    )) ranked.encounter,
+  ];
 });

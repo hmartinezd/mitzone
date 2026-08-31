@@ -89,8 +89,9 @@ class EventParticipationController {
       if (_ref.read(productionModeProvider)) {
         final id = await _ref.read(currentUserIdProvider.future);
         final participation = _ref.read(eventParticipationRepositoryProvider);
-        if (!await participation.isJoined(identityId: id, eventId: eventId))
+        if (!await participation.isJoined(identityId: id, eventId: eventId)) {
           return false;
+        }
         final now = _ref.read(utcNowProvider)().toUtc();
         final evidence = PresenceEvidence(
                 id: Uuid().v5(Uuid.NAMESPACE_URL, 'presence:$id:$eventId'),

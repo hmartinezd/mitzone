@@ -129,8 +129,9 @@ class LocalConnectionRepository implements ConnectionRepository {
     required String encounterId,
     String? contextId,
   }) async {
-    if (await blocks?.isPairBlocked(senderUserId, recipientUserId) == true)
+    if (await blocks?.isPairBlocked(senderUserId, recipientUserId) == true) {
       throw StateError('Interaction is unavailable');
+    }
     if (senderUserId == recipientUserId || encounterId.isEmpty) {
       throw ArgumentError('Invalid connection request');
     }
@@ -178,8 +179,9 @@ class LocalConnectionRepository implements ConnectionRepository {
       if (r.recipientUserId == id &&
           r.status == ConnectionRequestStatus.pending &&
           !(await blocks?.isPairBlocked(r.senderUserId, r.recipientUserId) ??
-              false))
+              false)) {
         result.add(r);
+      }
     }
     return result;
   }
@@ -190,8 +192,9 @@ class LocalConnectionRepository implements ConnectionRepository {
     for (final r in _parseRequests((await _read())['requests'])) {
       if (r.senderUserId == id &&
           !(await blocks?.isPairBlocked(r.senderUserId, r.recipientUserId) ??
-              false))
+              false)) {
         result.add(r);
+      }
     }
     return result;
   }
@@ -212,8 +215,9 @@ class LocalConnectionRepository implements ConnectionRepository {
     if (index < 0) throw StateError('Request is not actionable');
     final old = requests[index];
     if (await blocks?.isPairBlocked(old.senderUserId, old.recipientUserId) ==
-        true)
+        true) {
       throw StateError('Interaction is unavailable');
+    }
     final updated = ConnectionRequest(
       id: old.id,
       senderUserId: old.senderUserId,
@@ -320,8 +324,9 @@ class LocalConnectionRepository implements ConnectionRepository {
     String? contextId,
     String? encounterId,
   }) async {
-    if (await blocks?.isPairBlocked(userAId, userBId) == true)
+    if (await blocks?.isPairBlocked(userAId, userBId) == true) {
       return RelationshipState.none;
+    }
     final connections = await getConnections(userAId);
     if (connections.any(
       (c) =>

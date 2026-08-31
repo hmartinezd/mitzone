@@ -26,11 +26,12 @@ class SupabaseAuthRepository implements AuthRepository {
           password: password,
         )).session,
       );
-      if (session == null)
+      if (session == null) {
         throw const DomainError(
           DomainErrorCode.unauthorized,
           'Authentication did not return a session',
         );
+      }
       return session;
     } on DomainError {
       rethrow;

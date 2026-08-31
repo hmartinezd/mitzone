@@ -93,14 +93,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       ref.invalidate(authSessionProvider);
       if (mounted) context.go(AppRoutes.home);
     } on DomainError catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => error =
               'We could not sign you in. Check your details and try again.',
         );
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() => error = 'Authentication is temporarily unavailable.');
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }

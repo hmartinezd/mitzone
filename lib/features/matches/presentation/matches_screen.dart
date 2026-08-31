@@ -12,7 +12,6 @@ import '../../encounters/data/encounter_providers.dart';
 import '../../encounters/data/encounter_resolvers.dart';
 import '../../encounters/domain/encounter.dart';
 import '../../encounters/domain/profile_affinity.dart';
-import '../../profile/presentation/other_user_profile_screen.dart';
 
 class MatchesScreen extends ConsumerWidget {
   const MatchesScreen({super.key});

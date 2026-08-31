@@ -19,7 +19,9 @@ class EncounterEligibilityPolicy {
       if (await blocks.isPairBlocked(
         encounter.currentUserId,
         encounter.otherUserId,
-      )) return EncounterEligibility.unavailable;
+      )) {
+        return EncounterEligibility.unavailable;
+      }
       return EncounterEligibility.actionable;
     } catch (_) {
       // Safety-sensitive decisions fail closed.

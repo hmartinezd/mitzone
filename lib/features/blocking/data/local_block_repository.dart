@@ -25,8 +25,9 @@ class LocalBlockRepository implements BlockRepository {
     required String blockerUserId,
     required String blockedUserId,
   }) async {
-    if (blockerUserId == blockedUserId)
+    if (blockerUserId == blockedUserId) {
       throw ArgumentError('Cannot block yourself');
+    }
     final v = await _read(blockerUserId);
     v.add(blockedUserId);
     await _write(blockerUserId, v);

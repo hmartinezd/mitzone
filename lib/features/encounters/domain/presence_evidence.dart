@@ -23,33 +23,38 @@ class PresenceEvidence {
   }) {
     if (id.trim().isEmpty ||
         subjectUserId.trim().isEmpty ||
-        contextId.trim().isEmpty)
+        contextId.trim().isEmpty) {
       throw const DomainError(
         DomainErrorCode.validation,
         'Presence evidence identifiers are required',
       );
+    }
     if (!observedStart.isUtc ||
         !observedEnd.isUtc ||
-        (expiresAt != null && !expiresAt.isUtc))
+        (expiresAt != null && !expiresAt.isUtc)) {
       throw const DomainError(
         DomainErrorCode.validation,
         'Presence evidence timestamps must be UTC',
       );
-    if (observedEnd.isBefore(observedStart))
+    }
+    if (observedEnd.isBefore(observedStart)) {
       throw const DomainError(
         DomainErrorCode.validation,
         'Presence evidence interval is reversed',
       );
-    if (confidence != null && (confidence < 0 || confidence > 1))
+    }
+    if (confidence != null && (confidence < 0 || confidence > 1)) {
       throw const DomainError(
         DomainErrorCode.validation,
         'Presence confidence must be between 0 and 1',
       );
-    if (expiresAt != null && expiresAt.isBefore(observedEnd))
+    }
+    if (expiresAt != null && expiresAt.isBefore(observedEnd)) {
       throw const DomainError(
         DomainErrorCode.invalidState,
         'Presence evidence expires before it ends',
       );
+    }
     return PresenceEvidence._(
       id,
       subjectUserId,

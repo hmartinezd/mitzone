@@ -37,11 +37,12 @@ class SupabaseProfileRepository implements ProfileRepository {
   }
 
   void _requireOwner(String id) {
-    if (client.auth.currentUser?.id != id)
+    if (client.auth.currentUser?.id != id) {
       throw const DomainError(
         DomainErrorCode.unauthorized,
         'Profile ownership mismatch',
       );
+    }
   }
 
   @override

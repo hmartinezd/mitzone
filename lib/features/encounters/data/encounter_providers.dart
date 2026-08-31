@@ -9,6 +9,7 @@ import '../../../core/auth/auth_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
 import 'supabase_encounter_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../personality/data/personality_providers.dart';
 
 /// Local-demo encounters are observed after deterministic simulated elapsed
 /// time so a fresh check-in immediately demonstrates meaningful overlap.

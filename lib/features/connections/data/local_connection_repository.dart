@@ -175,18 +175,27 @@ class LocalConnectionRepository implements ConnectionRepository {
   Future<List<ConnectionRequest>> getIncomingRequests(String id) async {
     final result = <ConnectionRequest>[];
     for (final r in _parseRequests((await _read())['requests'])) {
-      if (r.recipientUserId == id && r.status == ConnectionRequestStatus.pending && !(await blocks?.isPairBlocked(r.senderUserId, r.recipientUserId) ?? false)) result.add(r);
+      if (r.recipientUserId == id &&
+          r.status == ConnectionRequestStatus.pending &&
+          !(await blocks?.isPairBlocked(r.senderUserId, r.recipientUserId) ??
+              false))
+        result.add(r);
     }
     return result;
   }
+
   @override
   Future<List<ConnectionRequest>> getOutgoingRequests(String id) async {
     final result = <ConnectionRequest>[];
     for (final r in _parseRequests((await _read())['requests'])) {
-      if (r.senderUserId == id && !(await blocks?.isPairBlocked(r.senderUserId, r.recipientUserId) ?? false)) result.add(r);
+      if (r.senderUserId == id &&
+          !(await blocks?.isPairBlocked(r.senderUserId, r.recipientUserId) ??
+              false))
+        result.add(r);
     }
     return result;
   }
+
   Future<ConnectionRequest> _change(
     String id,
     String user,
@@ -202,7 +211,8 @@ class LocalConnectionRepository implements ConnectionRepository {
     );
     if (index < 0) throw StateError('Request is not actionable');
     final old = requests[index];
-    if (await blocks?.isPairBlocked(old.senderUserId, old.recipientUserId) == true)
+    if (await blocks?.isPairBlocked(old.senderUserId, old.recipientUserId) ==
+        true)
       throw StateError('Interaction is unavailable');
     final updated = ConnectionRequest(
       id: old.id,
@@ -268,8 +278,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     final visible = <Connection>[];
     for (final c in all) {
       final other = c.userAId == id ? c.userBId : c.userAId;
-      if (await blocks?.isPairBlocked(id, other) == true)
-        continue;
+      if (await blocks?.isPairBlocked(id, other) == true) continue;
       visible.add(c);
     }
     return visible;

@@ -17,7 +17,9 @@ import '../../../core/identity/current_user_provider.dart';
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   final storage = ref.watch(localStorageProvider);
   final auth = ref.watch(authRepositoryProvider);
-  return auth == null ? LocalProfileRepository(storage) : SupabaseProfileRepository(Supabase.instance.client);
+  return auth == null
+      ? LocalProfileRepository(storage)
+      : SupabaseProfileRepository(Supabase.instance.client);
 });
 
 /// Provider for the [AvatarStorage].

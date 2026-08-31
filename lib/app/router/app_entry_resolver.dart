@@ -45,12 +45,15 @@ class AppEntryResolver {
     }
 
     try {
-      if (authRepository != null && await authRepository!.restoreSession() == null) return AppEntryTarget.unauthenticated;
+      if (authRepository != null &&
+          await authRepository!.restoreSession() == null)
+        return AppEntryTarget.unauthenticated;
       // Local identity remains the demo identity until profile migration.
       final identity = await identityGateway.ensureIdentity();
       final profile = await profileRepository.getProfile(identity.id);
 
-      if (profile == null || !ProfileValidation.hasMinimumProfile(profile.displayName)) {
+      if (profile == null ||
+          !ProfileValidation.hasMinimumProfile(profile.displayName)) {
         return AppEntryTarget.createProfile;
       }
 

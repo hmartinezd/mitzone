@@ -52,7 +52,10 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
       .getEncountersForUser(user.id);
   final result = <Encounter>[];
   for (final encounter in encounters) {
-    if (!await ref.read(blockRepositoryProvider).isPairBlocked(user.id, encounter.otherUserId)) result.add(encounter);
+    if (!await ref
+        .read(blockRepositoryProvider)
+        .isPairBlocked(user.id, encounter.otherUserId))
+      result.add(encounter);
   }
   return result;
 });

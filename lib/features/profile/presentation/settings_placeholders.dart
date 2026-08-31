@@ -31,9 +31,18 @@ class AccountSettingsScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xxl),
           ListTile(
             title: const Text('Sign out'),
-            subtitle: Text(ref.watch(productionModeProvider) ? 'End this session' : 'Authentication deferred'),
+            subtitle: Text(
+              ref.watch(productionModeProvider)
+                  ? 'End this session'
+                  : 'Authentication deferred',
+            ),
             enabled: ref.watch(productionModeProvider),
-            onTap: () async { await ref.read(authRepositoryProvider)?.signOut(); ref.invalidate(authSessionProvider); ref.invalidate(currentProfileProvider); if (context.mounted) context.go('/login'); },
+            onTap: () async {
+              await ref.read(authRepositoryProvider)?.signOut();
+              ref.invalidate(authSessionProvider);
+              ref.invalidate(currentProfileProvider);
+              if (context.mounted) context.go('/login');
+            },
           ),
           ListTile(
             title: Text(
@@ -65,10 +74,25 @@ class PrivacySettingsScreen extends ConsumerWidget {
           .when(
             data: (ids) => Column(
               children: [
-            for (final id in ids)
-              ListTile(
-                leading: ProfileAvatar(displayName: MockUsers.all.firstWhere((u) => u.id == id, orElse: () => UserProfile(id: id, displayName: id)).displayName, radius: 20),
-                title: Text(MockUsers.all.firstWhere((u) => u.id == id, orElse: () => UserProfile(id: id, displayName: id)).displayName),
+                for (final id in ids)
+                  ListTile(
+                    leading: ProfileAvatar(
+                      displayName: MockUsers.all
+                          .firstWhere(
+                            (u) => u.id == id,
+                            orElse: () => UserProfile(id: id, displayName: id),
+                          )
+                          .displayName,
+                      radius: 20,
+                    ),
+                    title: Text(
+                      MockUsers.all
+                          .firstWhere(
+                            (u) => u.id == id,
+                            orElse: () => UserProfile(id: id, displayName: id),
+                          )
+                          .displayName,
+                    ),
                     trailing: TextButton(
                       onPressed: () async {
                         await ref

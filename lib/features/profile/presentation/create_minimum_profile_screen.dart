@@ -75,7 +75,9 @@ class _CreateMinimumProfileScreenState
       final avatarStorage = ref.read(avatarStorageProvider);
 
       final session = await ref.read(authSessionProvider.future);
-      final identityId = session?.user.id ?? (await ref.read(identityGatewayProvider).ensureIdentity()).id;
+      final identityId =
+          session?.user.id ??
+          (await ref.read(identityGatewayProvider).ensureIdentity()).id;
 
       // 1. Save the minimum profile first (ensures core data is persisted)
       await profileRepo.saveMinimumProfile(

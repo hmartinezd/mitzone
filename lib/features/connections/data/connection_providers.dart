@@ -10,34 +10,38 @@ import '../../encounters/domain/encounter.dart';
 import '../../notifications/data/notification_providers.dart';
 import '../../notifications/domain/local_notification.dart';
 import '../../blocking/data/block_providers.dart';
+import '../../../core/auth/auth_providers.dart';
+import 'supabase_connection_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/identity/current_user_provider.dart';
 
-final connectionRepositoryProvider = Provider<ConnectionRepository>(
-  (ref) => LocalConnectionRepository(
+final connectionRepositoryProvider = Provider<ConnectionRepository>((ref) => ref.watch(productionModeProvider)
+    ? SupabaseConnectionRepository(Supabase.instance.client)
+    : LocalConnectionRepository(
     ref.watch(localStorageProvider),
     blocks: ref.watch(blockRepositoryProvider),
-  ),
-);
+  ));
 final incomingConnectionRequestsProvider =
-    FutureProvider<List<ConnectionRequest>>((ref) {
+    FutureProvider<List<ConnectionRequest>>((ref) async {
       ref.watch(blockedUsersProvider);
-      final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      final id = ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
       return ref.watch(connectionRepositoryProvider).getIncomingRequests(id);
     });
 final outgoingConnectionRequestsProvider =
-    FutureProvider<List<ConnectionRequest>>((ref) {
+    FutureProvider<List<ConnectionRequest>>((ref) async {
       ref.watch(blockedUsersProvider);
-      final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      final id = ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
       return ref.watch(connectionRepositoryProvider).getOutgoingRequests(id);
     });
-final connectionsProvider = FutureProvider<List<Connection>>((ref) {
+final connectionsProvider = FutureProvider<List<Connection>>((ref) async {
   ref.watch(blockedUsersProvider);
-  final id = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+  final id = ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
   return ref.watch(connectionRepositoryProvider).getConnections(id);
 });
 final relationshipProvider =
-    FutureProvider.family<RelationshipState, Encounter>((ref, encounter) {
+    FutureProvider.family<RelationshipState, Encounter>((ref, encounter) async {
       ref.watch(blockedUsersProvider);
-      final current = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      final current = ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
       final pair = [current, encounter.otherUserId]..sort();
       return ref
           .watch(connectionRepositoryProvider)
@@ -56,7 +60,7 @@ class ConnectionController {
   ConnectionController(this.ref);
   final Ref ref;
   Future<ConnectionRequest> send(String recipient, String encounter) async {
-    final sender = ref.read(mockIdentityRepositoryProvider).currentUser.id;
+    final sender = await ref.read(currentUserIdProvider.future);
     final valid = (await ref.read(encountersForCurrentUserProvider.future)).any(
       (item) =>
           item.id == encounter &&
@@ -76,7 +80,7 @@ class ConnectionController {
           encounterId: encounter,
           contextId: '${encounterData.eventId}:${pair.join(':')}',
         );
-    await ref
+    if (!ref.read(productionModeProvider)) await ref
         .read(notificationRepositoryProvider)
         .add(
           LocalNotification(
@@ -96,12 +100,9 @@ class ConnectionController {
         .read(connectionRepositoryProvider)
         .acceptRequest(
           requestId: id,
-          recipientUserId: ref
-              .read(mockIdentityRepositoryProvider)
-              .currentUser
-              .id,
+          recipientUserId: await ref.read(currentUserIdProvider.future),
         );
-    await ref
+    if (!ref.read(productionModeProvider)) await ref
         .read(notificationRepositoryProvider)
         .add(
           LocalNotification(
@@ -121,10 +122,7 @@ class ConnectionController {
         .read(connectionRepositoryProvider)
         .declineRequest(
           requestId: id,
-          recipientUserId: ref
-              .read(mockIdentityRepositoryProvider)
-              .currentUser
-              .id,
+          recipientUserId: await ref.read(currentUserIdProvider.future),
         ),
   );
   Future<void> remove(String connectionId) async {
@@ -132,7 +130,7 @@ class ConnectionController {
         .read(connectionRepositoryProvider)
         .removeConnection(
           connectionId: connectionId,
-          userId: ref.read(mockIdentityRepositoryProvider).currentUser.id,
+          userId: await ref.read(currentUserIdProvider.future),
         );
     ref.invalidate(connectionsProvider);
     ref.invalidate(relationshipProvider);

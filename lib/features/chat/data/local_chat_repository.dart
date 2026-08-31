@@ -182,6 +182,7 @@ class LocalChatRepository implements ChatRepository {
     required String conversationId,
     required String senderUserId,
     required String text,
+    String? clientMessageId,
   }) async {
     final value = text.trim();
     if (value.isEmpty) throw ArgumentError('Message cannot be empty');
@@ -196,7 +197,7 @@ class LocalChatRepository implements ChatRepository {
     await _authorized(c.connectionId, senderUserId);
     final timestamp = now().toUtc();
     final m = Message(
-      id: 'message_${timestamp.microsecondsSinceEpoch}',
+      id: 'message_${clientMessageId ?? timestamp.microsecondsSinceEpoch}',
       conversationId: conversationId,
       senderUserId: senderUserId,
       text: value,

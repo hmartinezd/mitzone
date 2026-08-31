@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/identity/identity_providers.dart';
 import '../data/chat_providers.dart';
+import 'package:uuid/uuid.dart';
 
 class ConversationScreen extends ConsumerStatefulWidget {
   const ConversationScreen({required this.conversationId, super.key});
@@ -14,6 +15,7 @@ class ConversationScreen extends ConsumerStatefulWidget {
 
 class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   final input = TextEditingController();
+  String? _clientMessageId;
 
   @override
   void dispose() {
@@ -118,8 +120,10 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             conversationId: widget.conversationId,
             senderUserId: currentUserId,
             text: input.text,
+            clientMessageId: _clientMessageId ??= const Uuid().v4(),
           );
       input.clear();
+      _clientMessageId = null;
       ref.invalidate(chatMessagesProvider(widget.conversationId));
       ref.invalidate(chatConversationsProvider);
     } catch (_) {

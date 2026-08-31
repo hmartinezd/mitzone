@@ -19,6 +19,7 @@ import '../../features/chat/presentation/conversation_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/profile_details_screen.dart';
+import '../../features/personality/presentation/personality_screen.dart';
 import '../../features/profile/presentation/other_user_profile_screen.dart';
 import '../../features/profile/presentation/settings_screen.dart';
 import '../../features/profile/presentation/settings_placeholders.dart';
@@ -184,6 +185,7 @@ GoRouter createAppRouter({
                     path: 'details',
                     builder: (context, state) => const ProfileDetailsScreen(),
                   ),
+                  GoRoute(path: 'personality', builder: (context, state) => const PersonalityScreen()),
                   GoRoute(
                     path: 'settings',
                     builder: (context, state) => const SettingsScreen(),

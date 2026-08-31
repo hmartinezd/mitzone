@@ -43,6 +43,7 @@ class AppRoutes {
 
   /// Profile details screen (progressive info)
   static const String profileDetails = '/app/profile/details';
+  static const String personality = '/app/profile/personality';
 
   /// Settings root screen
   static const String settings = '/app/profile/settings';

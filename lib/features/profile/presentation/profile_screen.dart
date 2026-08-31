@@ -105,6 +105,12 @@ class _ProfileContent extends ConsumerWidget {
         const SizedBox(height: AppSpacing.xxl),
         _ActivitySection(activity: activity),
         const SizedBox(height: AppSpacing.xxl),
+        MitzoneCard(
+          onTap: () => context.go(AppRoutes.personality),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: const Row(children: [Icon(Icons.psychology_outlined), SizedBox(width: AppSpacing.md), Expanded(child: Text('Optional: describe your social style')), Icon(Icons.chevron_right)]),
+        ),
+        const SizedBox(height: AppSpacing.xxl),
         const _SettingsAction(),
         const SizedBox(height: AppSpacing.xxl),
       ],

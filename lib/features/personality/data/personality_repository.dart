@@ -1,0 +1,2 @@
+import '../domain/personality_profile.dart';
+abstract interface class PersonalityRepository { Future<PersonalityProfile?> getForUser(String userId); Future<PersonalityProfile> save(PersonalityProfile profile); Future<Map<String, PersonalityProfile>> getByIds(Set<String> ids) async { final result = <String, PersonalityProfile>{}; for (final id in ids) { final profile = await getForUser(id); if (profile != null) result[id] = profile; } return result; } }

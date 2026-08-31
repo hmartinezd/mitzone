@@ -15,33 +15,43 @@ import 'supabase_connection_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/identity/current_user_provider.dart';
 
-final connectionRepositoryProvider = Provider<ConnectionRepository>((ref) => ref.watch(productionModeProvider)
-    ? SupabaseConnectionRepository(Supabase.instance.client)
-    : LocalConnectionRepository(
-    ref.watch(localStorageProvider),
-    blocks: ref.watch(blockRepositoryProvider),
-  ));
+final connectionRepositoryProvider = Provider<ConnectionRepository>(
+  (ref) => ref.watch(productionModeProvider)
+      ? SupabaseConnectionRepository(Supabase.instance.client)
+      : LocalConnectionRepository(
+          ref.watch(localStorageProvider),
+          blocks: ref.watch(blockRepositoryProvider),
+        ),
+);
 final incomingConnectionRequestsProvider =
     FutureProvider<List<ConnectionRequest>>((ref) async {
       ref.watch(blockedUsersProvider);
-      final id = ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      final id = ref.watch(productionModeProvider)
+          ? await ref.watch(currentUserIdProvider.future)
+          : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
       return ref.watch(connectionRepositoryProvider).getIncomingRequests(id);
     });
 final outgoingConnectionRequestsProvider =
     FutureProvider<List<ConnectionRequest>>((ref) async {
       ref.watch(blockedUsersProvider);
-      final id = ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      final id = ref.watch(productionModeProvider)
+          ? await ref.watch(currentUserIdProvider.future)
+          : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
       return ref.watch(connectionRepositoryProvider).getOutgoingRequests(id);
     });
 final connectionsProvider = FutureProvider<List<Connection>>((ref) async {
   ref.watch(blockedUsersProvider);
-  final id = ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+  final id = ref.watch(productionModeProvider)
+      ? await ref.watch(currentUserIdProvider.future)
+      : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
   return ref.watch(connectionRepositoryProvider).getConnections(id);
 });
 final relationshipProvider =
     FutureProvider.family<RelationshipState, Encounter>((ref, encounter) async {
       ref.watch(blockedUsersProvider);
-      final current = ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      final current = ref.watch(productionModeProvider)
+          ? await ref.watch(currentUserIdProvider.future)
+          : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
       final pair = [current, encounter.otherUserId]..sort();
       return ref
           .watch(connectionRepositoryProvider)
@@ -80,18 +90,19 @@ class ConnectionController {
           encounterId: encounter,
           contextId: '${encounterData.eventId}:${pair.join(':')}',
         );
-    if (!ref.read(productionModeProvider)) await ref
-        .read(notificationRepositoryProvider)
-        .add(
-          LocalNotification(
-            id: 'request_${request.id}',
-            type: LocalNotificationType.connectionRequest,
-            userId: recipient,
-            timestamp: request.createdAt,
-            entityId: request.id,
-            destination: '/app/matches',
-          ),
-        );
+    if (!ref.read(productionModeProvider))
+      await ref
+          .read(notificationRepositoryProvider)
+          .add(
+            LocalNotification(
+              id: 'request_${request.id}',
+              type: LocalNotificationType.connectionRequest,
+              userId: recipient,
+              timestamp: request.createdAt,
+              entityId: request.id,
+              destination: '/app/matches',
+            ),
+          );
     return _refresh(request);
   }
 
@@ -102,18 +113,19 @@ class ConnectionController {
           requestId: id,
           recipientUserId: await ref.read(currentUserIdProvider.future),
         );
-    if (!ref.read(productionModeProvider)) await ref
-        .read(notificationRepositoryProvider)
-        .add(
-          LocalNotification(
-            id: 'accepted_$id',
-            type: LocalNotificationType.connectionAccepted,
-            userId: result.senderUserId,
-            timestamp: result.createdAt,
-            entityId: id,
-            destination: '/app/chat',
-          ),
-        );
+    if (!ref.read(productionModeProvider))
+      await ref
+          .read(notificationRepositoryProvider)
+          .add(
+            LocalNotification(
+              id: 'accepted_$id',
+              type: LocalNotificationType.connectionAccepted,
+              userId: result.senderUserId,
+              timestamp: result.createdAt,
+              entityId: id,
+              destination: '/app/chat',
+            ),
+          );
     return _refresh(result);
   }
 

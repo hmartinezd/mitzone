@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/identity/identity_providers.dart';
-import '../../../core/auth/auth_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
 import '../../chat/data/chat_providers.dart';
 import '../data/notification_providers.dart';
@@ -12,7 +10,14 @@ class NotificationCenterScreen extends ConsumerWidget {
   const NotificationCenterScreen({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(productionModeProvider) ? (ref.watch(currentUserIdProvider).value ?? '') : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+    final identity = ref.watch(currentUserIdProvider);
+    if (identity.isLoading)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (identity.hasError)
+      return const Scaffold(
+        body: Center(child: Text('Notifications unavailable')),
+      );
+    final user = identity.requireValue;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Notifications'),

@@ -94,22 +94,21 @@ class EventParticipationController {
         }
         final now = _ref.read(utcNowProvider)().toUtc();
         final evidence = PresenceEvidence(
-                id: Uuid().v5(Uuid.NAMESPACE_URL, 'presence:$id:$eventId'),
-                subjectUserId: id,
-                contextId: eventId,
-                observedStart: now,
-                observedEnd: now.add(const Duration(minutes: 45)),
-                source: PresenceEvidenceSource.eventParticipation,
-                consentScope: 'explicit-check-in',
-                expiresAt: now.add(const Duration(days: 30)),
-              );
+          id: Uuid().v5(Uuid.NAMESPACE_URL, 'presence:$id:$eventId'),
+          subjectUserId: id,
+          contextId: eventId,
+          observedStart: now,
+          observedEnd: now.add(const Duration(minutes: 45)),
+          source: PresenceEvidenceSource.eventParticipation,
+          consentScope: 'explicit-check-in',
+          expiresAt: now.add(const Duration(days: 30)),
+        );
         final recorded = await _ref
             .read(presenceRepositoryProvider)
             .recordEvidence(evidence, actorUserId: id);
-        await _ref.read(encounterRepositoryProvider).processEvidence(
-              recorded,
-              actorUserId: id,
-            );
+        await _ref
+            .read(encounterRepositoryProvider)
+            .processEvidence(recorded, actorUserId: id);
         _ref.invalidate(eventCheckInsProvider);
         return true;
       }

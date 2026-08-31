@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/features/connections/domain/connection_repository.dart';
+import 'package:mitzone/features/connections/data/connection_providers.dart';
 import 'package:mitzone/features/encounters/data/encounter_providers.dart';
 import 'package:mitzone/features/encounters/domain/encounter.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/features/profile/presentation/other_user_profile_screen.dart';
+import 'package:mitzone/core/identity/mock_identity_repository.dart';
 
 void main() {
   final encounter = Encounter(

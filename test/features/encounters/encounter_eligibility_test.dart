@@ -9,26 +9,56 @@ class FakeBlocks implements BlockRepository {
   @override
   Future<bool> isBlocked(String a, String b) async => blocked && a == 'a';
   @override
-  Future<void> block({required String blockerUserId, required String blockedUserId}) async {}
+  Future<bool> isPairBlocked(String a, String b) async =>
+      await isBlocked(a, b) || await isBlocked(b, a);
   @override
-  Future<void> unblock({required String blockerUserId, required String blockedUserId}) async {}
+  Future<void> block({
+    required String blockerUserId,
+    required String blockedUserId,
+  }) async {}
+  @override
+  Future<void> unblock({
+    required String blockerUserId,
+    required String blockedUserId,
+  }) async {}
   @override
   Future<List<String>> getBlocked(String blockerUserId) async => const [];
 }
 
 Encounter encounter() => Encounter(
-      id: 'e', currentUserId: 'a', otherUserId: 'b', eventId: 'event',
-      overlapStart: DateTime.utc(2026, 1, 1),
-      overlapEnd: DateTime.utc(2026, 1, 1, 1),
-    );
+  id: 'e',
+  currentUserId: 'a',
+  otherUserId: 'b',
+  eventId: 'event',
+  overlapStart: DateTime.utc(2026, 1, 1),
+  overlapEnd: DateTime.utc(2026, 1, 1, 1),
+);
 
 void main() {
-  test('blocked pair is unavailable and unblocked pair is actionable', () async {
-    expect(await EncounterEligibilityPolicy(FakeBlocks(true)).evaluate(encounter()), EncounterEligibility.unavailable);
-    expect(await EncounterEligibilityPolicy(FakeBlocks(false)).evaluate(encounter()), EncounterEligibility.actionable);
-  });
+  test(
+    'blocked pair is unavailable and unblocked pair is actionable',
+    () async {
+      expect(
+        await EncounterEligibilityPolicy(
+          FakeBlocks(true),
+        ).evaluate(encounter()),
+        EncounterEligibility.unavailable,
+      );
+      expect(
+        await EncounterEligibilityPolicy(
+          FakeBlocks(false),
+        ).evaluate(encounter()),
+        EncounterEligibility.actionable,
+      );
+    },
+  );
 
   test('unavailable eligibility rejects sensitive actions', () async {
-    expect(() => EncounterEligibilityPolicy(FakeBlocks(true)).requireActionable(encounter()), throwsA(isA<Exception>()));
+    expect(
+      () => EncounterEligibilityPolicy(
+        FakeBlocks(true),
+      ).requireActionable(encounter()),
+      throwsA(isA<Exception>()),
+    );
   });
 }

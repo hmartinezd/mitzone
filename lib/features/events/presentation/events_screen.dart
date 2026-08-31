@@ -12,7 +12,7 @@ class EventsScreen extends ConsumerStatefulWidget {
   const EventsScreen({super.key});
 
   @override
-  State<EventsScreen> createState() => _EventsScreenState();
+  ConsumerState<EventsScreen> createState() => _EventsScreenState();
 }
 
 class _EventsScreenState extends ConsumerState<EventsScreen> {
@@ -39,7 +39,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                   e.title.toLowerCase().contains(query) ||
                   e.venue.toLowerCase().contains(query)) &&
               (category == null || e.category == category) &&
-              (!joinedOnly || (joined.valueOrNull?.contains(e.id) ?? false)),
+                  (!joinedOnly || (joined.value?.contains(e.id) ?? false)),
         )
         .toList();
 
@@ -121,7 +121,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                 final event = filtered[index];
                 return EventListCard(
                   event: event,
-                  isJoined: joined.valueOrNull?.contains(event.id) ?? false,
+                  isJoined: joined.value?.contains(event.id) ?? false,
                   onTap: () => context.push(AppRoutes.eventDetails(event.id)),
                 );
               },

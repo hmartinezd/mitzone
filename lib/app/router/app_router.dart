@@ -185,7 +185,10 @@ GoRouter createAppRouter({
                     path: 'details',
                     builder: (context, state) => const ProfileDetailsScreen(),
                   ),
-                  GoRoute(path: 'personality', builder: (context, state) => const PersonalityScreen()),
+                  GoRoute(
+                    path: 'personality',
+                    builder: (context, state) => const PersonalityScreen(),
+                  ),
                   GoRoute(
                     path: 'settings',
                     builder: (context, state) => const SettingsScreen(),

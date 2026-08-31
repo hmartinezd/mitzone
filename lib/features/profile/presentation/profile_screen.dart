@@ -108,7 +108,14 @@ class _ProfileContent extends ConsumerWidget {
         MitzoneCard(
           onTap: () => context.go(AppRoutes.personality),
           padding: const EdgeInsets.all(AppSpacing.lg),
-          child: const Row(children: [Icon(Icons.psychology_outlined), SizedBox(width: AppSpacing.md), Expanded(child: Text('Optional: describe your social style')), Icon(Icons.chevron_right)]),
+          child: const Row(
+            children: [
+              Icon(Icons.psychology_outlined),
+              SizedBox(width: AppSpacing.md),
+              Expanded(child: Text('Optional: describe your social style')),
+              Icon(Icons.chevron_right),
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.xxl),
         const _SettingsAction(),

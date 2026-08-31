@@ -7,7 +7,7 @@ void main() {
   test('persists per identity and prevents duplicate notifications', () async {
     final storage = MemoryStorage();
     final repo = LocalNotificationRepository(storage);
-    const first = LocalNotification(
+    final first = LocalNotification(
       id: 'request-1',
       type: LocalNotificationType.connectionRequest,
       userId: 'jose',
@@ -18,7 +18,7 @@ void main() {
     await repo.add(first);
     await repo.add(first);
     await repo.add(
-      const LocalNotification(
+      LocalNotification(
         id: 'request-2',
         type: LocalNotificationType.connectionRequest,
         userId: 'sofia',
@@ -43,7 +43,7 @@ void main() {
       onChanged: () => changes++,
     );
     await repo.add(
-      const LocalNotification(
+      LocalNotification(
         id: 'n',
         type: LocalNotificationType.newMessage,
         userId: 'jose',

@@ -2,12 +2,12 @@ import '../../../core/errors/domain_error.dart';
 
 class Encounter {
   factory Encounter({
-    required this.id,
-    required this.currentUserId,
-    required this.otherUserId,
-    required this.eventId,
-    required this.overlapStart,
-    required this.overlapEnd,
+    required String id,
+    required String currentUserId,
+    required String otherUserId,
+    required String eventId,
+    required DateTime overlapStart,
+    required DateTime overlapEnd,
   }) {
     if ([
           id,

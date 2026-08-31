@@ -96,7 +96,7 @@ class _CreateMinimumProfileScreenState
 
           // Update profile with the new avatar URI
           await profileRepo.saveMinimumProfile(
-            identityId: identity.id,
+            identityId: identityId,
             displayName: _nameController.text.trim(),
             avatarUri: avatarUri,
           );

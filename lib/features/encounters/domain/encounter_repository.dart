@@ -6,7 +6,8 @@ abstract interface class EncounterRepository {
 
   /// Processes one newly recorded presence without exposing other users'
   /// evidence to the caller. Implementations must be idempotent.
-  Future<List<Encounter>> processEvidence(PresenceEvidence evidence, {
+  Future<List<Encounter>> processEvidence(
+    PresenceEvidence evidence, {
     required String actorUserId,
   });
 }

@@ -11,6 +11,7 @@ import 'supabase_encounter_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../personality/data/personality_providers.dart';
 import '../../profile/data/profile_providers.dart';
+import '../../profile/data/profile_repository.dart';
 import '../../profile/domain/user_profile.dart';
 import '../domain/encounter_eligibility.dart';
 import '../domain/encounter_relevance.dart';
@@ -77,9 +78,11 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
   late final Map<String, UserProfile> profiles;
   late final Map<String, double> personalityCompatibility;
   if (production) {
-    current = await profileRepository.getProfile(userId).catchError((_) => null);
+    current = await profileRepository
+        .getProfile(userId)
+        .catchError((_) => null);
     profiles = await profileRepository
-        .getProfilesByIds(result.map((e) => e.otherUserId).toSet())
+        .loadProfilesByIds(result.map((e) => e.otherUserId).toSet())
         .catchError((_) => <String, UserProfile>{});
     personalityCompatibility = await ref
         .read(personalityRepositoryProvider)

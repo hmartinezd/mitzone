@@ -6,5 +6,14 @@ import '../../../core/identity/current_user_provider.dart';
 import 'local_personality_repository.dart';
 import 'personality_repository.dart';
 import 'supabase_personality_repository.dart';
-final personalityRepositoryProvider = Provider<PersonalityRepository>((ref) => ref.watch(authRepositoryProvider) == null ? LocalPersonalityRepository(ref.watch(localStorageProvider)) : SupabasePersonalityRepository(Supabase.instance.client));
-final currentPersonalityProvider = FutureProvider((ref) async => ref.watch(personalityRepositoryProvider).getForUser(await ref.watch(currentUserIdProvider.future)));
+
+final personalityRepositoryProvider = Provider<PersonalityRepository>(
+  (ref) => ref.watch(authRepositoryProvider) == null
+      ? LocalPersonalityRepository(ref.watch(localStorageProvider))
+      : SupabasePersonalityRepository(Supabase.instance.client),
+);
+final currentPersonalityProvider = FutureProvider(
+  (ref) async => ref
+      .watch(personalityRepositoryProvider)
+      .getForUser(await ref.watch(currentUserIdProvider.future)),
+);

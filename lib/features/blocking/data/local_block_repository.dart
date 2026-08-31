@@ -5,6 +5,9 @@ import '../domain/block_repository.dart';
 class LocalBlockRepository implements BlockRepository {
   const LocalBlockRepository(this.storage);
   final LocalStorage storage;
+  @override
+  Future<bool> isPairBlocked(String a, String b) async =>
+      await isBlocked(a, b) || await isBlocked(b, a);
   String key(String id) => 'local_blocks.v1.$id';
   Future<Set<String>> _read(String id) async {
     try {

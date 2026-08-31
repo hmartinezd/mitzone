@@ -14,13 +14,13 @@ class SupabaseEncounterRepository implements EncounterRepository {
   }
 
   Encounter _parse(Map<String, dynamic> row, String userId) => Encounter(
-        id: row['id'] as String,
-        currentUserId: userId,
-        otherUserId: row['other_user_id'] as String,
-        eventId: row['context_id'] as String,
-        overlapStart: DateTime.parse(row['overlap_start'] as String),
-        overlapEnd: DateTime.parse(row['overlap_end'] as String),
-      );
+    id: row['id'] as String,
+    currentUserId: userId,
+    otherUserId: row['other_user_id'] as String,
+    eventId: row['context_id'] as String,
+    overlapStart: DateTime.parse(row['overlap_start'] as String),
+    overlapEnd: DateTime.parse(row['overlap_end'] as String),
+  );
 
   @override
   Future<List<Encounter>> getEncountersForUser(String userId) async {
@@ -37,16 +37,18 @@ class SupabaseEncounterRepository implements EncounterRepository {
   }
 
   @override
-  Future<List<Encounter>> processEvidence(PresenceEvidence evidence, {
+  Future<List<Encounter>> processEvidence(
+    PresenceEvidence evidence, {
     required String actorUserId,
   }) async {
     _own(actorUserId);
     if (evidence.subjectUserId != actorUserId) {
       throw StateError('Encounter ownership mismatch');
     }
-    await client.rpc('process_presence_evidence', params: {
-      'p_evidence_id': evidence.id,
-    });
+    await client.rpc(
+      'process_presence_evidence',
+      params: {'p_evidence_id': evidence.id},
+    );
     return getEncountersForUser(actorUserId);
   }
 }

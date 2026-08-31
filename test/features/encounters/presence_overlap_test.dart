@@ -14,14 +14,35 @@ PresenceEvidence evidence(String user, String context, int start, int end) =>
 
 void main() {
   test('same context with meaningful overlap is a candidate', () {
-    final overlap = PresenceOverlap.between(evidence('a', 'event', 0, 20), evidence('b', 'event', 10, 30));
+    final overlap = PresenceOverlap.between(
+      evidence('a', 'event', 0, 20),
+      evidence('b', 'event', 10, 30),
+    );
     expect(overlap, isNotNull);
     expect(overlap!.duration, const Duration(minutes: 10));
   });
 
   test('short, different-context, and self overlaps are rejected', () {
-    expect(PresenceOverlap.between(evidence('a', 'event', 0, 10), evidence('b', 'event', 8, 20)), isNull);
-    expect(PresenceOverlap.between(evidence('a', 'event', 0, 20), evidence('b', 'other', 0, 20)), isNull);
-    expect(PresenceOverlap.between(evidence('a', 'event', 0, 20), evidence('a', 'event', 0, 20)), isNull);
+    expect(
+      PresenceOverlap.between(
+        evidence('a', 'event', 0, 10),
+        evidence('b', 'event', 8, 20),
+      ),
+      isNull,
+    );
+    expect(
+      PresenceOverlap.between(
+        evidence('a', 'event', 0, 20),
+        evidence('b', 'other', 0, 20),
+      ),
+      isNull,
+    );
+    expect(
+      PresenceOverlap.between(
+        evidence('a', 'event', 0, 20),
+        evidence('a', 'event', 0, 20),
+      ),
+      isNull,
+    );
   });
 }

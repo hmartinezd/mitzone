@@ -9,7 +9,10 @@ abstract final class ProfileAffinity {
       a.connectionGoal != null && a.connectionGoal == b.connectionGoal;
   static List<String> _intersection(List<String> a, List<String> b) {
     final normalized = {for (final value in b) _normalize(value)};
-    return [for (final value in a) if (normalized.contains(_normalize(value))) value.trim()];
+    return [
+      for (final value in a)
+        if (normalized.contains(_normalize(value))) value.trim(),
+    ];
   }
 
   static String _normalize(String value) => value.trim().toLowerCase();

@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import 'auth_models.dart';
 import 'auth_repository.dart';
 import '../errors/domain_error.dart';

@@ -4,6 +4,9 @@ import '../domain/block_repository.dart';
 class SupabaseBlockRepository implements BlockRepository {
   SupabaseBlockRepository(this.client);
   final SupabaseClient client;
+  @override
+  Future<bool> isPairBlocked(String a, String b) async =>
+      await isBlocked(a, b) || await isBlocked(b, a);
 
   void _own(String id) {
     if (client.auth.currentUser?.id != id) {
@@ -21,9 +24,13 @@ class SupabaseBlockRepository implements BlockRepository {
   }
 
   @override
-  Future<void> block({required String blockerUserId, required String blockedUserId}) async {
+  Future<void> block({
+    required String blockerUserId,
+    required String blockedUserId,
+  }) async {
     _own(blockerUserId);
-    if (blockerUserId == blockedUserId) throw ArgumentError('Cannot block yourself');
+    if (blockerUserId == blockedUserId)
+      throw ArgumentError('Cannot block yourself');
     await client.from('blocks').upsert({
       'blocker_user_id': blockerUserId,
       'blocked_user_id': blockedUserId,
@@ -31,7 +38,10 @@ class SupabaseBlockRepository implements BlockRepository {
   }
 
   @override
-  Future<void> unblock({required String blockerUserId, required String blockedUserId}) async {
+  Future<void> unblock({
+    required String blockerUserId,
+    required String blockedUserId,
+  }) async {
     _own(blockerUserId);
     await client.from('blocks').delete().match({
       'blocker_user_id': blockerUserId,
@@ -42,7 +52,10 @@ class SupabaseBlockRepository implements BlockRepository {
   @override
   Future<List<String>> getBlocked(String blockerUserId) async {
     _own(blockerUserId);
-    final rows = await client.from('blocks').select('blocked_user_id').eq('blocker_user_id', blockerUserId);
+    final rows = await client
+        .from('blocks')
+        .select('blocked_user_id')
+        .eq('blocker_user_id', blockerUserId);
     return rows.map<String>((row) => row['blocked_user_id'] as String).toList();
   }
 }

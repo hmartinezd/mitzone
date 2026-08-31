@@ -1,16 +1,17 @@
 /// How a presence was verified. Only manual/local demo is implemented today.
 library;
+
 import '../../../core/errors/domain_error.dart';
 
 enum EventCheckInMethod { manual, localDemo, qr, geofence }
 
 class EventCheckIn {
   factory EventCheckIn({
-    required this.eventId,
-    required this.identityId,
-    required this.checkedInAt,
-    required this.method,
-    this.checkedOutAt,
+    required String eventId,
+    required String identityId,
+    required DateTime checkedInAt,
+    required EventCheckInMethod method,
+    DateTime? checkedOutAt,
   }) {
     if (eventId.trim().isEmpty ||
         identityId.trim().isEmpty ||

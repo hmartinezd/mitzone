@@ -21,7 +21,8 @@ class LocalEncounterRepository implements EncounterRepository {
       ]).forUser(userId, referenceTime: referenceTime);
 
   @override
-  Future<List<Encounter>> processEvidence(PresenceEvidence evidence, {
+  Future<List<Encounter>> processEvidence(
+    PresenceEvidence evidence, {
     required String actorUserId,
   }) async => getEncountersForUser(actorUserId);
 }

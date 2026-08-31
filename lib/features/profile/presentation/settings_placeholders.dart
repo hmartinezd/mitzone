@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/identity/identity_providers.dart';
+import '../../../core/identity/mock_identity_repository.dart';
 import '../../blocking/data/block_providers.dart';
 import '../domain/user_profile.dart';
 import 'widgets/profile_avatar.dart';

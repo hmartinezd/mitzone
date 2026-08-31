@@ -2,6 +2,7 @@ import '../../events/domain/event_check_in.dart';
 import 'package:mitzone/features/encounters/domain/encounter.dart';
 import '../domain/encounter_engine.dart';
 import '../domain/encounter_repository.dart';
+import '../domain/presence_evidence.dart';
 
 class LocalEncounterRepository implements EncounterRepository {
   const LocalEncounterRepository({
@@ -18,4 +19,9 @@ class LocalEncounterRepository implements EncounterRepository {
         ...currentUserPresence.where((p) => p.identityId == userId),
         ...otherUserPresence.where((p) => p.identityId != userId),
       ]).forUser(userId, referenceTime: referenceTime);
+
+  @override
+  Future<List<Encounter>> processEvidence(PresenceEvidence evidence, {
+    required String actorUserId,
+  }) async => getEncountersForUser(actorUserId);
 }

@@ -5,6 +5,10 @@ import '../../events/domain/event_check_in.dart';
 import 'package:mitzone/features/encounters/domain/encounter.dart';
 import 'local_encounter_repository.dart';
 import '../../blocking/data/block_providers.dart';
+import '../../../core/auth/auth_providers.dart';
+import '../../../core/identity/current_user_provider.dart';
+import 'supabase_encounter_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Local-demo encounters are observed after deterministic simulated elapsed
 /// time so a fresh check-in immediately demonstrates meaningful overlap.
@@ -13,6 +17,9 @@ final demoEncounterObservationOffsetProvider = Provider<Duration>(
 );
 
 final encounterRepositoryProvider = Provider((ref) {
+  if (ref.watch(productionModeProvider)) {
+    return SupabaseEncounterRepository(Supabase.instance.client);
+  }
   final checkIns = ref.watch(eventCheckInsProvider);
   final local = checkIns.when(
     data: (value) => value,
@@ -46,15 +53,17 @@ final encounterRepositoryProvider = Provider((ref) {
 final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
   ref,
 ) async {
-  final user = ref.watch(mockIdentityRepositoryProvider).currentUser;
+  final userId = ref.watch(productionModeProvider)
+      ? await ref.watch(currentUserIdProvider.future)
+      : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
   final encounters = await ref
       .watch(encounterRepositoryProvider)
-      .getEncountersForUser(user.id);
+      .getEncountersForUser(userId);
   final result = <Encounter>[];
   for (final encounter in encounters) {
     if (!await ref
         .read(blockRepositoryProvider)
-        .isPairBlocked(user.id, encounter.otherUserId))
+        .isPairBlocked(userId, encounter.otherUserId))
       result.add(encounter);
   }
   return result;

@@ -49,4 +49,8 @@ The first contract block adds a source-neutral `PresenceEvidence` value with an 
 
 Remote presence foundation: authenticated event/check-in evidence is stored through `PresenceRepository` and owned by the authenticated user ID. Production evidence uses bounded UTC intervals, explicit check-in consent, a 30-day expiration, and a unique subject/context pair. RLS permits users to manage only their own raw evidence; it is not publicly readable. Demo check-ins and deterministic attendees remain local, and remote evidence does not yet generate encounters.
 
+## Remote encounter generation
+
+Two different users qualify only when their evidence has the same context and at least five minutes of overlap between bounded UTC intervals. `PresenceOverlap` owns this rule. Production submits only the current user's evidence ID to the secured `process_presence_evidence` RPC; raw other-user evidence is never client-readable. Migration `0003_encounters.sql` stores canonical ordered pairs and derived overlap data, with participant-only RLS and idempotent uniqueness. Presence remains valid if processing fails and can be retried. Eligibility (including blocks) remains separate from overlap detection.
+
 Existing local IDs remain valid. New IDs must be opaque and independent of display names, list order, and timestamps alone. Domain timestamps are UTC; lifecycle timestamps retain their meaning instead of being overloaded. No local persistence schema migration is required by these contracts.

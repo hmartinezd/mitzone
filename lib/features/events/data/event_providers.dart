@@ -14,6 +14,7 @@ import 'local_event_check_in_repository.dart';
 import 'local_event_participation_repository.dart';
 import 'mock_event_attendees.dart';
 import '../../encounters/data/presence_providers.dart';
+import '../../encounters/data/encounter_providers.dart';
 import '../../encounters/domain/presence_evidence.dart';
 
 typedef DemoPresenceRequest = ({String eventId, DateTime referenceTime});
@@ -91,10 +92,7 @@ class EventParticipationController {
         if (!await participation.isJoined(identityId: id, eventId: eventId))
           return false;
         final now = _ref.read(utcNowProvider)().toUtc();
-        await _ref
-            .read(presenceRepositoryProvider)
-            .recordEvidence(
-              PresenceEvidence(
+        final evidence = PresenceEvidence(
                 id: Uuid().v5(Uuid.NAMESPACE_URL, 'presence:$id:$eventId'),
                 subjectUserId: id,
                 contextId: eventId,
@@ -103,7 +101,12 @@ class EventParticipationController {
                 source: PresenceEvidenceSource.eventParticipation,
                 consentScope: 'explicit-check-in',
                 expiresAt: now.add(const Duration(days: 30)),
-              ),
+              );
+        final recorded = await _ref
+            .read(presenceRepositoryProvider)
+            .recordEvidence(evidence, actorUserId: id);
+        await _ref.read(encounterRepositoryProvider).processEvidence(
+              recorded,
               actorUserId: id,
             );
         _ref.invalidate(eventCheckInsProvider);

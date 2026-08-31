@@ -11,6 +11,7 @@ import 'profile_repository.dart';
 import '../../../core/auth/auth_providers.dart';
 import 'supabase_profile_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/identity/current_user_provider.dart';
 
 /// Provider for the [ProfileRepository].
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
@@ -31,11 +32,11 @@ final avatarPickerProvider = Provider<AvatarPicker>((ref) {
 
 /// Reusable provider for the profile associated with the current local-development identity.
 final currentProfileProvider = FutureProvider<UserProfile?>((ref) async {
+  final id = await ref.watch(currentUserIdProvider.future);
   final session = await ref.watch(authSessionProvider.future);
-  if (ref.watch(productionModeProvider) && session == null) return null;
   final mockIdentity = ref.watch(mockIdentityRepositoryProvider);
   final profileRepository = ref.watch(profileRepositoryProvider);
-  final user = session == null ? mockIdentity.currentUser : UserProfile(id: session.user.id, displayName: '');
-  if (session != null) return profileRepository.getProfile(session.user.id);
+  if (session != null) return profileRepository.getProfile(id);
+  final user = mockIdentity.currentUser;
   return await profileRepository.getProfile(user.id) ?? user;
 });

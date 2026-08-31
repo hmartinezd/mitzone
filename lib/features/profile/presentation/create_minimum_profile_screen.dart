@@ -85,7 +85,7 @@ class _CreateMinimumProfileScreenState
       );
 
       // 2. Try to save the optional avatar if selected
-      if (_selectedAvatar != null) {
+      if (_selectedAvatar != null && !ref.read(productionModeProvider)) {
         try {
           final avatarUri = await avatarStorage.saveAvatar(
             identityId: identityId,

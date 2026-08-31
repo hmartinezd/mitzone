@@ -8,6 +8,7 @@ import '../../blocking/data/block_providers.dart';
 import '../domain/user_profile.dart';
 import 'widgets/profile_avatar.dart';
 import '../../../core/auth/auth_providers.dart';
+import '../data/profile_providers.dart';
 
 class AccountSettingsScreen extends ConsumerWidget {
   const AccountSettingsScreen({super.key});
@@ -32,7 +33,7 @@ class AccountSettingsScreen extends ConsumerWidget {
             title: const Text('Sign out'),
             subtitle: Text(ref.watch(productionModeProvider) ? 'End this session' : 'Authentication deferred'),
             enabled: ref.watch(productionModeProvider),
-            onTap: () async { await ref.read(authRepositoryProvider)?.signOut(); ref.invalidate(authSessionProvider); if (context.mounted) context.go('/login'); },
+            onTap: () async { await ref.read(authRepositoryProvider)?.signOut(); ref.invalidate(authSessionProvider); ref.invalidate(currentProfileProvider); if (context.mounted) context.go('/login'); },
           ),
           ListTile(
             title: Text(

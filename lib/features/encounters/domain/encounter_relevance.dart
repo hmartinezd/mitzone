@@ -38,7 +38,7 @@ class EncounterRankingService {
   const EncounterRankingService({this.weights = const EncounterRankingWeights()});
   final EncounterRankingWeights weights;
 
-  List<RankedEncounter> rank({required List<Encounter> eligibleEncounters, required UserProfile currentUser, required Map<String, UserProfile> profiles}) {
+  List<RankedEncounter> rank({required List<Encounter> eligibleEncounters, required UserProfile? currentUser, required Map<String, UserProfile> profiles}) {
     final ranked = [
       for (final encounter in eligibleEncounters)
         _rankOne(encounter, currentUser, profiles[encounter.otherUserId]),
@@ -56,7 +56,7 @@ class EncounterRankingService {
     add(RelevanceSignal.sharedContext, SignalState.positive, 1);
     final overlap = (encounter.overlapDuration.inMinutes / 30).clamp(0.0, 1.0).toDouble();
     add(RelevanceSignal.overlap, overlap == 0 ? SignalState.neutral : SignalState.positive, overlap);
-    if (other == null) {
+    if (other == null || current == null) {
       add(RelevanceSignal.interests, SignalState.unknown, 0);
       add(RelevanceSignal.languages, SignalState.unknown, 0);
       add(RelevanceSignal.goals, SignalState.unknown, 0);

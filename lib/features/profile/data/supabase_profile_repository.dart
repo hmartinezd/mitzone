@@ -36,6 +36,13 @@ class SupabaseProfileRepository implements ProfileRepository {
     return row == null ? null : _profile(row);
   }
 
+  @override
+  Future<Map<String, UserProfile>> getProfilesByIds(Set<String> ids) async {
+    if (ids.isEmpty) return {};
+    final rows = await client.from('profiles').select().inFilter('id', ids.toList());
+    return {for (final row in rows) row['id'] as String: _profile(row)};
+  }
+
   void _requireOwner(String id) {
     if (client.auth.currentUser?.id != id) {
       throw const DomainError(

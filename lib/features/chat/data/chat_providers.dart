@@ -47,7 +47,9 @@ final conversationContextProvider = FutureProvider.family<String?, String>((
   ref,
   id,
 ) async {
-  final me = ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+  final me = ref.watch(productionModeProvider)
+      ? await ref.watch(currentUserIdProvider.future)
+      : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
   final conversation = (await ref.watch(
     chatConversationsProvider.future,
   )).where((c) => c.id == id).firstOrNull;

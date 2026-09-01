@@ -60,6 +60,12 @@ class AppConfig {
       );
     }
 
+    if (env == AppEnvironment.production && !hasUrl) {
+      throw const ConfigException(
+        'Production requires Supabase configuration. Local identity and data are disabled.',
+      );
+    }
+
     if (hasUrl) {
       final uri = Uri.tryParse(supabaseUrl!);
       final isValid =

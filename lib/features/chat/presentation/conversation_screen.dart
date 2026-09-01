@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/identity/identity_providers.dart';
+import '../../../core/auth/auth_providers.dart';
+import '../../../core/identity/current_user_provider.dart';
 import '../data/chat_providers.dart';
 import 'package:uuid/uuid.dart';
 
@@ -25,10 +27,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = ref
-        .watch(mockIdentityRepositoryProvider)
-        .currentUser
-        .id;
+    final production = ref.watch(productionModeProvider);
+    final identity = production ? null : ref.watch(mockIdentityRepositoryProvider);
+    final currentUserId = production
+        ? (ref.watch(currentUserIdProvider).value ?? '')
+        : identity!.currentUser.id;
     final messages = ref.watch(chatMessagesProvider(widget.conversationId));
     final conversations = ref.watch(chatConversationsProvider);
     final contextState = ref.watch(
@@ -45,11 +48,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         : conversation.userAId == currentUserId
         ? conversation.userBId
         : conversation.userAId;
-    final other = otherId == null
+    final other = otherId == null || production
         ? null
-        : ref
-              .watch(mockIdentityRepositoryProvider)
-              .users
+        : identity!.users
               .where((u) => u.id == otherId)
               .firstOrNull;
     return Scaffold(

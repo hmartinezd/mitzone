@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/identity/identity_providers.dart';
+import '../../../core/auth/auth_providers.dart';
+import '../../../core/identity/current_user_provider.dart';
 import '../../connections/data/connection_providers.dart';
 import '../../profile/presentation/widgets/profile_avatar.dart';
 import '../data/chat_providers.dart';
@@ -16,8 +18,11 @@ class ChatScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final conversations = ref.watch(chatConversationsProvider);
     final connections = ref.watch(connectionsProvider);
-    final identity = ref.watch(mockIdentityRepositoryProvider);
-    final currentUserId = identity.currentUser.id;
+    final production = ref.watch(productionModeProvider);
+    final identity = production ? null : ref.watch(mockIdentityRepositoryProvider);
+    final currentUserId = production
+        ? (ref.watch(currentUserIdProvider).value ?? '')
+        : identity!.currentUser.id;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Chat'),
@@ -71,14 +76,14 @@ class ChatScreen extends ConsumerWidget {
                 final otherId = connection.userAId == currentUserId
                     ? connection.userBId
                     : connection.userAId;
-                final other = identity.users.firstWhere(
-                  (user) => user.id == otherId,
-                );
+                final other = production
+                    ? null
+                    : identity!.users.firstWhere((user) => user.id == otherId);
                 return _ConversationTile(
                   conversation: conversation,
                   connectionId: connection.id,
                   currentUserId: currentUserId,
-                  displayName: other.displayName,
+                  displayName: other?.displayName ?? 'Connection',
                 );
               }).toList(),
             );

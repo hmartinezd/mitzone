@@ -13,9 +13,11 @@ final blockRepositoryProvider = Provider<BlockRepository>(
       : LocalBlockRepository(ref.watch(localStorageProvider)),
 );
 final blockedUsersProvider = FutureProvider<List<String>>(
-  (ref) => ref
-      .watch(blockRepositoryProvider)
-      .getBlocked(ref.watch(mockIdentityRepositoryProvider).currentUser.id),
+  (ref) async => ref.watch(blockRepositoryProvider).getBlocked(
+    ref.watch(productionModeProvider)
+        ? await ref.watch(currentUserIdProvider.future)
+        : ref.watch(mockIdentityRepositoryProvider).currentUser.id,
+  ),
 );
 final interactionBlockedProvider =
     FutureProvider.family<bool, ({String a, String b})>(

@@ -5,6 +5,8 @@ import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../core/identity/identity_providers.dart';
+import '../../../core/auth/auth_providers.dart';
+import '../../../core/identity/current_user_provider.dart';
 import '../../chat/data/chat_providers.dart';
 import '../../connections/data/connection_providers.dart';
 import '../../encounters/data/encounter_providers.dart';
@@ -27,7 +29,8 @@ class HomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
     final joinedIdsAsync = ref.watch(joinedEventIdsProvider);
     final catalog = ref.watch(eventCatalogProvider);
-    final identity = ref.watch(mockIdentityRepositoryProvider);
+    final production = ref.watch(productionModeProvider);
+    final identity = production ? null : ref.watch(mockIdentityRepositoryProvider);
     final encounters = ref.watch(encountersForCurrentUserProvider);
     final incomingRequests = ref.watch(incomingConnectionRequestsProvider);
     final connections = ref.watch(connectionsProvider);
@@ -115,8 +118,10 @@ class HomeScreen extends ConsumerWidget {
             incomingRequests: incomingRequests,
             connections: connections,
             conversations: conversations,
-            currentUserId: identity.currentUser.id,
-            users: identity.users,
+            currentUserId: production
+                ? (ref.watch(currentUserIdProvider).value ?? '')
+                : identity!.currentUser.id,
+            users: production ? const [] : identity!.users,
             eventCatalog: catalog,
             onExploreEvents: () => context.go(AppRoutes.events),
             onViewMatches: () => context.go(AppRoutes.matches),

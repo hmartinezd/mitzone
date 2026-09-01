@@ -36,9 +36,9 @@ final avatarPickerProvider = Provider<AvatarPicker>((ref) {
 final currentProfileProvider = FutureProvider<UserProfile?>((ref) async {
   final id = await ref.watch(currentUserIdProvider.future);
   final session = await ref.watch(authSessionProvider.future);
-  final mockIdentity = ref.watch(mockIdentityRepositoryProvider);
   final profileRepository = ref.watch(profileRepositoryProvider);
   if (session != null) return profileRepository.getProfile(id);
+  final mockIdentity = ref.watch(mockIdentityRepositoryProvider);
   final user = mockIdentity.currentUser;
   return await profileRepository.getProfile(user.id) ?? user;
 });

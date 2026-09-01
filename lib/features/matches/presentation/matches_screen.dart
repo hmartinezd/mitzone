@@ -62,14 +62,18 @@ class _EncounterCard extends ConsumerWidget {
   final Encounter encounter;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(encounterProfileProvider(encounter.otherUserId));
-    final current = ref.watch(
+    final userState = ref.watch(encounterProfileProvider(encounter.otherUserId));
+    final currentState = ref.watch(
       encounterProfileProvider(encounter.currentUserId),
     );
+    if (!userState.hasValue || !currentState.hasValue) return const SizedBox.shrink();
+    final user = userState.value;
+    final current = currentState.value;
+    if (user == null || current == null) return const SizedBox.shrink();
     final event = ref.watch(encounterEventProvider(encounter.eventId));
     final relationship = ref.watch(relationshipProvider(encounter));
     if (event == null) return const SizedBox.shrink();
-    final interests = ProfileAffinity.sharedInterests(current, user);
+    final interests = ProfileAffinity.sharedInterests(current.toUserProfile(), user.toUserProfile());
     return MitzoneCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,7 +184,7 @@ class _RequestsSection extends ConsumerWidget {
       for (final r in requests)
         ListTile(
           title: Text(
-            ref.watch(encounterProfileProvider(r.senderUserId)).displayName,
+            ref.watch(encounterProfileProvider(r.senderUserId)).value?.displayName ?? 'Someone',
           ),
           subtitle: const Text('You crossed paths. They said hi.'),
           trailing: Wrap(

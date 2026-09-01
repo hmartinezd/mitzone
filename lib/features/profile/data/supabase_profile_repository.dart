@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/user_profile.dart';
+import '../domain/public_profile.dart';
 import 'profile_repository.dart';
 import '../../../core/errors/domain_error.dart';
 
@@ -34,6 +35,19 @@ class SupabaseProfileRepository implements ProfileRepository {
         .eq('id', id)
         .maybeSingle();
     return row == null ? null : _profile(row);
+  }
+
+  @override
+  Future<PublicProfile?> getPublicProfile(String userId) async {
+    final rows = await getPublicProfilesByIds({userId});
+    return rows[userId];
+  }
+
+  @override
+  Future<Map<String, PublicProfile>> getPublicProfilesByIds(Set<String> ids) async {
+    if (ids.isEmpty) return {};
+    final rows = await client.rpc('get_public_profiles', params: {'p_user_ids': ids.toList()}) as List;
+    return {for (final row in rows) (row['id'] as String): PublicProfile.fromJson(row)};
   }
 
   Future<Map<String, UserProfile>> getProfilesByIds(Set<String> ids) async {

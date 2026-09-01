@@ -42,8 +42,11 @@ class OtherUserProfileScreen extends ConsumerWidget {
             body: Center(child: Text('This encounter is no longer available.')),
           );
         }
-        final profile = ref.watch(encounterProfileProvider(userId));
-        return _content(context, ref, profile, encounter);
+        final profileState = ref.watch(encounterProfileProvider(userId));
+        final profile = profileState.value;
+        if (profileState.isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        if (profile == null) return const Scaffold(body: Center(child: Text('This profile is no longer available.')));
+        return _content(context, ref, profile.toUserProfile(), encounter);
       },
     );
   }
@@ -54,9 +57,11 @@ class OtherUserProfileScreen extends ConsumerWidget {
     UserProfile profile,
     Encounter encounter,
   ) {
-    final current = ref.watch(
+    final currentState = ref.watch(
       encounterProfileProvider(encounter.currentUserId),
     );
+    final current = currentState.value?.toUserProfile();
+    if (current == null) return const Scaffold(body: Center(child: Text('Your profile is unavailable.')));
     final event = ref.watch(encounterEventProvider(encounter.eventId));
     final relationship = ref.watch(relationshipProvider(encounter));
     final sharedInterests = ProfileAffinity.sharedInterests(current, profile);

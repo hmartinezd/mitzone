@@ -5,6 +5,24 @@ import '../domain/presence_repository.dart';
 class SupabasePresenceRepository implements PresenceRepository {
   SupabasePresenceRepository(this.client);
   final SupabaseClient client;
+
+  Future<PresenceEvidence> recordForegroundPresence({required double latitude, required double longitude}) async {
+    final rows = await client.rpc('record_foreground_presence', params: {
+      'p_latitude': latitude, 'p_longitude': longitude,
+    }) as List;
+    if (rows.isEmpty) throw StateError('Presence unavailable');
+    final row = rows.first as Map<String, dynamic>;
+    return PresenceEvidence(
+      id: 'foreground:${client.auth.currentUser!.id}:${row['context_id']}',
+      subjectUserId: client.auth.currentUser!.id,
+      contextId: row['context_id'] as String,
+      observedStart: DateTime.parse(row['observed_start'] as String).toUtc(),
+      observedEnd: DateTime.parse(row['observed_end'] as String).toUtc(),
+      source: PresenceEvidenceSource.geolocation,
+      consentScope: 'foreground-explicit',
+      expiresAt: DateTime.parse(row['expires_at'] as String).toUtc(),
+    );
+  }
   Map<String, dynamic> row(PresenceEvidence e) => {
     'id': e.id,
     'subject_user_id': e.subjectUserId,

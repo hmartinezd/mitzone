@@ -7,10 +7,12 @@ class SupabasePresenceRepository implements PresenceRepository, ForegroundPresen
   SupabasePresenceRepository(this.client);
   final SupabaseClient client;
 
+  @override
   Future<void> stopForegroundPresence() async {
     await client.rpc('stop_foreground_presence');
   }
 
+  @override
   Future<DateTime> recordForegroundPresence({required double latitude, required double longitude}) async {
     final rows = await client.rpc('record_foreground_presence', params: {
       'p_latitude': latitude, 'p_longitude': longitude,

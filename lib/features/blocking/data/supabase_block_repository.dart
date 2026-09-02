@@ -29,8 +29,9 @@ class SupabaseBlockRepository implements BlockRepository {
     required String blockedUserId,
   }) async {
     _own(blockerUserId);
-    if (blockerUserId == blockedUserId)
+    if (blockerUserId == blockedUserId) {
       throw ArgumentError('Cannot block yourself');
+    }
     await client.from('blocks').upsert({
       'blocker_user_id': blockerUserId,
       'blocked_user_id': blockedUserId,

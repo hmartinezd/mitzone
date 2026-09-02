@@ -35,7 +35,7 @@ class PlatformForegroundLocationSource implements LocationObservationSource {
     return LocationObservation(
       latitude: position.latitude,
       longitude: position.longitude,
-      observedAt: position.timestamp?.toUtc() ?? DateTime.now().toUtc(),
+      observedAt: position.timestamp.toUtc() ?? DateTime.now().toUtc(),
     );
   }
 }

@@ -90,7 +90,7 @@ class ConnectionController {
           encounterId: encounter,
           contextId: '${encounterData.eventId}:${pair.join(':')}',
         );
-    if (!ref.read(productionModeProvider))
+    if (!ref.read(productionModeProvider)) {
       await ref
           .read(notificationRepositoryProvider)
           .add(
@@ -103,6 +103,7 @@ class ConnectionController {
               destination: '/app/matches',
             ),
           );
+    }
     return _refresh(request);
   }
 
@@ -113,7 +114,7 @@ class ConnectionController {
           requestId: id,
           recipientUserId: await ref.read(currentUserIdProvider.future),
         );
-    if (!ref.read(productionModeProvider))
+    if (!ref.read(productionModeProvider)) {
       await ref
           .read(notificationRepositoryProvider)
           .add(
@@ -126,6 +127,7 @@ class ConnectionController {
               destination: '/app/chat',
             ),
           );
+    }
     return _refresh(result);
   }
 

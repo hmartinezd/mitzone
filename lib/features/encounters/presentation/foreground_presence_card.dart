@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../data/foreground_presence_service.dart';
 import '../data/presence_providers.dart';
 import '../domain/foreground_presence_controller.dart';
-import '../domain/presence_consent.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/storage/storage_providers.dart';
 import 'dart:async';

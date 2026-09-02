@@ -17,16 +17,18 @@ class SupabaseNotificationRepository implements NotificationRepository {
   );
   String _requireOwner(String requested) {
     final id = client.auth.currentUser?.id;
-    if (id == null)
+    if (id == null) {
       throw const DomainError(
         DomainErrorCode.unauthorized,
         'Authentication required.',
       );
-    if (id != requested)
+    }
+    if (id != requested) {
       throw const DomainError(
         DomainErrorCode.unauthorized,
         'Notification ownership mismatch.',
       );
+    }
     return id;
   }
 

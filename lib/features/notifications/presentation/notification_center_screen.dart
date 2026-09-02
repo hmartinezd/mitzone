@@ -11,12 +11,14 @@ class NotificationCenterScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final identity = ref.watch(currentUserIdProvider);
-    if (identity.isLoading)
+    if (identity.isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    if (identity.hasError)
+    }
+    if (identity.hasError) {
       return const Scaffold(
         body: Center(child: Text('Notifications unavailable')),
       );
+    }
     final user = identity.requireValue;
     return Scaffold(
       appBar: AppBar(

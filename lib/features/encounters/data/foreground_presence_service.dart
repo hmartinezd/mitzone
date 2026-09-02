@@ -1,7 +1,5 @@
 import '../domain/foreground_presence_controller.dart';
 import '../domain/location_observation.dart';
-import '../domain/presence_consent.dart';
-import 'supabase_presence_repository.dart';
 import 'foreground_location_sources.dart';
 
 abstract interface class ForegroundPresenceGateway {

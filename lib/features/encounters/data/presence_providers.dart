@@ -7,8 +7,6 @@ import 'local_presence_repository.dart';
 import 'supabase_presence_repository.dart';
 import 'foreground_location_sources.dart';
 import '../domain/location_observation.dart';
-import '../domain/presence_consent.dart';
-import 'package:geolocator/geolocator.dart';
 import 'foreground_presence_service.dart';
 
 final locationObservationSourceProvider = Provider<LocationObservationSource>(

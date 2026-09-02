@@ -8,8 +8,9 @@ class SupabaseConnectionRepository implements ConnectionRepository {
   final SupabaseClient client;
   String _user(String requested) {
     final id = client.auth.currentUser?.id;
-    if (id == null || id != requested)
+    if (id == null || id != requested) {
       throw StateError('Authentication required');
+    }
     return id;
   }
 

@@ -1,6 +1,5 @@
 import 'presence_consent.dart';
 import 'presence_evidence.dart';
-import 'presence_source.dart';
 import 'location_observation.dart';
 
 enum ForegroundPresenceStatus { inactive, requestingPermission, locating, active, recorded, denied, unavailable }

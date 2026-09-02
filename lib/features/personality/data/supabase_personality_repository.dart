@@ -26,11 +26,12 @@ class SupabasePersonalityRepository implements PersonalityRepository {
 
   @override
   Future<PersonalityProfile> save(PersonalityProfile profile) async {
-    if (client.auth.currentUser?.id != profile.userId)
+    if (client.auth.currentUser?.id != profile.userId) {
       throw const DomainError(
         DomainErrorCode.unauthorized,
         'You can only update your own personality profile.',
       );
+    }
     final row = {
       'user_id': profile.userId,
       'traits': profile.toJson()['traits'],
@@ -50,8 +51,9 @@ class SupabasePersonalityRepository implements PersonalityRepository {
         'get_personality_compatibility',
         params: {'p_other_user_id': id},
       );
-      if (row is Map && row['state'] == 'known' && row['value'] is num)
+      if (row is Map && row['state'] == 'known' && row['value'] is num) {
         result[id] = (row['value'] as num).toDouble();
+      }
     }
     return result;
   }

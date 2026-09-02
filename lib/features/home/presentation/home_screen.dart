@@ -20,6 +20,7 @@ import 'widgets/home_event_section.dart';
 import 'widgets/home_profile_card.dart';
 import 'widgets/home_social_summary.dart';
 import 'widgets/how_mitzone_works.dart';
+import '../../encounters/presentation/foreground_presence_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -73,6 +74,8 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           const HomeWelcomeCard(),
+          const SizedBox(height: AppSpacing.xl),
+          const ForegroundPresenceCard(),
           const SizedBox(height: AppSpacing.xxl),
           HomeEventSection(
             title: 'Events near you',

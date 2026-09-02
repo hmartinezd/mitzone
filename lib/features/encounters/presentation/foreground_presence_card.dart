@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/foreground_presence_service.dart';
 import '../data/presence_providers.dart';
-import '../data/supabase_presence_repository.dart';
 import '../domain/foreground_presence_controller.dart';
 import '../domain/presence_consent.dart';
 import '../../../core/auth/auth_providers.dart';
@@ -41,10 +40,10 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
     setState(() => status = ForegroundPresenceStatus.locating);
     try {
       if (ref.read(productionModeProvider)) {
-        final result = await ForegroundPresenceService(
-          location: ref.read(locationObservationSourceProvider),
-          presence: ref.read(presenceRepositoryProvider) as SupabasePresenceRepository,
-        ).record(consent: consent, permission: LocationPermissionState.whileUsing);
+        final result = await ref.read(foregroundPresenceServiceProvider)!.record(
+          consent: consent,
+          permission: ref.read(foregroundPermissionProvider).value ?? LocationPermissionState.notRequested,
+        );
         if (mounted) setState(() => status = result);
       } else {
         final evidence = await ref.read(locationObservationSourceProvider).observeForeground();
@@ -64,7 +63,12 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
       })),
       const SizedBox(width: 12),
       if (status == ForegroundPresenceStatus.recorded || status == ForegroundPresenceStatus.active)
-        TextButton(onPressed: () => setState(() { stopped = true; status = ForegroundPresenceStatus.inactive; }), child: const Text('Stop'))
+        TextButton(onPressed: () async {
+          if (ref.read(productionModeProvider)) {
+            await ref.read(presenceRepositoryProvider).stopForegroundPresence();
+          }
+          if (mounted) setState(() { stopped = true; status = ForegroundPresenceStatus.inactive; });
+        }, child: const Text('Stop'))
       else if (!stopped) FilledButton(onPressed: status == ForegroundPresenceStatus.locating ? null : _activate, child: const Text('I’m here')),
     ]),
   ));

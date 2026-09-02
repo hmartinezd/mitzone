@@ -1,6 +1,7 @@
 import 'presence_evidence.dart';
 
 abstract interface class PresenceRepository {
+  Future<void> stopForegroundPresence() async {}
   Future<PresenceEvidence?> getEvidence({
     required String userId,
     required String contextId,

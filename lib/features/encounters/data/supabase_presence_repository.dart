@@ -13,7 +13,7 @@ class SupabasePresenceRepository implements PresenceRepository {
     if (rows.isEmpty) throw StateError('Presence unavailable');
     final row = rows.first as Map<String, dynamic>;
     return PresenceEvidence(
-      id: 'foreground:${client.auth.currentUser!.id}:${row['context_id']}',
+      id: row['evidence_id'] as String,
       subjectUserId: client.auth.currentUser!.id,
       contextId: row['context_id'] as String,
       observedStart: DateTime.parse(row['observed_start'] as String).toUtc(),

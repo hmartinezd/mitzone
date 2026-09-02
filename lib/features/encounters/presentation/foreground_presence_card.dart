@@ -6,6 +6,7 @@ import '../domain/foreground_presence_controller.dart';
 import '../domain/presence_consent.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/storage/storage_providers.dart';
+import 'dart:async';
 
 class ForegroundPresenceCard extends ConsumerStatefulWidget {
   const ForegroundPresenceCard({super.key});
@@ -16,6 +17,7 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
   ForegroundPresenceStatus status = ForegroundPresenceStatus.inactive;
   bool consent = false;
   bool stopped = false;
+  Timer? expiryTimer;
 
   @override
   void initState() {
@@ -40,17 +42,29 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
     setState(() => status = ForegroundPresenceStatus.locating);
     try {
       if (ref.read(productionModeProvider)) {
-        final result = await ref.read(foregroundPresenceServiceProvider)!.record(
+        final service = ref.read(foregroundPresenceServiceProvider);
+        final result = await service.record(
           consent: consent,
-          permission: LocationPermissionState.whileUsing,
         );
-        if (mounted) setState(() => status = result);
+        if (mounted) {
+          setState(() => status = result);
+          expiryTimer?.cancel();
+          final expiry = service.expiresAt;
+          if (result == ForegroundPresenceStatus.recorded && expiry != null) {
+            expiryTimer = Timer(expiry.difference(DateTime.now().toUtc()), () {
+              if (mounted) setState(() { status = ForegroundPresenceStatus.inactive; stopped = false; });
+            });
+          }
+        }
       } else {
         final evidence = await ref.read(locationObservationSourceProvider).observeForeground();
         if (mounted) setState(() => status = evidence.observedAt.isUtc ? ForegroundPresenceStatus.recorded : ForegroundPresenceStatus.unavailable);
       }
     } catch (_) { if (mounted) setState(() => status = ForegroundPresenceStatus.unavailable); }
   }
+
+  @override
+  void dispose() { expiryTimer?.cancel(); super.dispose(); }
 
   @override Widget build(BuildContext context) => Card(child: Padding(
     padding: const EdgeInsets.all(16),
@@ -66,7 +80,7 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
         TextButton(onPressed: () async {
           try {
             if (ref.read(productionModeProvider)) {
-              await ref.read(presenceRepositoryProvider).stopForegroundPresence();
+              await ref.read(foregroundPresenceGatewayProvider).stopForegroundPresence();
             }
             if (mounted) setState(() { stopped = true; status = ForegroundPresenceStatus.inactive; });
           } catch (_) {

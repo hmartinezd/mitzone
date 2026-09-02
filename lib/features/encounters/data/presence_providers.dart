@@ -17,27 +17,28 @@ final locationObservationSourceProvider = Provider<LocationObservationSource>(
       : const DemoForegroundLocationSource(),
 );
 
-final foregroundPermissionProvider = FutureProvider<LocationPermissionState>((ref) async {
-  final permission = await Geolocator.checkPermission();
-  return switch (permission) {
-    LocationPermission.denied => LocationPermissionState.denied,
-    LocationPermission.deniedForever => LocationPermissionState.deniedForever,
-    LocationPermission.whileInUse => LocationPermissionState.whileUsing,
-    LocationPermission.always => LocationPermissionState.background,
-    _ => LocationPermissionState.notRequested,
-  };
-});
-
 final presenceRepositoryProvider = Provider<PresenceRepository>(
   (ref) => ref.watch(productionModeProvider)
       ? SupabasePresenceRepository(Supabase.instance.client)
       : LocalPresenceRepository(ref.watch(localStorageProvider)),
 );
 
-final foregroundPresenceServiceProvider = Provider<ForegroundPresenceService?>((ref) {
-  if (!ref.watch(productionModeProvider)) return null;
+final foregroundPresenceGatewayProvider = Provider<ForegroundPresenceGateway>((ref) {
+  if (!ref.watch(productionModeProvider)) return const DemoForegroundPresenceGateway();
+  return _RepositoryForegroundGateway(ref.watch(presenceRepositoryProvider));
+});
+final foregroundPresenceServiceProvider = Provider<ForegroundPresenceService>((ref) {
   return ForegroundPresenceService(
     location: ref.watch(locationObservationSourceProvider),
-    presence: ref.watch(presenceRepositoryProvider) as ForegroundPresenceGateway,
+    presence: ref.watch(foregroundPresenceGatewayProvider),
   );
 });
+
+class _RepositoryForegroundGateway implements ForegroundPresenceGateway {
+  const _RepositoryForegroundGateway(this.repository);
+  final PresenceRepository repository;
+  @override
+  Future<DateTime> recordForegroundPresence({required double latitude, required double longitude}) => repository.recordForegroundPresence(latitude: latitude, longitude: longitude);
+  @override
+  Future<void> stopForegroundPresence() => repository.stopForegroundPresence();
+}

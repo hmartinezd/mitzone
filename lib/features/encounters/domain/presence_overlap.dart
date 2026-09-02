@@ -15,7 +15,7 @@ class PresenceOverlap {
     PresenceEvidence b, {
     Duration minimum = initialMeaningfulPresenceOverlap,
   }) {
-    if (a.subjectUserId == b.subjectUserId || a.contextId != b.contextId) {
+    if (a.subjectUserId == b.subjectUserId || !contextsCompatible(a.contextId, b.contextId)) {
       return null;
     }
     final start = a.observedStart.isAfter(b.observedStart)
@@ -26,5 +26,18 @@ class PresenceOverlap {
         : b.observedEnd;
     if (end.difference(start) < minimum) return null;
     return PresenceOverlap(start: start, end: end);
+  }
+
+  /// Geolocation cells include only their immediate 8 neighbors; event contexts stay exact.
+  static bool contextsCompatible(String a, String b) {
+    if (a == b) return true;
+    if (!a.startsWith('cell:') || !b.startsWith('cell:')) return false;
+    final pa = a.substring(5).split(':');
+    final pb = b.substring(5).split(':');
+    if (pa.length != 2 || pb.length != 2) return false;
+    final ax = int.tryParse(pa[0]), ay = int.tryParse(pa[1]);
+    final bx = int.tryParse(pb[0]), by = int.tryParse(pb[1]);
+    return ax != null && ay != null && bx != null && by != null &&
+        (ax - bx).abs() <= 1 && (ay - by).abs() <= 1;
   }
 }

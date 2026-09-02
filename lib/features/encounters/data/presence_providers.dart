@@ -5,6 +5,14 @@ import '../../../core/storage/storage_providers.dart';
 import '../domain/presence_repository.dart';
 import 'local_presence_repository.dart';
 import 'supabase_presence_repository.dart';
+import 'foreground_location_sources.dart';
+import '../domain/location_observation.dart';
+
+final locationObservationSourceProvider = Provider<LocationObservationSource>(
+  (ref) => ref.watch(productionModeProvider)
+      ? const PlatformForegroundLocationSource()
+      : const DemoForegroundLocationSource(),
+);
 
 final presenceRepositoryProvider = Provider<PresenceRepository>(
   (ref) => ref.watch(productionModeProvider)

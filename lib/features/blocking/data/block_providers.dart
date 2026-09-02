@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../../../core/identity/identity_providers.dart';
+import '../../../core/identity/current_user_provider.dart';
 import '../domain/block_repository.dart';
 import 'local_block_repository.dart';
 import '../../../core/auth/auth_providers.dart';
@@ -13,11 +14,13 @@ final blockRepositoryProvider = Provider<BlockRepository>(
       : LocalBlockRepository(ref.watch(localStorageProvider)),
 );
 final blockedUsersProvider = FutureProvider<List<String>>(
-  (ref) async => ref.watch(blockRepositoryProvider).getBlocked(
-    ref.watch(productionModeProvider)
-        ? await ref.watch(currentUserIdProvider.future)
-        : ref.watch(mockIdentityRepositoryProvider).currentUser.id,
-  ),
+  (ref) async => ref
+      .watch(blockRepositoryProvider)
+      .getBlocked(
+        ref.watch(productionModeProvider)
+            ? await ref.watch(currentUserIdProvider.future)
+            : ref.watch(mockIdentityRepositoryProvider).currentUser.id,
+      ),
 );
 final interactionBlockedProvider =
     FutureProvider.family<bool, ({String a, String b})>(

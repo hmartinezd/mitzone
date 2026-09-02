@@ -7,6 +7,16 @@ class LocalPresenceRepository implements PresenceRepository {
   const LocalPresenceRepository(this.storage);
   final LocalStorage storage;
   String key(String id) => 'local_presence_evidence.v1.$id';
+
+  @override
+  Future<DateTime> recordForegroundPresence({
+    required double latitude,
+    required double longitude,
+  }) async => DateTime.now().toUtc().add(const Duration(minutes: 30));
+
+  @override
+  Future<void> stopForegroundPresence() async {}
+
   @override
   Future<List<PresenceEvidence>> getEvidenceForUser(String id) async => [];
   @override

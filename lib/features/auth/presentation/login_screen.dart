@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/errors/domain_error.dart';
+import '../../profile/data/profile_providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -89,9 +90,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       error = null;
     });
     try {
-      await repo.signIn(email: e, password: password.text);
+      final session = await repo.signIn(email: e, password: password.text);
       ref.invalidate(authSessionProvider);
-      if (mounted) context.go(AppRoutes.home);
+      final profile = await ref
+          .read(profileRepositoryProvider)
+          .getProfile(session.user.id);
+      ref.invalidate(currentProfileProvider);
+      if (mounted) {
+        context.go(profile == null ? AppRoutes.createProfile : AppRoutes.home);
+      }
     } on DomainError catch (_) {
       if (mounted) {
         setState(

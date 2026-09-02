@@ -73,6 +73,9 @@ class NotificationCenterScreen extends ConsumerWidget {
             .read(chatRepositoryProvider)
             .getMessages(conversationId: n.entityId, userId: user);
       } catch (_) {
+        if (!context.mounted) {
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('This conversation is no longer available.'),
@@ -80,6 +83,9 @@ class NotificationCenterScreen extends ConsumerWidget {
         );
         return;
       }
+    }
+    if (!context.mounted) {
+      return;
     }
     context.push(n.destination);
   }

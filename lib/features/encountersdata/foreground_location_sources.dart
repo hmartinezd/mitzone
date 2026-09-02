@@ -1,4 +1,4 @@
-import '../domain/location_observation.dart';
+import '../encounters/domain/location_observation.dart';
 
 /// Production seam for a future platform location implementation. It fails closed.
 class PlatformForegroundLocationSource implements LocationObservationSource {
@@ -10,11 +10,16 @@ class PlatformForegroundLocationSource implements LocationObservationSource {
 
 /// Deterministic adapter used only by local/demo environments and tests.
 class DemoForegroundLocationSource implements LocationObservationSource {
-  const DemoForegroundLocationSource({this.latitude = 40.7128, this.longitude = -74.0060});
+  const DemoForegroundLocationSource({
+    this.latitude = 40.7128,
+    this.longitude = -74.0060,
+  });
   final double latitude;
   final double longitude;
   @override
   Future<LocationObservation> observeForeground() async => LocationObservation(
-    latitude: latitude, longitude: longitude, observedAt: DateTime.now().toUtc(),
+    latitude: latitude,
+    longitude: longitude,
+    observedAt: DateTime.now().toUtc(),
   );
 }

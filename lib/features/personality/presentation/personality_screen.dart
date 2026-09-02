@@ -76,6 +76,7 @@ class _Question extends StatelessWidget {
       children: [
         Text(question.text),
         for (var i = 1; i <= 4; i++)
+          // ignore: deprecated_member_use
           RadioListTile<int>(
             dense: true,
             title: Text(
@@ -87,7 +88,9 @@ class _Question extends StatelessWidget {
               ][i - 1],
             ),
             value: i,
+            // ignore: deprecated_member_use
             groupValue: value,
+            // ignore: deprecated_member_use
             onChanged: (v) {
               if (v != null) onChanged(v);
             },

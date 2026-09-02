@@ -11,6 +11,13 @@ void main() {
       expect(config.isSupabaseConfigured, isFalse);
     });
 
+    test('rejects production mode without Supabase configuration', () {
+      expect(
+        () => AppConfig.validated(env: AppEnvironment.production),
+        throwsA(isA<ConfigException>()),
+      );
+    });
+
     test('accepts valid HTTP configuration', () {
       final config = AppConfig.validated(
         env: AppEnvironment.local,

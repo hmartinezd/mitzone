@@ -164,7 +164,7 @@ lib/
 
 ## Sprint 3 backend/auth foundation
 
-Supabase configuration and a backend-neutral authentication contract are now present. Configure `--dart-define=SUPABASE_URL=... --dart-define=SUPABASE_PUBLISHABLE_KEY=...` only for an authenticated environment; never use a service-role key in the client. The current social records remain local, and mock identity/demo mode remains the default when configuration is absent. Email/password is the initial authentication vertical slice, including session restoration, production login routing, and sign out. Remote profile/data migration remains a future Sprint 3 block.
+Supabase configuration and a backend-neutral authentication contract are now present. The default `flutter run` command remains local/demo mode. For Supabase development, copy `config/dev.example.json` to the ignored `config/dev.json`, set only `APP_ENV`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY`, then run `flutter run --dart-define-from-file=config/dev.json`. Never use a service-role key, database password, JWT signing secret, or management token in the client. Email/password authentication and the authenticated user's own profile are the first production-backed vertical slice; the social domains remain deferred.
 
 In the local demo, participation means intending to attend an event, while presence/check-in represents demo attendance. Presence is scoped to the active mock identity. Deterministic mock attendee windows are generated relative to the local check-in, and encounters are derived from genuine interval overlap. QR, geolocation, and independently verified presence remain future work.
 

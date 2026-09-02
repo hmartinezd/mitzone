@@ -5,7 +5,8 @@ import '../domain/public_profile.dart';
 import 'profile_repository.dart';
 
 /// An implementation of [ProfileRepository] that persists data in local storage.
-class LocalProfileRepository implements ProfileRepository {
+class LocalProfileRepository
+    implements ProfileRepository, PublicProfileRepository {
   LocalProfileRepository(this._storage);
 
   final LocalStorage _storage;
@@ -13,12 +14,26 @@ class LocalProfileRepository implements ProfileRepository {
   @override
   Future<PublicProfile?> getPublicProfile(String userId) async {
     final p = await getProfile(userId);
-    return p == null ? null : PublicProfile(id: p.id, displayName: p.displayName, avatarUri: p.avatarUri, bio: p.bio, city: p.city);
+    return p == null
+        ? null
+        : PublicProfile(
+            id: p.id,
+            displayName: p.displayName,
+            avatarUri: p.avatarUri,
+            bio: p.bio,
+            city: p.city,
+          );
   }
+
   @override
-  Future<Map<String, PublicProfile>> getPublicProfilesByIds(Set<String> ids) async {
+  Future<Map<String, PublicProfile>> getPublicProfilesByIds(
+    Set<String> ids,
+  ) async {
     final result = <String, PublicProfile>{};
-    for (final id in ids) { final p = await getPublicProfile(id); if (p != null) result[id] = p; }
+    for (final id in ids) {
+      final p = await getPublicProfile(id);
+      if (p != null) result[id] = p;
+    }
     return result;
   }
 

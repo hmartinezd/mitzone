@@ -11,10 +11,13 @@ import '../data/encounter_providers.dart';
 
 class ForegroundPresenceCard extends ConsumerStatefulWidget {
   const ForegroundPresenceCard({super.key});
-  @override ConsumerState<ForegroundPresenceCard> createState() => _ForegroundPresenceCardState();
+  @override
+  ConsumerState<ForegroundPresenceCard> createState() =>
+      _ForegroundPresenceCardState();
 }
 
-class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard> with WidgetsBindingObserver {
+class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
+    with WidgetsBindingObserver {
   ForegroundPresenceStatus status = ForegroundPresenceStatus.inactive;
   bool consent = false;
   bool stopped = false;
@@ -27,7 +30,9 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     Future<void>(() async {
-      final value = await ref.read(localStorageProvider).getBool('foreground_presence_consent.v1');
+      final value = await ref
+          .read(localStorageProvider)
+          .getBool('foreground_presence_consent.v1');
       if (mounted && value == true) setState(() => consent = true);
     });
   }
@@ -35,77 +40,155 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
   Future<void> _activate() async {
     if (_inFlight) return;
     if (!consent) {
-      final accepted = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
-        title: const Text('Discover people nearby'),
-        content: const Text('Mitzone uses your location only while you actively use this feature to help identify people who may have shared the same place and time. It does not track you in the background or share your exact location.'),
-        actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Continue'))],
-      ));
+      final accepted = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Discover people nearby'),
+          content: const Text(
+            'Mitzone uses your location only while you actively use this feature to help identify people who may have shared the same place and time. It does not track you in the background or share your exact location.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
       if (accepted != true || !mounted) return;
       consent = true;
-      await ref.read(localStorageProvider).setBool('foreground_presence_consent.v1', true);
+      await ref
+          .read(localStorageProvider)
+          .setBool('foreground_presence_consent.v1', true);
     }
-    setState(() { status = ForegroundPresenceStatus.locating; _inFlight = true; failure = null; });
+    setState(() {
+      status = ForegroundPresenceStatus.locating;
+      _inFlight = true;
+      failure = null;
+    });
     try {
       if (ref.read(productionModeProvider)) {
         final service = ref.read(foregroundPresenceServiceProvider);
-        final result = await service.record(
-          consent: consent,
-        );
+        final result = await service.record(consent: consent);
         if (mounted) {
           failure = service.lastLocationFailure;
           setState(() => status = result);
           _inFlight = false;
-          if (result == ForegroundPresenceStatus.recorded) ref.invalidate(encountersForCurrentUserProvider);
+          if (result == ForegroundPresenceStatus.recorded) {
+            ref.invalidate(encountersForCurrentUserProvider);
+          }
           expiryTimer?.cancel();
           final expiry = service.expiresAt;
           if (result == ForegroundPresenceStatus.recorded && expiry != null) {
             expiryTimer = Timer(expiry.difference(DateTime.now().toUtc()), () {
-              if (mounted) setState(() { status = ForegroundPresenceStatus.inactive; stopped = false; });
+              if (mounted) {
+                setState(() {
+                  status = ForegroundPresenceStatus.inactive;
+                  stopped = false;
+                });
+              }
             });
           }
         }
       } else {
-        final evidence = await ref.read(locationObservationSourceProvider).observeForeground();
+        final evidence = await ref
+            .read(locationObservationSourceProvider)
+            .observeForeground();
         if (mounted) {
-          setState(() => status = evidence.observedAt.isUtc ? ForegroundPresenceStatus.recorded : ForegroundPresenceStatus.unavailable);
-          if (evidence.observedAt.isUtc) ref.invalidate(encountersForCurrentUserProvider);
+          setState(
+            () => status = evidence.observedAt.isUtc
+                ? ForegroundPresenceStatus.recorded
+                : ForegroundPresenceStatus.unavailable,
+          );
+          if (evidence.observedAt.isUtc) {
+            ref.invalidate(encountersForCurrentUserProvider);
+          }
         }
       }
-    } catch (_) { _inFlight = false; if (mounted) setState(() => status = ForegroundPresenceStatus.unavailable); }
+    } catch (_) {
+      _inFlight = false;
+      if (mounted) {
+        setState(() => status = ForegroundPresenceStatus.unavailable);
+      }
+    }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {}
 
   @override
-  void dispose() { WidgetsBinding.instance.removeObserver(this); expiryTimer?.cancel(); super.dispose(); }
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    expiryTimer?.cancel();
+    super.dispose();
+  }
 
-  @override Widget build(BuildContext context) => Card(child: Padding(
-    padding: const EdgeInsets.all(16),
-    child: Row(children: [
-      Expanded(child: Text(switch (status) {
-        ForegroundPresenceStatus.locating => 'Finding your location…',
-        ForegroundPresenceStatus.recorded || ForegroundPresenceStatus.active => 'You’re discoverable here for a limited time.',
-        ForegroundPresenceStatus.unavailable => 'We couldn’t confirm your location.',
-        _ => 'Discover people you may have shared a place and time with.',
-      })),
-      const SizedBox(width: 12),
-      if (failure == ForegroundLocationFailure.permissionPermanentlyDenied)
-        TextButton(onPressed: () => Geolocator.openAppSettings(), child: const Text('Settings'))
-      else if (failure == ForegroundLocationFailure.servicesDisabled)
-        TextButton(onPressed: () => Geolocator.openLocationSettings(), child: const Text('Settings'))
-      else if (status == ForegroundPresenceStatus.unavailable)
-        TextButton(onPressed: _activate, child: const Text('Try again')),
-      if (status == ForegroundPresenceStatus.recorded || status == ForegroundPresenceStatus.active)
-        TextButton(onPressed: () async {
-          try {
-            if (ref.read(productionModeProvider)) {
-              await ref.read(foregroundPresenceGatewayProvider).stopForegroundPresence();
-            }
-            if (mounted) setState(() { stopped = true; status = ForegroundPresenceStatus.inactive; });
-          } catch (_) {}
-        }, child: const Text('Stop'))
-      else if (!stopped) FilledButton(onPressed: status == ForegroundPresenceStatus.locating ? null : _activate, child: const Text('I’m here')),
-    ]),
-  ));
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(switch (status) {
+              ForegroundPresenceStatus.locating => 'Finding your location…',
+              ForegroundPresenceStatus.recorded ||
+              ForegroundPresenceStatus.active =>
+                'You’re discoverable here for a limited time.',
+              ForegroundPresenceStatus.unavailable =>
+                'We couldn’t confirm your location.',
+              _ => 'Discover people you may have shared a place and time with.',
+            }),
+          ),
+          const SizedBox(width: 12),
+          if (failure == ForegroundLocationFailure.permissionPermanentlyDenied)
+            TextButton(
+              onPressed: () => Geolocator.openAppSettings(),
+              child: const Text('Settings'),
+            )
+          else if (failure == ForegroundLocationFailure.servicesDisabled)
+            TextButton(
+              onPressed: () => Geolocator.openLocationSettings(),
+              child: const Text('Settings'),
+            )
+          else if (status == ForegroundPresenceStatus.unavailable)
+            TextButton(onPressed: _activate, child: const Text('Try again')),
+          if (status == ForegroundPresenceStatus.recorded ||
+              status == ForegroundPresenceStatus.active)
+            TextButton(
+              onPressed: () async {
+                try {
+                  if (ref.read(productionModeProvider)) {
+                    await ref
+                        .read(foregroundPresenceGatewayProvider)
+                        .stopForegroundPresence();
+                  }
+                  if (mounted) {
+                    setState(() {
+                      stopped = true;
+                      status = ForegroundPresenceStatus.inactive;
+                    });
+                  }
+                } catch (_) {}
+              },
+              child: const Text('Stop'),
+            )
+          else if (!stopped)
+            SizedBox(
+              width: 104,
+              child: FilledButton(
+                onPressed: status == ForegroundPresenceStatus.locating
+                    ? null
+                    : _activate,
+                child: const Text('I’m here'),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }

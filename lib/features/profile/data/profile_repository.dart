@@ -17,8 +17,20 @@ abstract interface class ProfileRepository {
 
   /// Saves the full profile data.
   Future<UserProfile> saveProfile(UserProfile profile);
+}
 
+/// Optional capability for repositories that can enforce a public-profile
+/// boundary without reading private profile fields.
+abstract interface class PublicProfileRepository {
+  Future<PublicProfile?> getPublicProfile(String userId);
+  Future<Map<String, PublicProfile>> getPublicProfilesByIds(Set<String> ids);
+}
+
+extension ProfileRepositoryBatch on ProfileRepository {
   Future<PublicProfile?> getPublicProfile(String userId) async {
+    if (this case final PublicProfileRepository repository) {
+      return repository.getPublicProfile(userId);
+    }
     final profile = await getProfile(userId);
     return profile == null
         ? null
@@ -32,24 +44,32 @@ abstract interface class ProfileRepository {
   }
 
   Future<Map<String, PublicProfile>> getPublicProfilesByIds(
-    Set<String> userIds,
+    Set<String> ids,
   ) async {
-    final result = <String, PublicProfile>{};
-    for (final id in userIds) {
-      final profile = await getPublicProfile(id);
-      if (profile != null) result[id] = profile;
+    if (this case final PublicProfileRepository repository) {
+      return repository.getPublicProfilesByIds(ids);
     }
-    return result;
-  }
-}
-
-extension ProfileRepositoryBatch on ProfileRepository {
-  Future<Map<String, UserProfile>> loadProfilesByIds(Set<String> ids) async {
-    final profiles = <String, UserProfile>{};
+    final profiles = <String, PublicProfile>{};
     for (final id in ids) {
-      final profile = await getProfile(id);
-      if (profile != null) profiles[id] = profile;
+      final profile = await getPublicProfile(id);
+      if (profile != null) {
+        profiles[id] = profile;
+      }
     }
     return profiles;
+  }
+
+  Future<Map<String, UserProfile>> loadProfilesByIds(Set<String> ids) async {
+    final publicProfiles = await getPublicProfilesByIds(ids);
+    return {
+      for (final profile in publicProfiles.values)
+        profile.id: UserProfile(
+          id: profile.id,
+          displayName: profile.displayName,
+          avatarUri: profile.avatarUri,
+          bio: profile.bio,
+          city: profile.city,
+        ),
+    };
   }
 }

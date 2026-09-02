@@ -94,7 +94,7 @@ class EventParticipationController {
         }
         final now = _ref.read(utcNowProvider)().toUtc();
         final evidence = PresenceEvidence(
-          id: Uuid().v5(Uuid.NAMESPACE_URL, 'presence:$id:$eventId'),
+          id: Uuid().v5(Namespace.url.value, 'presence:$id:$eventId'),
           subjectUserId: id,
           contextId: eventId,
           observedStart: now,

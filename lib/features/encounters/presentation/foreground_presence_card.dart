@@ -42,7 +42,7 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
       if (ref.read(productionModeProvider)) {
         final result = await ref.read(foregroundPresenceServiceProvider)!.record(
           consent: consent,
-          permission: ref.read(foregroundPermissionProvider).value ?? LocationPermissionState.notRequested,
+          permission: LocationPermissionState.whileUsing,
         );
         if (mounted) setState(() => status = result);
       } else {
@@ -64,10 +64,14 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
       const SizedBox(width: 12),
       if (status == ForegroundPresenceStatus.recorded || status == ForegroundPresenceStatus.active)
         TextButton(onPressed: () async {
-          if (ref.read(productionModeProvider)) {
-            await ref.read(presenceRepositoryProvider).stopForegroundPresence();
+          try {
+            if (ref.read(productionModeProvider)) {
+              await ref.read(presenceRepositoryProvider).stopForegroundPresence();
+            }
+            if (mounted) setState(() { stopped = true; status = ForegroundPresenceStatus.inactive; });
+          } catch (_) {
+            if (mounted) setState(() => status = ForegroundPresenceStatus.unavailable);
           }
-          if (mounted) setState(() { stopped = true; status = ForegroundPresenceStatus.inactive; });
         }, child: const Text('Stop'))
       else if (!stopped) FilledButton(onPressed: status == ForegroundPresenceStatus.locating ? null : _activate, child: const Text('I’m here')),
     ]),

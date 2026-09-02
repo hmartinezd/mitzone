@@ -1,8 +1,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/presence_evidence.dart';
 import '../domain/presence_repository.dart';
+import 'foreground_presence_service.dart';
 
-class SupabasePresenceRepository implements PresenceRepository {
+class SupabasePresenceRepository implements PresenceRepository, ForegroundPresenceGateway {
   SupabasePresenceRepository(this.client);
   final SupabaseClient client;
 
@@ -10,13 +11,13 @@ class SupabasePresenceRepository implements PresenceRepository {
     await client.rpc('stop_foreground_presence');
   }
 
-  Future<PresenceEvidence> recordForegroundPresence({required double latitude, required double longitude}) async {
+  Future<DateTime> recordForegroundPresence({required double latitude, required double longitude}) async {
     final rows = await client.rpc('record_foreground_presence', params: {
       'p_latitude': latitude, 'p_longitude': longitude,
     }) as List;
     if (rows.isEmpty) throw StateError('Presence unavailable');
     final row = rows.first as Map<String, dynamic>;
-    return PresenceEvidence(
+    final evidence = PresenceEvidence(
       id: row['evidence_id'] as String,
       subjectUserId: client.auth.currentUser!.id,
       contextId: row['context_id'] as String,
@@ -26,6 +27,7 @@ class SupabasePresenceRepository implements PresenceRepository {
       consentScope: 'foreground-explicit',
       expiresAt: DateTime.parse(row['expires_at'] as String).toUtc(),
     );
+    return evidence.expiresAt!;
   }
   Map<String, dynamic> row(PresenceEvidence e) => {
     'id': e.id,

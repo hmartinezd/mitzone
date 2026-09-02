@@ -38,6 +38,6 @@ final foregroundPresenceServiceProvider = Provider<ForegroundPresenceService?>((
   if (!ref.watch(productionModeProvider)) return null;
   return ForegroundPresenceService(
     location: ref.watch(locationObservationSourceProvider),
-    presence: ref.watch(presenceRepositoryProvider) as SupabasePresenceRepository,
+    presence: ref.watch(presenceRepositoryProvider) as ForegroundPresenceGateway,
   );
 });

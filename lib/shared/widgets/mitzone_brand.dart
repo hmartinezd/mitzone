@@ -68,7 +68,7 @@ class _BrandMark extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(size * 0.12),
       child: Image.asset(
-        'assets/branding/mitzone_logo.jpg',
+        'assets/branding/mitzone_logo_square.png',
         width: size,
         height: size,
         fit: BoxFit.contain,

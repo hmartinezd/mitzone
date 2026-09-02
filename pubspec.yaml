@@ -29,3 +29,4 @@ flutter:
   assets:
     - assets/branding/mitzone_app_icon.png
     - assets/branding/mitzone_logo.jpg
+    - assets/branding/mitzone_logo_square.png

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/errors/domain_error.dart';
@@ -89,26 +90,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       busy = true;
       error = null;
     });
+    var profileLookupStarted = false;
     try {
       final session = await repo.signIn(email: e, password: password.text);
       ref.invalidate(authSessionProvider);
-      final profile = await ref
-          .read(profileRepositoryProvider)
-          .getProfile(session.user.id);
+      profileLookupStarted = true;
+      final profile = await (() async {
+        try {
+          return await ref
+              .read(profileRepositoryProvider)
+              .getProfile(session.user.id);
+        } catch (exception, stackTrace) {
+          debugPrint('Post-auth profile lookup failed: $exception');
+          debugPrintStack(stackTrace: stackTrace);
+          rethrow;
+        }
+      })();
       ref.invalidate(currentProfileProvider);
       if (mounted) {
         context.go(profile == null ? AppRoutes.createProfile : AppRoutes.home);
       }
-    } on DomainError catch (_) {
+    } on DomainError catch (exception, stackTrace) {
+      debugPrint(
+        '${profileLookupStarted ? 'Post-auth profile flow' : 'Sign-in'} failed: '
+        '$exception',
+      );
+      debugPrintStack(stackTrace: stackTrace);
       if (mounted) {
         setState(
-          () => error =
-              'We could not sign you in. Check your details and try again.',
+          () => error = profileLookupStarted
+              ? 'We could not load your profile. Please try again.'
+              : 'We could not sign you in. Check your details and try again.',
         );
       }
-    } catch (_) {
+    } catch (exception, stackTrace) {
+      debugPrint(
+        '${profileLookupStarted ? 'Post-auth profile flow' : 'Sign-in'} failed: '
+        '$exception',
+      );
+      debugPrintStack(stackTrace: stackTrace);
       if (mounted) {
-        setState(() => error = 'Authentication is temporarily unavailable.');
+        setState(
+          () => error = profileLookupStarted
+              ? 'We could not load your profile. Please try again.'
+              : 'Authentication is temporarily unavailable.',
+        );
       }
     } finally {
       if (mounted) setState(() => busy = false);

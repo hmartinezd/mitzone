@@ -30,7 +30,7 @@ class PlatformForegroundLocationSource implements LocationObservationSource {
       throw const ForegroundLocationException(ForegroundLocationFailure.permissionDenied);
     }
     late final Position position;
-    try { position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.balanced)); }
+    try { position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium)); }
     catch (_) { throw const ForegroundLocationException(ForegroundLocationFailure.temporarilyUnavailable); }
     return LocationObservation(
       latitude: position.latitude,

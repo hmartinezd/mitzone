@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import '../../core/identity/identity_gateway.dart';
 import '../../features/onboarding/data/onboarding_status_store.dart';
 import '../../features/profile/data/profile_repository.dart';
@@ -45,13 +47,14 @@ class AppEntryResolver {
     }
 
     try {
-      if (authRepository != null &&
-          await authRepository!.restoreSession() == null) {
+      final session = await authRepository?.restoreSession();
+      if (authRepository != null && session == null) {
         return AppEntryTarget.unauthenticated;
       }
-      // Local identity remains the demo identity until profile migration.
-      final identity = await identityGateway.ensureIdentity();
-      final profile = await profileRepository.getProfile(identity.id);
+
+      final identityId =
+          session?.user.id ?? (await identityGateway.ensureIdentity()).id;
+      final profile = await profileRepository.getProfile(identityId);
 
       if (profile == null ||
           !ProfileValidation.hasMinimumProfile(profile.displayName)) {
@@ -59,8 +62,13 @@ class AppEntryResolver {
       }
 
       return AppEntryTarget.ready;
-    } catch (e) {
-      // Critical failures (identity generation/storage) lead to failure state.
+    } catch (e, stackTrace) {
+      developer.log(
+        'App entry resolution failed',
+        name: 'mitzone.app_entry_resolver',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return AppEntryTarget.entryFailure;
     }
   }

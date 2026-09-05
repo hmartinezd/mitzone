@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/app/router/app_entry_resolver.dart';
+import 'package:mitzone/core/auth/auth_models.dart';
+import 'package:mitzone/core/auth/auth_repository.dart';
 import 'package:mitzone/core/identity/app_identity.dart';
 import 'package:mitzone/core/identity/identity_gateway.dart';
 import 'package:mitzone/features/onboarding/data/onboarding_status_store.dart';
@@ -41,9 +43,11 @@ class FakeIdentityGateway implements IdentityGateway {
 class FakeProfileRepository implements ProfileRepository {
   UserProfile? profile;
   bool shouldThrow = false;
+  String? requestedIdentityId;
 
   @override
   Future<UserProfile?> getProfile(String identityId) async {
+    requestedIdentityId = identityId;
     if (shouldThrow) throw Exception('Repo error');
     return profile;
   }
@@ -67,6 +71,27 @@ class FakeProfileRepository implements ProfileRepository {
     profile = p;
     return profile!;
   }
+}
+
+class FakeAuthRepository implements AuthRepository {
+  FakeAuthRepository(this.session);
+
+  AuthSession? session;
+
+  @override
+  Future<AuthSession?> restoreSession() async => session;
+
+  @override
+  Future<AuthSession> signIn({
+    required String email,
+    required String password,
+  }) async => session!;
+
+  @override
+  Future<void> signOut() async => session = null;
+
+  @override
+  Stream<AuthSession?> get sessionChanges => const Stream.empty();
 }
 
 void main() {
@@ -138,6 +163,89 @@ void main() {
       identityGateway.shouldThrow = true;
       final target = await resolver.resolve();
       expect(target, AppEntryTarget.entryFailure);
+    });
+
+    test('uses authenticated session user id for profile resolution', () async {
+      onboardingStore.completed = true;
+      final authRepository = FakeAuthRepository(
+        const AuthSession(user: AuthUser(id: 'supabase-user-id')),
+      );
+      identityGateway.identity = const AppIdentity(
+        id: 'local-demo-id',
+        type: AppIdentityType.localDevelopment,
+      );
+      resolver = AppEntryResolver(
+        onboardingStatusStore: onboardingStore,
+        identityGateway: identityGateway,
+        profileRepository: profileRepo,
+        authRepository: authRepository,
+      );
+
+      final target = await resolver.resolve();
+
+      expect(target, AppEntryTarget.createProfile);
+      expect(profileRepo.requestedIdentityId, 'supabase-user-id');
+    });
+
+    test('resolves to unauthenticated when no session exists', () async {
+      onboardingStore.completed = true;
+      resolver = AppEntryResolver(
+        onboardingStatusStore: onboardingStore,
+        identityGateway: identityGateway,
+        profileRepository: profileRepo,
+        authRepository: FakeAuthRepository(null),
+      );
+
+      final target = await resolver.resolve();
+
+      expect(target, AppEntryTarget.unauthenticated);
+      expect(profileRepo.requestedIdentityId, isNull);
+    });
+
+    test(
+      'resolves authenticated user without a profile to createProfile',
+      () async {
+        onboardingStore.completed = true;
+        resolver = AppEntryResolver(
+          onboardingStatusStore: onboardingStore,
+          identityGateway: identityGateway,
+          profileRepository: profileRepo,
+          authRepository: FakeAuthRepository(
+            const AuthSession(user: AuthUser(id: 'supabase-user-id')),
+          ),
+        );
+
+        expect(await resolver.resolve(), AppEntryTarget.createProfile);
+      },
+    );
+
+    test('resolves authenticated user with a valid profile to ready', () async {
+      onboardingStore.completed = true;
+      profileRepo.profile = const UserProfile(
+        id: 'supabase-user-id',
+        displayName: 'Hector',
+      );
+      resolver = AppEntryResolver(
+        onboardingStatusStore: onboardingStore,
+        identityGateway: identityGateway,
+        profileRepository: profileRepo,
+        authRepository: FakeAuthRepository(
+          const AuthSession(user: AuthUser(id: 'supabase-user-id')),
+        ),
+      );
+
+      expect(await resolver.resolve(), AppEntryTarget.ready);
+    });
+
+    test('uses the local identity in demo mode', () async {
+      onboardingStore.completed = true;
+      identityGateway.identity = const AppIdentity(
+        id: 'local-demo-id',
+        type: AppIdentityType.localDevelopment,
+      );
+
+      expect(await resolver.resolve(), AppEntryTarget.createProfile);
+      expect(profileRepo.requestedIdentityId, 'local-demo-id');
     });
   });
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter/foundation.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/errors/domain_error.dart';

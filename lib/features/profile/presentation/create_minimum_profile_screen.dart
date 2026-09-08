@@ -1,4 +1,6 @@
+import 'dart:developer' as developer;
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,6 +32,16 @@ class _CreateMinimumProfileScreenState
   bool _isSaving = false;
   String? _errorMessage;
   String? _nameError;
+
+  void _debugLog(String message, Stopwatch stopwatch) {
+    if (kDebugMode) {
+      developer.log(
+        '$message; elapsedMs=${stopwatch.elapsedMilliseconds}; '
+        'at=${DateTime.now().toIso8601String()}',
+        name: 'mitzone.create_minimum_profile',
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -71,20 +83,33 @@ class _CreateMinimumProfileScreenState
     });
 
     try {
+      final stopwatch = Stopwatch()..start();
       final profileRepo = ref.read(profileRepositoryProvider);
       final avatarStorage = ref.read(avatarStorageProvider);
 
+      _debugLog('authSessionProvider.future start', stopwatch);
       final session = await ref.read(authSessionProvider.future);
-      final identityId =
-          session?.user.id ??
-          (await ref.read(identityGatewayProvider).ensureIdentity()).id;
+      _debugLog('authSessionProvider.future end', stopwatch);
+      final identityId;
+      if (ref.read(productionModeProvider)) {
+        if (session == null) {
+          throw StateError('Authentication required to create a profile');
+        }
+        identityId = session.user.id;
+      } else {
+        identityId =
+            (await ref.read(identityGatewayProvider).ensureIdentity()).id;
+      }
+      _debugLog('resolved user id=$identityId', stopwatch);
 
       // 1. Save the minimum profile first (ensures core data is persisted)
+      _debugLog('profileRepository.saveMinimumProfile start', stopwatch);
       await profileRepo.saveMinimumProfile(
         identityId: identityId,
         displayName: _nameController.text.trim(),
         avatarUri: null,
       );
+      _debugLog('profileRepository.saveMinimumProfile end', stopwatch);
 
       // 2. Try to save the optional avatar if selected
       if (_selectedAvatar != null && !ref.read(productionModeProvider)) {
@@ -100,7 +125,15 @@ class _CreateMinimumProfileScreenState
             displayName: _nameController.text.trim(),
             avatarUri: avatarUri,
           );
-        } catch (e) {
+        } catch (e, stackTrace) {
+          if (kDebugMode) {
+            developer.log(
+              'Optional profile avatar save failed',
+              name: 'mitzone.create_minimum_profile',
+              error: e,
+              stackTrace: stackTrace,
+            );
+          }
           // If avatar fails, we stop here and show the error, but the profile is already created.
           if (mounted) {
             setState(() {
@@ -115,9 +148,19 @@ class _CreateMinimumProfileScreenState
       }
 
       if (mounted) {
+        _debugLog('navigation to Home start', stopwatch);
         context.go(AppRoutes.home);
+        _debugLog('navigation to Home end', stopwatch);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        developer.log(
+          'Minimum profile save failed',
+          name: 'mitzone.create_minimum_profile',
+          error: e,
+          stackTrace: stackTrace,
+        );
+      }
       if (mounted) {
         setState(() {
           _isSaving = false;

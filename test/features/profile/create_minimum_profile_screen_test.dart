@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/app/theme/app_theme.dart';
+import 'package:mitzone/core/auth/auth_models.dart';
+import 'package:mitzone/core/auth/auth_providers.dart';
 import 'package:mitzone/core/identity/app_identity.dart';
 import 'package:mitzone/core/identity/identity_providers.dart';
 import 'package:mitzone/core/identity/identity_gateway.dart';
@@ -14,9 +16,17 @@ import 'package:mitzone/features/profile/presentation/create_minimum_profile_scr
 import 'package:mitzone/shared/widgets/mitzone_feedback_banner.dart';
 
 class FakeIdentityGateway implements IdentityGateway {
+  int ensureIdentityCallCount = 0;
+
   @override
-  Future<AppIdentity> ensureIdentity() async =>
-      const AppIdentity(id: 'id-123', type: AppIdentityType.localDevelopment);
+  Future<AppIdentity> ensureIdentity() async {
+    ensureIdentityCallCount++;
+    return const AppIdentity(
+      id: 'id-123',
+      type: AppIdentityType.localDevelopment,
+    );
+  }
+
   @override
   Future<AppIdentity?> getExistingIdentity() async =>
       const AppIdentity(id: 'id-123', type: AppIdentityType.localDevelopment);
@@ -103,6 +113,29 @@ void main() {
           profileRepositoryProvider.overrideWithValue(profileRepo),
           avatarPickerProvider.overrideWithValue(avatarPicker),
           avatarStorageProvider.overrideWithValue(avatarStorage),
+          productionModeProvider.overrideWithValue(false),
+          authSessionProvider.overrideWithValue(
+            const AsyncValue<AuthSession?>.data(null),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: const CreateMinimumProfileScreen(),
+        ),
+      );
+    }
+
+    Widget createSupabaseWidget({AuthSession? session}) {
+      return ProviderScope(
+        overrides: [
+          identityGatewayProvider.overrideWithValue(identityGateway),
+          profileRepositoryProvider.overrideWithValue(profileRepo),
+          avatarPickerProvider.overrideWithValue(avatarPicker),
+          avatarStorageProvider.overrideWithValue(avatarStorage),
+          productionModeProvider.overrideWithValue(true),
+          authSessionProvider.overrideWithValue(
+            AsyncValue<AuthSession?>.data(session),
+          ),
         ],
         child: MaterialApp(
           theme: AppTheme.darkTheme,
@@ -199,6 +232,41 @@ void main() {
       );
       // Controls should be re-enabled
       expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+    });
+
+    testWidgets('uses the authenticated Supabase user id for saving', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createSupabaseWidget(
+          session: const AuthSession(user: AuthUser(id: 'supabase-user-id')),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextField), 'Hector');
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(profileRepo.saveCallCount, 1);
+      expect(profileRepo.lastDisplayName, 'Hector');
+      expect(identityGateway.ensureIdentityCallCount, 0);
+    });
+
+    testWidgets('does not fall back to local identity without a session', (
+      tester,
+    ) async {
+      await tester.pumpWidget(createSupabaseWidget());
+
+      await tester.enterText(find.byType(TextField), 'Hector');
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(profileRepo.saveCallCount, 0);
+      expect(identityGateway.ensureIdentityCallCount, 0);
+      expect(
+        find.text("We couldn't save your profile. Please try again."),
+        findsOneWidget,
+      );
     });
 
     testWidgets('continues even if optional avatar storage fails', (

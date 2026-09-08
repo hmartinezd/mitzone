@@ -1,3 +1,6 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/user_profile.dart';
 import '../domain/public_profile.dart';
@@ -98,11 +101,24 @@ class SupabaseProfileRepository
   @override
   Future<UserProfile> saveProfile(UserProfile profile) async {
     _requireOwner(profile.id);
+    final startedAt = DateTime.now();
+    void debugLog(String message) {
+      if (kDebugMode) {
+        developer.log(
+          '$message; elapsedMs=${DateTime.now().difference(startedAt).inMilliseconds}; '
+          'at=${DateTime.now().toIso8601String()}',
+          name: 'mitzone.supabase_profile_repository',
+        );
+      }
+    }
+
+    debugLog('profiles upsert select single start');
     final row = await client
         .from('profiles')
         .upsert(_row(profile))
         .select()
         .single();
+    debugLog('profiles upsert select single end');
     return _profile(row);
   }
 }

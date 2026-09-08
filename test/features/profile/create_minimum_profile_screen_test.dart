@@ -1,3 +1,5 @@
+import 'package:go_router/go_router.dart';
+import 'package:mitzone/app/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -106,7 +108,23 @@ void main() {
       avatarStorage = FakeAvatarStorage();
     });
 
-    Widget createWidget() {
+    Widget createWidget({bool withRouter = false}) {
+      final router = withRouter
+          ? GoRouter(
+              initialLocation: AppRoutes.createProfile,
+              routes: [
+                GoRoute(
+                  path: AppRoutes.createProfile,
+                  builder: (_, _) => const CreateMinimumProfileScreen(),
+                ),
+                GoRoute(
+                  path: AppRoutes.home,
+                  builder: (_, _) => const Scaffold(body: Text("Home reached")),
+                ),
+              ],
+            )
+          : null;
+      if (router != null) addTearDown(router.dispose);
       return ProviderScope(
         overrides: [
           identityGatewayProvider.overrideWithValue(identityGateway),
@@ -118,14 +136,19 @@ void main() {
             const AsyncValue<AuthSession?>.data(null),
           ),
         ],
-        child: MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: const CreateMinimumProfileScreen(),
-        ),
+        child: router != null
+            ? MaterialApp.router(
+                routerConfig: router,
+                theme: AppTheme.darkTheme,
+              )
+            : MaterialApp(
+                theme: AppTheme.darkTheme,
+                home: const CreateMinimumProfileScreen(),
+              ),
       );
     }
 
-    Widget createSupabaseWidget({AuthSession? session}) {
+    Widget createSupabaseWidget({AuthSession? session, bool loading = false}) {
       return ProviderScope(
         overrides: [
           identityGatewayProvider.overrideWithValue(identityGateway),
@@ -134,7 +157,9 @@ void main() {
           avatarStorageProvider.overrideWithValue(avatarStorage),
           productionModeProvider.overrideWithValue(true),
           authSessionProvider.overrideWithValue(
-            AsyncValue<AuthSession?>.data(session),
+            loading
+                ? const AsyncValue<AuthSession?>.loading()
+                : AsyncValue<AuthSession?>.data(session),
           ),
         ],
         child: MaterialApp(
@@ -143,6 +168,57 @@ void main() {
         ),
       );
     }
+
+    testWidgets('navigates to Home after saving', (tester) async {
+      await tester.pumpWidget(createWidget(withRouter: true));
+      await tester.enterText(find.byType(TextField), 'Hector');
+      await tester.ensureVisible(find.text('Continue'));
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Home reached'), findsOneWidget);
+      expect(profileRepo.saveCallCount, 1);
+    });
+
+    testWidgets('stalled save stops loading and allows retry', (tester) async {
+      profileRepo.delay = const Duration(seconds: 25);
+      await tester.pumpWidget(createWidget(withRouter: true));
+      await tester.enterText(find.byType(TextField), 'Hector');
+      await tester.ensureVisible(find.text('Continue'));
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 21));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('took too long'), findsOneWidget);
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+      expect(find.text('Home reached'), findsNothing);
+
+      // A late completion must not navigate after the timeout.
+      await tester.pump(const Duration(seconds: 5));
+      expect(find.text('Home reached'), findsNothing);
+      profileRepo.delay = Duration.zero;
+      await tester.ensureVisible(find.text('Continue'));
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(find.text('Home reached'), findsOneWidget);
+    });
+
+    testWidgets('stalled authentication stops loading without saving', (
+      tester,
+    ) async {
+      await tester.pumpWidget(createSupabaseWidget(loading: true));
+      await tester.enterText(find.byType(TextField), 'Hector');
+      await tester.ensureVisible(find.text('Continue'));
+      await tester.tap(find.text('Continue'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 21));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('took too long'), findsOneWidget);
+      expect(profileRepo.saveCallCount, 0);
+      expect(tester.widget<TextField>(find.byType(TextField)).enabled, isTrue);
+    });
 
     testWidgets('renders initial components', (tester) async {
       await tester.pumpWidget(createWidget());

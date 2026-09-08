@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -27,6 +28,8 @@ class CreateMinimumProfileScreen extends ConsumerStatefulWidget {
 
 class _CreateMinimumProfileScreenState
     extends ConsumerState<CreateMinimumProfileScreen> {
+  static const _operationTimeout = Duration(seconds: 20);
+
   final _nameController = TextEditingController();
   PickedAvatar? _selectedAvatar;
   bool _isSaving = false;
@@ -87,44 +90,60 @@ class _CreateMinimumProfileScreenState
       final profileRepo = ref.read(profileRepositoryProvider);
       final avatarStorage = ref.read(avatarStorageProvider);
 
-      _debugLog('authSessionProvider.future start', stopwatch);
-      final session = await ref.read(authSessionProvider.future);
-      _debugLog('authSessionProvider.future end', stopwatch);
-      final identityId;
+      final String identityId;
       if (ref.read(productionModeProvider)) {
+        _debugLog('authSessionProvider.future start', stopwatch);
+        final session = await ref
+            .read(authSessionProvider.future)
+            .timeout(_operationTimeout);
+        if (!mounted) return;
+        _debugLog('authSessionProvider.future end', stopwatch);
         if (session == null) {
           throw StateError('Authentication required to create a profile');
         }
         identityId = session.user.id;
       } else {
         identityId =
-            (await ref.read(identityGatewayProvider).ensureIdentity()).id;
+            (await ref
+                    .read(identityGatewayProvider)
+                    .ensureIdentity()
+                    .timeout(_operationTimeout))
+                .id;
       }
+      if (!mounted) return;
       _debugLog('resolved user id=$identityId', stopwatch);
 
       // 1. Save the minimum profile first (ensures core data is persisted)
       _debugLog('profileRepository.saveMinimumProfile start', stopwatch);
-      await profileRepo.saveMinimumProfile(
-        identityId: identityId,
-        displayName: _nameController.text.trim(),
-        avatarUri: null,
-      );
+      await profileRepo
+          .saveMinimumProfile(
+            identityId: identityId,
+            displayName: _nameController.text.trim(),
+            avatarUri: null,
+          )
+          .timeout(_operationTimeout);
+      if (!mounted) return;
       _debugLog('profileRepository.saveMinimumProfile end', stopwatch);
 
       // 2. Try to save the optional avatar if selected
       if (_selectedAvatar != null && !ref.read(productionModeProvider)) {
         try {
-          final avatarUri = await avatarStorage.saveAvatar(
-            identityId: identityId,
-            sourcePath: _selectedAvatar!.path,
-          );
+          final avatarUri = await avatarStorage
+              .saveAvatar(
+                identityId: identityId,
+                sourcePath: _selectedAvatar!.path,
+              )
+              .timeout(_operationTimeout);
+          if (!mounted) return;
 
           // Update profile with the new avatar URI
-          await profileRepo.saveMinimumProfile(
-            identityId: identityId,
-            displayName: _nameController.text.trim(),
-            avatarUri: avatarUri,
-          );
+          await profileRepo
+              .saveMinimumProfile(
+                identityId: identityId,
+                displayName: _nameController.text.trim(),
+                avatarUri: avatarUri,
+              )
+              .timeout(_operationTimeout);
         } catch (e, stackTrace) {
           if (kDebugMode) {
             developer.log(
@@ -148,6 +167,7 @@ class _CreateMinimumProfileScreenState
       }
 
       if (mounted) {
+        ref.invalidate(currentProfileProvider);
         _debugLog('navigation to Home start', stopwatch);
         context.go(AppRoutes.home);
         _debugLog('navigation to Home end', stopwatch);
@@ -164,7 +184,9 @@ class _CreateMinimumProfileScreenState
       if (mounted) {
         setState(() {
           _isSaving = false;
-          _errorMessage = "We couldn't save your profile. Please try again.";
+          _errorMessage = e is TimeoutException
+              ? "Saving your profile took too long. Please check your connection and try again."
+              : "We couldn't save your profile. Please try again.";
         });
       }
     }
@@ -172,6 +194,10 @@ class _CreateMinimumProfileScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Keep the session stream active while profile creation is on screen.
+    if (ref.watch(productionModeProvider)) {
+      ref.watch(authSessionProvider);
+    }
     final theme = Theme.of(context);
 
     return MitzonePageScaffold(

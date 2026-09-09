@@ -72,6 +72,19 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
       result.add(encounter);
     }
   }
+
+  // Keep the presentation list stable by collapsing rows that describe the
+  // same logical person/event context before the ranker sees them.
+  final deduped = <Encounter>[];
+  final seen = <String>{};
+  for (final encounter in result) {
+    final key =
+        '${encounter.currentUserId}:${encounter.otherUserId}:${encounter.eventId}';
+    if (seen.add(key)) {
+      deduped.add(encounter);
+    }
+  }
+
   final production = ref.watch(productionModeProvider);
   final profileRepository = ref.read(profileRepositoryProvider);
   late final UserProfile? current;
@@ -82,11 +95,11 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
         .getProfile(userId)
         .catchError((_) => null);
     profiles = await profileRepository
-        .loadProfilesByIds(result.map((e) => e.otherUserId).toSet())
+        .loadProfilesByIds(deduped.map((e) => e.otherUserId).toSet())
         .catchError((_) => <String, UserProfile>{});
     personalityCompatibility = await ref
         .read(personalityRepositoryProvider)
-        .getCompatibilityWith(result.map((e) => e.otherUserId).toSet())
+        .getCompatibilityWith(deduped.map((e) => e.otherUserId).toSet())
         .catchError((_) => <String, double>{});
   } else {
     final identity = ref.watch(mockIdentityRepositoryProvider);
@@ -96,7 +109,7 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
   }
   return [
     for (final ranked in const EncounterRankingService().rank(
-      eligibleEncounters: result,
+      eligibleEncounters: deduped,
       currentUser: current,
       profiles: profiles,
       personalityCompatibility: personalityCompatibility,

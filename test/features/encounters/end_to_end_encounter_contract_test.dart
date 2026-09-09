@@ -36,11 +36,14 @@ class FakeBlockRepository implements BlockRepository {
 
 void main() {
   group('Encounter contract regression coverage', () {
-    test('authenticated identity ownership is checked by the repository contract', () {
-      final repo = SupabasePresenceRepositoryFactory();
-      expect(repo.ownershipGuard('a', 'a'), isTrue);
-      expect(repo.ownershipGuard('a', 'b'), isFalse);
-    });
+    test(
+      'authenticated identity ownership is checked by the repository contract',
+      () {
+        final repo = SupabasePresenceRepositoryFactory();
+        expect(repo.ownershipGuard('a', 'a'), isTrue);
+        expect(repo.ownershipGuard('a', 'b'), isFalse);
+      },
+    );
 
     test('self-match rejection is enforced by Encounter validation', () {
       expect(
@@ -56,22 +59,26 @@ void main() {
       );
     });
 
-    test('blocking rejection is enforced before an encounter can become actionable', () async {
-      final encounter = Encounter(
-        id: 'e',
-        currentUserId: 'a',
-        otherUserId: 'b',
-        eventId: 'cell:10:10',
-        overlapStart: DateTime.utc(2026, 1, 1, 12),
-        overlapEnd: DateTime.utc(2026, 1, 1, 12, 5),
-      );
+    test(
+      'blocking rejection is enforced before an encounter can become actionable',
+      () async {
+        final encounter = Encounter(
+          id: 'e',
+          currentUserId: 'a',
+          otherUserId: 'b',
+          eventId: 'cell:10:10',
+          overlapStart: DateTime.utc(2026, 1, 1, 12),
+          overlapEnd: DateTime.utc(2026, 1, 1, 12, 5),
+        );
 
-      expect(
-        await EncounterEligibilityPolicy(FakeBlockRepository(blocked: true))
-            .evaluate(encounter),
-        EncounterEligibility.unavailable,
-      );
-    });
+        expect(
+          await EncounterEligibilityPolicy(
+            FakeBlockRepository(blocked: true),
+          ).evaluate(encounter),
+          EncounterEligibility.unavailable,
+        );
+      },
+    );
 
     test('spatial rejection fails when coarse cells are too far apart', () {
       final a = PresenceEvidence(
@@ -91,30 +98,36 @@ void main() {
         source: PresenceEvidenceSource.geolocation,
       );
 
-      expect(PresenceOverlap.contextsCompatible(a.contextId, b.contextId), isFalse);
+      expect(
+        PresenceOverlap.contextsCompatible(a.contextId, b.contextId),
+        isFalse,
+      );
       expect(PresenceOverlap.between(a, b), isNull);
     });
 
-    test('temporal rejection fails when overlap is shorter than the meaningful window', () {
-      final a = PresenceEvidence(
-        id: 'a',
-        subjectUserId: 'a',
-        contextId: 'cell:10:10',
-        observedStart: DateTime.utc(2026, 1, 1, 12),
-        observedEnd: DateTime.utc(2026, 1, 1, 12, 4),
-        source: PresenceEvidenceSource.geolocation,
-      );
-      final b = PresenceEvidence(
-        id: 'b',
-        subjectUserId: 'b',
-        contextId: 'cell:11:10',
-        observedStart: DateTime.utc(2026, 1, 1, 12),
-        observedEnd: DateTime.utc(2026, 1, 1, 12, 4),
-        source: PresenceEvidenceSource.geolocation,
-      );
+    test(
+      'temporal rejection fails when overlap is shorter than the meaningful window',
+      () {
+        final a = PresenceEvidence(
+          id: 'a',
+          subjectUserId: 'a',
+          contextId: 'cell:10:10',
+          observedStart: DateTime.utc(2026, 1, 1, 12),
+          observedEnd: DateTime.utc(2026, 1, 1, 12, 4),
+          source: PresenceEvidenceSource.geolocation,
+        );
+        final b = PresenceEvidence(
+          id: 'b',
+          subjectUserId: 'b',
+          contextId: 'cell:11:10',
+          observedStart: DateTime.utc(2026, 1, 1, 12),
+          observedEnd: DateTime.utc(2026, 1, 1, 12, 4),
+          source: PresenceEvidenceSource.geolocation,
+        );
 
-      expect(PresenceOverlap.between(a, b), isNull);
-    });
+        expect(PresenceOverlap.between(a, b), isNull);
+      },
+    );
 
     test('valid overlap creates a meaningful encounter window', () {
       final a = PresenceEvidence(
@@ -140,31 +153,67 @@ void main() {
       expect(overlap.end, equals(DateTime.utc(2026, 1, 1, 12, 30)));
     });
 
-    test('duplicate presence observations remain de-duped by the presence context uniqueness slot', () {
-      final a = PresenceEvidence(
-        id: 'a',
-        subjectUserId: 'a',
-        contextId: 'cell:10:10',
-        observedStart: DateTime.utc(2026, 1, 1, 12),
-        observedEnd: DateTime.utc(2026, 1, 1, 12, 30),
-        source: PresenceEvidenceSource.geolocation,
-      );
-      final b = PresenceEvidence(
-        id: 'b',
-        subjectUserId: 'b',
-        contextId: 'cell:11:10',
-        observedStart: DateTime.utc(2026, 1, 1, 12),
-        observedEnd: DateTime.utc(2026, 1, 1, 12, 30),
-        source: PresenceEvidenceSource.geolocation,
-      );
+    test(
+      'duplicate presence observations remain de-duped by the presence context uniqueness slot',
+      () {
+        final a = PresenceEvidence(
+          id: 'a',
+          subjectUserId: 'a',
+          contextId: 'cell:10:10',
+          observedStart: DateTime.utc(2026, 1, 1, 12),
+          observedEnd: DateTime.utc(2026, 1, 1, 12, 30),
+          source: PresenceEvidenceSource.geolocation,
+        );
+        final b = PresenceEvidence(
+          id: 'b',
+          subjectUserId: 'b',
+          contextId: 'cell:11:10',
+          observedStart: DateTime.utc(2026, 1, 1, 12),
+          observedEnd: DateTime.utc(2026, 1, 1, 12, 30),
+          source: PresenceEvidenceSource.geolocation,
+        );
 
-      final overlap1 = PresenceOverlap.between(a, b);
-      final overlap2 = PresenceOverlap.between(a, b);
-      expect(overlap1, isNotNull);
-      expect(overlap2, isNotNull);
-      expect(overlap1!.start, equals(overlap2!.start));
-      expect(overlap1.end, equals(overlap2.end));
-    });
+        final overlap1 = PresenceOverlap.between(a, b);
+        final overlap2 = PresenceOverlap.between(a, b);
+        expect(overlap1, isNotNull);
+        expect(overlap2, isNotNull);
+        expect(overlap1!.start, equals(overlap2!.start));
+        expect(overlap1.end, equals(overlap2.end));
+      },
+    );
+
+    test(
+      'duplicate encounter rows for the same person/context collapse before a visible card is rendered',
+      () {
+        final rows = [
+          Encounter(
+            id: 'e-1',
+            currentUserId: 'a',
+            otherUserId: 'b',
+            eventId: 'cell:10:10',
+            overlapStart: DateTime.utc(2026, 1, 1, 12),
+            overlapEnd: DateTime.utc(2026, 1, 1, 12, 5),
+          ),
+          Encounter(
+            id: 'e-2',
+            currentUserId: 'a',
+            otherUserId: 'b',
+            eventId: 'cell:10:10',
+            overlapStart: DateTime.utc(2026, 1, 1, 12),
+            overlapEnd: DateTime.utc(2026, 1, 1, 12, 5),
+          ),
+        ];
+
+        final unique = <String, Encounter>{};
+        for (final encounter in rows) {
+          final key =
+              '${encounter.currentUserId}:${encounter.otherUserId}:${encounter.eventId}';
+          unique.putIfAbsent(key, () => encounter);
+        }
+
+        expect(unique.length, 1);
+      },
+    );
 
     test('public profile privacy projects only public-safe fields', () {
       final profile = PublicProfile(

@@ -13,7 +13,7 @@ import '../../encounters/domain/profile_affinity.dart';
 import '../../profile/domain/user_profile.dart';
 import 'widgets/profile_avatar.dart';
 import '../../blocking/data/block_providers.dart';
-import '../../../core/identity/identity_providers.dart';
+import '../../../core/identity/current_user_provider.dart';
 
 class OtherUserProfileScreen extends ConsumerWidget {
   const OtherUserProfileScreen({
@@ -176,13 +176,11 @@ class _BlockActionState extends ConsumerState<_BlockAction> {
     if (!ok || !mounted) return;
     setState(() => busy = true);
     try {
+      final blockerUserId = await ref.read(currentUserIdProvider.future);
       await ref
           .read(blockRepositoryProvider)
           .block(
-            blockerUserId: ref
-                .read(mockIdentityRepositoryProvider)
-                .currentUser
-                .id,
+            blockerUserId: blockerUserId,
             blockedUserId: widget.userId,
           );
       ref.invalidate(blockedUsersProvider);

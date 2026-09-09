@@ -1,8 +1,8 @@
 # Sprint 3 Production Encounter Architecture
 
-Status: planning only. This document defines boundaries; it does not activate a backend, authentication, GPS, QR, push notifications, or production matching.
+Status: the Supabase email/password authentication and minimum-profile slice is implemented; the remaining production encounter/backend work is planning only.
 
-The initial backend/auth foundation now includes an email/password vertical slice: compile-time Supabase URL and publishable key configuration is optional, and a backend-neutral session contract wraps Supabase infrastructure types. In configured mode, restoration, login routing, sign out, and the authenticated user's profile use session state; missing configuration continues to run the local demo. Profiles are the first production-backed record, owned by `auth.users.id`, with RLS. All social repositories remain local until later migration blocks.
+The backend/auth foundation includes an email/password vertical slice: compile-time Supabase URL and publishable key configuration is optional, and a backend-neutral session contract wraps Supabase infrastructure types. In configured mode, sign in, signup, restoration, login routing, sign out, and the authenticated user's profile use session state. Signup explicitly represents both an immediate session and a confirmation-required user without a session. Missing configuration continues to run the local demo. Profiles are the first production-backed record, owned by `auth.users.id`, with RLS. All social repositories remain local until later migration blocks.
 
 ## Sprint 2 audit
 
@@ -28,7 +28,7 @@ Eligibility consumes consent, privacy, blocks, account state, and connection sta
 
 ## Backend migration boundary
 
-Remote implementations will eventually replace the local repositories for identity/profile, events, participation/presence, encounters, connection requests/connections, blocking, conversations/messages, and notifications. Keep contracts storage-neutral. Add authenticated remote implementations behind current providers only after ownership, conflict handling, privacy rules, and authorization semantics are specified; do not activate Supabase yet.
+Remote implementations will eventually replace the local repositories for events, participation/presence, encounters, connection requests/connections, blocking, conversations/messages, and notifications. Keep contracts storage-neutral. The identity/profile boundary is already backed by Supabase in configured mode; add further authenticated remote implementations behind current providers only after ownership, conflict handling, privacy rules, and authorization semantics are specified.
 
 ## Recommended implementation order
 

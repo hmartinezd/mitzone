@@ -88,6 +88,16 @@ class FakeAuthRepository implements AuthRepository {
   }) async => session!;
 
   @override
+  Future<AuthSignUpResult> signUp({
+    required String email,
+    required String password,
+  }) async => AuthSignUpResult(
+    user: session!.user,
+    session: session,
+    outcome: AuthSignUpOutcome.signedIn,
+  );
+
+  @override
   Future<void> signOut() async => session = null;
 
   @override

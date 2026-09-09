@@ -6,7 +6,7 @@ Mitzone transforms real-world encounters into meaningful digital connections, he
 
 ## Project Status
 
-**Current Phase**: Sprint 2 — complete; Sprint 3 architecture defined
+**Current Phase**: Sprint 3 — Supabase authentication/profile slice implemented; broader backend architecture remains deferred
 
 **Baseline**: Sprint 1 local/offline demo — closed and validated. This is a
 demo baseline, not a production-readiness claim.
@@ -22,10 +22,12 @@ demo baseline, not a production-readiness claim.
 8. **Profile and Settings**: Fully functional local profile management, derived completion percentage, and comprehensive Settings navigation structure.
 9. **Sprint 1 Local Demo Hardening**: Robust async profile loading, removal of nested scaffolds, centralized validation, improved accessibility, corruption-safe local persistence, and transactional avatar replacement.
 10. **Event Experience & Local Participation Foundation — Complete**: Event details, stable local catalog IDs, identity-scoped participation, and participation-aware upcoming activities.
+11. **Supabase Authentication + Minimum Profile**: Email/password sign in and sign up, session restoration, explicit email-confirmation handling, and authenticated profile creation owned by the Supabase user UUID.
 
 **Future / Deferred**:
-- **Permanent Authentication — Deferred**
-- **Supabase Backend Integration — Deferred**
+- **Password Recovery and Email-Confirmation Deep Links — Future**
+- **Account Deletion and Production Account Management — Future**
+- **Supabase Social-Feature Synchronization — Deferred**
 - **Verified Event Presence — Future**
 - **Production Matching — Future**
 - **QR Check-in — Future**
@@ -33,9 +35,13 @@ demo baseline, not a production-readiness claim.
 
 ## Application Entry Policy
 
-### Mock development identities
+### Local/demo mode
 
-Authentication and backend services are intentionally inactive. The app uses local mock identities for development, with Jose as the default. Developers can switch between Jose, Sofia, Daniel, and Emma in Settings under Developer → Current User. This supports future multi-user feature simulation without introducing backend dependencies.
+With no Supabase configuration, authentication and backend services are intentionally inactive. The app uses local mock identities for development, with Jose as the default. Developers can switch between Jose, Sofia, Daniel, and Emma in Settings under Developer → Current User.
+
+### Configured Supabase mode
+
+With `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` configured, Mitzone supports email/password sign in, email/password account creation, session restoration, email-confirmation-required signup states, and authenticated minimum-profile creation. A signup that returns no session never enters authenticated screens. The existing profile row remains separate from account creation and is keyed by the authenticated `auth.users.id`.
 
 The long-term application-entry rules are:
 
@@ -44,7 +50,7 @@ The long-term application-entry rules are:
 3. **No active session + onboarding previously completed** → Login
 4. **First use** → Onboarding
 
-*Note: In the current development stage, a **Local Development Identity** is used instead of a Supabase session to allow rapid feature development without backend dependency.*
+*Note: The local development identity is used only when Supabase is not configured.*
 
 ## Main Navigation
 
@@ -62,7 +68,7 @@ Users can manage their local profile and access application settings.
 - **Progressive Details**: Optional fields including bio, city, languages, interests, and connection goals (Social, Professional, Both).
 - **Profile Completion**: Informational percentage derived from seven profile components.
 - **Settings**: Structured navigation for Account, Privacy, Notifications, and Legal.
-- **Note on Account Actions**: Sign Out and Delete Account actions are visibly deferred until permanent authentication is implemented, as the current identity is local-only.
+- **Note on Account Actions**: Sign out is available in configured Supabase mode. Password recovery, email-confirmation deep-link return, and Delete Account remain deferred.
 
 ## Local Demo Boundary
 
@@ -83,8 +89,7 @@ For this development phase, the following boundaries apply:
 - Home summaries that react to encounters, incoming requests, connections, and recent conversations.
 
 ### Intentionally Deferred
-- **Permanent Authentication — Deferred**: Permanent accounts, sign-out, and deletion are unavailable.
-- **Supabase Backend Integration — Deferred**: All data is local; Supabase is integrated but inactive.
+- **Supabase social backend synchronization — Deferred**: Events, encounters, requests, connections, conversations, and messages remain local/demo data.
 - **Verified Event Presence — Future**: Participation records intent only and never claims verified attendance.
 - **Production Matching — Future**: Encounter data is a deterministic local demo, not a production recommendation or matching system.
 - **QR Check-in — Future**: Scanner functionality is not implemented.
@@ -164,7 +169,9 @@ lib/
 
 ## Sprint 3 backend/auth foundation
 
-Supabase configuration and a backend-neutral authentication contract are now present. The default `flutter run` command remains local/demo mode. For Supabase development, copy `config/dev.example.json` to the ignored `config/dev.json`, set only `APP_ENV`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY`, then run `flutter run --dart-define-from-file=config/dev.json`. Never use a service-role key, database password, JWT signing secret, or management token in the client. Email/password authentication and the authenticated user's own profile are the first production-backed vertical slice; the social domains remain deferred.
+Supabase configuration and a backend-neutral authentication contract are now present. The default `flutter run` command remains local/demo mode. For Supabase development, copy `config/dev.example.json` to the ignored `config/dev.json`, set only `APP_ENV`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY`, then run `flutter run --dart-define-from-file=config/dev.json`. Never use a service-role key, database password, JWT signing secret, or management token in the client.
+
+The supported configured flow is: email/password sign in or sign up → active-session check → authenticated minimum-profile creation when needed → Home. When email confirmation is enabled, signup shows a Check your email state and returns to Sign In without creating a local or remote profile row. Password recovery, confirmation deep-link return, account deletion, and Supabase synchronization for the social domains remain deferred.
 
 In the local demo, participation means intending to attend an event, while presence/check-in represents demo attendance. Presence is scoped to the active mock identity. Deterministic mock attendee windows are generated relative to the local check-in, and encounters are derived from genuine interval overlap. QR, geolocation, and independently verified presence remain future work.
 

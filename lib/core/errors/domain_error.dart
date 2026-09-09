@@ -1,6 +1,8 @@
 enum DomainErrorCode {
   notFound,
   unauthorized,
+  conflict,
+  unavailable,
   interactionUnavailable,
   invalidState,
   validation,

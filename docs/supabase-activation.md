@@ -13,8 +13,9 @@ This uses the local demo identity and local repositories.
 ## Supabase development mode
 
 1. Create a new Supabase project.
-2. In Supabase Authentication, enable Email and configure the development
-   email confirmation behavior appropriate for the test users.
+2. In Supabase Authentication, enable Email, allow new users to sign up, and
+   configure the development email confirmation behavior appropriate for the
+   test users. The app supports both confirmation enabled and disabled.
 3. Copy `config/dev.example.json` to `config/dev.json`.
 4. Set `APP_ENV` to `development`, and supply the project's client-safe
    `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` only.
@@ -33,9 +34,15 @@ management token in Flutter configuration.
 
 ## First smoke test
 
-Create two temporary email/password users in the Supabase dashboard, then
-verify for each user: sign in, create a minimum profile, edit it, restart the
-app, and confirm the same session and profile return. Verify through the
+Use the app's Create Account mode to register a disposable email/password
+account. If confirmation is enabled, verify that the app shows Check your
+email and does not enter authenticated screens; confirm the email, then sign
+in. If confirmation is disabled, verify that signup enters the minimum-profile
+flow. In either case, save a minimum profile, restart the app, confirm the
+same session and profile return, sign out, and sign back in.
+
+The profile row must use the same UUID as `auth.users.id`. Verify through the
 dashboard or a separate authenticated client that one user cannot read or
-update the other user's private profile fields. Public profile reads must use
-the `get_public_profiles` RPC.
+update another user's private profile fields. Public profile reads must use
+the `get_public_profiles` RPC. Password recovery, confirmation deep-link
+return, and account deletion are follow-up work.

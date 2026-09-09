@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,9 +7,7 @@ import '../../core/identity/identity_providers.dart';
 import '../../features/foundation/presentation/entry_failure_screen.dart';
 import '../../features/foundation/presentation/route_error_screen.dart';
 import '../../features/foundation/presentation/visual_system_showcase_screen.dart';
-import '../../features/onboarding/data/onboarding_providers.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
-import '../../features/profile/data/profile_providers.dart';
 import '../../features/profile/presentation/create_minimum_profile_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
@@ -25,7 +25,7 @@ import '../../features/profile/presentation/settings_screen.dart';
 import '../../features/profile/presentation/settings_placeholders.dart';
 import '../../features/navigation/presentation/main_navigation_shell.dart';
 import '../../features/notifications/presentation/notification_center_screen.dart';
-import 'app_entry_resolver.dart';
+import 'app_entry_resolver_provider.dart';
 import 'app_routes.dart';
 import 'app_entry_coordinator.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -41,9 +41,15 @@ GoRouter createAppRouter({
   String initialLocation = AppRoutes.splash,
   required Ref ref,
 }) {
+  final authRefresh = ValueNotifier<int>(0);
+  ref.listen(authSessionProvider, (_, _) => authRefresh.value++);
+  ref.onDispose(authRefresh.dispose);
+
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: initialLocation,
+    refreshListenable: authRefresh,
+    redirect: (context, state) => _authRedirect(ref, state),
     errorBuilder: (context, state) => RouteErrorScreen(error: state.error),
     routes: [
       GoRoute(
@@ -55,14 +61,7 @@ GoRouter createAppRouter({
         builder: (context, state) {
           return SplashScreen(
             onCompleted: () async {
-              final resolver = AppEntryResolver(
-                onboardingStatusStore: ref.read(onboardingStatusStoreProvider),
-                identityGateway: ref.read(identityGatewayProvider),
-                profileRepository: ref.read(profileRepositoryProvider),
-                authRepository: ref.read(authRepositoryProvider),
-              );
-
-              final target = await resolver.resolve();
+              final target = await ref.read(appEntryResolverProvider).resolve();
 
               if (!context.mounted) return;
 
@@ -228,6 +227,46 @@ GoRouter createAppRouter({
       ),
     ],
   );
+}
+
+FutureOr<String?> _authRedirect(Ref ref, GoRouterState state) {
+  final authRepository = ref.read(authRepositoryProvider);
+  if (authRepository == null) return null;
+
+  final location = state.uri.path;
+  final sessionState = ref.read(authSessionProvider);
+
+  // Keep a protected deep link behind Splash until restoration has settled.
+  // AsyncLoading is not equivalent to an unauthenticated session.
+  if (sessionState.isLoading) {
+    return _isProtectedLocation(location) ? AppRoutes.splash : null;
+  }
+
+  // A session error cannot authorize protected content. Login provides a
+  // deterministic recovery path while public routes remain reachable.
+  if (sessionState.hasError) {
+    return _isProtectedLocation(location) ? AppRoutes.login : null;
+  }
+
+  if (sessionState.value == null) {
+    return _isProtectedLocation(location) ? AppRoutes.login : null;
+  }
+
+  if (location == AppRoutes.login) {
+    return _authenticatedLoginRedirect(ref, location);
+  }
+
+  return null;
+}
+
+Future<String?> _authenticatedLoginRedirect(Ref ref, String location) async {
+  final target = await ref.read(appEntryResolverProvider).resolve();
+  final destination = AppEntryCoordinator.locationForTarget(target);
+  return destination == location ? null : destination;
+}
+
+bool _isProtectedLocation(String location) {
+  return location == AppRoutes.createProfile || location.startsWith('/app/');
 }
 
 /// Provider for the initial location of the router.

@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../app/router/app_entry_coordinator.dart';
-import '../../../app/router/app_entry_resolver.dart';
+import '../../../app/router/app_entry_resolver_provider.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../core/identity/identity_providers.dart';
 import '../../../shared/widgets/mitzone_button.dart';
 import '../../../shared/widgets/mitzone_feedback_banner.dart';
 import '../../../shared/widgets/mitzone_page_scaffold.dart';
-import '../../profile/data/profile_providers.dart';
 import '../data/onboarding_providers.dart';
 import 'onboarding_illustrations.dart';
 import 'onboarding_page.dart';
@@ -73,13 +71,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await store.markCompleted();
 
       if (mounted) {
-        final resolver = AppEntryResolver(
-          onboardingStatusStore: store,
-          identityGateway: ref.read(identityGatewayProvider),
-          profileRepository: ref.read(profileRepositoryProvider),
-        );
-
-        final target = await resolver.resolve();
+        final target = await ref.read(appEntryResolverProvider).resolve();
 
         if (!mounted) return;
 

@@ -261,7 +261,7 @@ Future<String?> _authenticatedLoginRedirect(Ref ref, String location) async {
 }
 
 bool _isProtectedLocation(String location) {
-  return location == AppRoutes.createProfile || location.startsWith('/app/');
+  return location.startsWith('/app/');
 }
 
 /// Provider for the initial location of the router.

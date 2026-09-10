@@ -25,8 +25,8 @@ class ProfileScreen extends ConsumerWidget {
         data: (profile) => profile == null
             ? _MessageState(
                 message: 'Your profile could not be found.',
-                action: 'Finish your profile',
-                onPressed: () => context.go(AppRoutes.createProfile),
+                action: 'Try again',
+                onPressed: () => ref.invalidate(currentProfileProvider),
               )
             : _ProfileContent(profile: profile),
         loading: () => const Center(child: MitzoneLoadingIndicator()),

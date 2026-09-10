@@ -92,7 +92,7 @@ void main() {
         expect(find.text(screen.title), findsOneWidget);
         expect(find.byTooltip('Back'), findsOneWidget);
         expect(find.text('Your profile could not be found.'), findsOneWidget);
-        expect(find.text('Finish your profile'), findsOneWidget);
+        expect(find.text('Try again'), findsOneWidget);
         expect(find.byType(Scaffold), findsOneWidget);
       });
 

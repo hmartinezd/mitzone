@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../app/router/app_entry_coordinator.dart';
+import '../../../app/router/app_entry_resolver_provider.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/auth/auth_models.dart';
@@ -339,12 +341,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _routeAfterAuthentication(AuthSession session) async {
     ref.invalidate(authSessionProvider);
-    final profile = await ref
-        .read(profileRepositoryProvider)
-        .getProfile(session.user.id);
+    final target = await ref.read(appEntryResolverProvider).resolve();
     ref.invalidate(currentProfileProvider);
     if (!mounted) return;
-    context.go(profile == null ? AppRoutes.createProfile : AppRoutes.home);
+    context.go(AppEntryCoordinator.locationForTarget(target));
   }
 
   String _messageForDomainError(DomainError error) {

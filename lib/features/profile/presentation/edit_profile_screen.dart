@@ -31,8 +31,8 @@ class EditProfileScreen extends ConsumerWidget {
                   const Text('Your profile could not be found.'),
                   const SizedBox(height: AppSpacing.md),
                   MitzoneButton(
-                    text: 'Finish your profile',
-                    onPressed: () => context.go(AppRoutes.createProfile),
+                    text: 'Try again',
+                    onPressed: () => ref.invalidate(currentProfileProvider),
                   ),
                 ],
               ),

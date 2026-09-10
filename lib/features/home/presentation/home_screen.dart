@@ -54,7 +54,7 @@ class HomeScreen extends ConsumerWidget {
                     const HomeHeader(displayName: null),
                     const SizedBox(height: AppSpacing.md),
                     _HomeMissingProfile(
-                      onFinish: () => context.go(AppRoutes.createProfile),
+                      onFinish: () => ref.invalidate(currentProfileProvider),
                     ),
                   ],
                 );
@@ -282,7 +282,7 @@ class _HomeMissingProfile extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
-              "Finish your profile to get the most out of Mitzone.",
+              "Complete your profile to get the most out of Mitzone.",
               style: theme.textTheme.bodyMedium,
             ),
           ),

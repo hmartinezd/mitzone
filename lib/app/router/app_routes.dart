@@ -6,9 +6,6 @@ class AppRoutes {
   static const String onboarding = '/onboarding';
   static const String login = '/login';
 
-  /// The minimum profile creation screen.
-  static const String createProfile = '/profile/create';
-
   /// Development-only visual system showcase.
   static const String showcase = '/showcase';
 

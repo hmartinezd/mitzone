@@ -11,9 +11,6 @@ enum AppEntryTarget {
   /// The user should see the onboarding sequence.
   onboarding,
 
-  /// The user needs to create a minimum profile.
-  createProfile,
-
   /// The application is ready for use (post-profile).
   ready,
 
@@ -52,13 +49,12 @@ class AppEntryResolver {
         return AppEntryTarget.unauthenticated;
       }
 
-      final identityId =
-          session?.user.id ?? (await identityGateway.ensureIdentity()).id;
+      if (session == null) return AppEntryTarget.entryFailure;
+      final identityId = session.user.id;
       final profile = await profileRepository.getProfile(identityId);
 
       if (profile == null ||
           !ProfileValidation.hasMinimumProfile(profile.displayName)) {
-        if (session == null) return AppEntryTarget.createProfile;
         final displayName = _safeDisplayName(session.user);
         await profileRepository.saveMinimumProfile(
           identityId: session.user.id,

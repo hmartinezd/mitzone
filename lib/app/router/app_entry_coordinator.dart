@@ -8,8 +8,6 @@ class AppEntryCoordinator {
     switch (target) {
       case AppEntryTarget.onboarding:
         return AppRoutes.onboarding;
-      case AppEntryTarget.createProfile:
-        return AppRoutes.createProfile;
       case AppEntryTarget.ready:
         // Ready destination for Phase 6 is Main Navigation Home.
         return AppRoutes.home;

@@ -136,7 +136,7 @@ void main() {
         profileRepo.profile = null;
 
         final target = await resolver.resolve();
-        expect(target, AppEntryTarget.createProfile);
+        expect(target, AppEntryTarget.ready);
       },
     );
 
@@ -147,7 +147,7 @@ void main() {
         profileRepo.profile = const UserProfile(id: 'id', displayName: 'H');
 
         final target = await resolver.resolve();
-        expect(target, AppEntryTarget.createProfile);
+        expect(target, AppEntryTarget.ready);
       },
     );
 
@@ -193,7 +193,7 @@ void main() {
 
       final target = await resolver.resolve();
 
-      expect(target, AppEntryTarget.createProfile);
+        expect(target, AppEntryTarget.ready);
       expect(profileRepo.requestedIdentityId, 'supabase-user-id');
     });
 
@@ -225,7 +225,7 @@ void main() {
           ),
         );
 
-        expect(await resolver.resolve(), AppEntryTarget.createProfile);
+        expect(await resolver.resolve(), AppEntryTarget.ready);
       },
     );
 
@@ -254,7 +254,7 @@ void main() {
         type: AppIdentityType.localDevelopment,
       );
 
-      expect(await resolver.resolve(), AppEntryTarget.createProfile);
+        expect(await resolver.resolve(), AppEntryTarget.ready);
       expect(profileRepo.requestedIdentityId, 'local-demo-id');
     });
   });

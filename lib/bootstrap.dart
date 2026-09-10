@@ -8,6 +8,7 @@ import 'app/app.dart';
 import 'app/startup_failure_app.dart';
 import 'core/config/app_config.dart';
 import 'core/providers/core_providers.dart';
+import 'core/errors/app_exception.dart';
 
 /// Typedef for loading application configuration.
 typedef AppConfigLoader = AppConfig Function();
@@ -98,11 +99,16 @@ void _handleStartupError({
 
   appRunner(
     StartupFailureApp(
-      message:
-          'The application could not start due to a $category. '
-          'Please verify your environment configuration.',
+      message: _startupMessage(category: category, error: error),
       // Provide a retry mechanism that re-runs bootstrap with default dependencies.
       onRetry: () => bootstrap(),
     ),
   );
+}
+
+String _startupMessage({required String category, required Object error}) {
+  if (error is ConfigException) return error.message;
+
+  return 'The application could not start due to a $category. '
+      'Please verify your environment configuration.';
 }

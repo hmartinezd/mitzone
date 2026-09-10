@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/core/identity/app_identity.dart';
 import 'package:mitzone/core/identity/identity_gateway.dart';
 import 'package:mitzone/core/identity/identity_providers.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/features/events/data/event_providers.dart';
 import 'package:mitzone/features/events/domain/event_check_in.dart';
 import 'package:mitzone/features/events/domain/event_check_in_repository.dart';
@@ -76,6 +79,9 @@ void main() {
     checkIns = RecordingRepository();
     container = ProviderContainer(
       overrides: [
+        appConfigProvider.overrideWithValue(
+          AppConfig.validated(env: AppEnvironment.local),
+        ),
         identityGatewayProvider.overrideWithValue(TestIdentityGateway()),
         eventParticipationRepositoryProvider.overrideWithValue(participation),
         eventCheckInRepositoryProvider.overrideWithValue(checkIns),

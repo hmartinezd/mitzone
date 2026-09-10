@@ -38,7 +38,7 @@ class AppConfig {
 
   /// Loads configuration from compile-time environment variables.
   factory AppConfig.fromEnvironment() {
-    const envStr = String.fromEnvironment('APP_ENV', defaultValue: 'local');
+    const envStr = String.fromEnvironment('APP_ENV');
     const urlStr = String.fromEnvironment('SUPABASE_URL');
     const keyStr = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
 
@@ -56,13 +56,15 @@ class AppConfig {
     if (hasUrl != hasKey) {
       throw const ConfigException(
         'Partial Supabase configuration detected. '
-        'Both SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY must be provided or both must be absent.',
+        'Both SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY must be provided.',
       );
     }
 
-    if (env == AppEnvironment.production && !hasUrl) {
+    if (env != AppEnvironment.local && !hasUrl) {
       throw const ConfigException(
-        'Production requires Supabase configuration. Local identity and data are disabled.',
+        'This application environment requires SUPABASE_URL and '
+        'SUPABASE_PUBLISHABLE_KEY. Create config/dev.json from '
+        'config/dev.example.json and fill in your Supabase project values.',
       );
     }
 
@@ -77,6 +79,14 @@ class AppConfig {
       if (!isValid) {
         throw const ConfigException(
           'Invalid SUPABASE_URL. It must be a valid absolute HTTP or HTTPS URI.',
+        );
+      }
+
+      if (supabaseUrl!.contains('YOUR_PROJECT') ||
+          supabasePublishableKey!.contains('REPLACE_ME')) {
+        throw const ConfigException(
+          'Supabase configuration still contains placeholder values. '
+          'Fill in config/dev.json with your project URL and publishable key.',
         );
       }
     }

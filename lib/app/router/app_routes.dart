@@ -12,7 +12,7 @@ class AppRoutes {
   /// Development-only visual system showcase.
   static const String showcase = '/showcase';
 
-  /// A screen shown when local development identity entry cannot be resolved.
+  /// A screen shown when authenticated application entry cannot be resolved.
   static const String entryFailure = '/entry-failure';
 
   /// Main navigation branch: Home

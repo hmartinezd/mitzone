@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/app/router/app_router.dart';
 import 'package:mitzone/app/router/app_routes.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
@@ -21,6 +24,9 @@ void main() {
     return ProviderScope(
       retry: (_, _) => null,
       overrides: [
+        appConfigProvider.overrideWithValue(
+          AppConfig.validated(env: AppEnvironment.local),
+        ),
         currentProfileProvider.overrideWith(loadProfile),
         routerInitialLocationProvider.overrideWithValue(location),
       ],

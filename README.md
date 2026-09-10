@@ -35,13 +35,14 @@ demo baseline, not a production-readiness claim.
 
 ## Application Entry Policy
 
-### Local/demo mode
+### Canonical Supabase runtime
 
-With no Supabase configuration, authentication and backend services are intentionally inactive. The app uses local mock identities for development, with Jose as the default. Developers can switch between Jose, Sofia, Daniel, and Emma in Settings under Developer → Current User.
-
-### Configured Supabase mode
-
-With `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` configured, Mitzone supports email/password sign in, email/password account creation, session restoration, email-confirmation-required signup states, and authenticated minimum-profile creation. A signup that returns no session never enters authenticated screens. The existing profile row remains separate from account creation and is keyed by the authenticated `auth.users.id`.
+Mitzone's normal application runtime is Supabase-backed authenticated mode.
+Missing or invalid configuration is a startup error; it never activates a
+local identity or demo login. The app supports email/password sign in, account
+creation, session restoration, email-confirmation-required signup states, and
+authenticated minimum-profile creation. Profiles are keyed by the authenticated
+Supabase `auth.users.id`.
 
 The long-term application-entry rules are:
 
@@ -50,7 +51,30 @@ The long-term application-entry rules are:
 3. **No active session + onboarding previously completed** → Login
 4. **First use** → Onboarding
 
-*Note: The local development identity is used only when Supabase is not configured.*
+Social repositories may still use deterministic local/demo data while their
+Supabase migrations are unfinished, but they do not provide an authentication
+bypass.
+
+## Normal development
+
+In VS Code, press **Run / F5** and choose the single **Mitzone** launch target.
+It automatically uses `config/dev.json`.
+
+The equivalent CLI command is:
+
+```bash
+flutter run --dart-define-from-file=config/dev.json
+```
+
+For first setup:
+
+1. Copy `config/dev.example.json` to `config/dev.json`.
+2. Fill in the Supabase project URL and publishable key.
+3. Press **F5**.
+
+`config/dev.json` is local and ignored by Git. Use only the client-safe
+publishable key; never add a service-role key, database password, JWT signing
+secret, or management token to Flutter configuration.
 
 ## Main Navigation
 
@@ -63,7 +87,7 @@ Mitzone features exactly five primary destinations accessible via a Material 3 b
 
 ## Profile and Settings
 
-Users can manage their local profile and access application settings.
+Users can manage their application profile and access application settings.
 - **Editable Profile**: Change display name and profile photo with safe replacement strategy.
 - **Progressive Details**: Optional fields including bio, city, languages, interests, and connection goals (Social, Professional, Both).
 - **Profile Completion**: Informational percentage derived from seven profile components.
@@ -98,12 +122,16 @@ For this development phase, the following boundaries apply:
 - **Backend Sync**: Encounters, requests, connections, conversations, and messages remain local to the device.
 - **Web**: Only Android/iOS platforms are currently targeted.
 
-## Local Development Identity
+## Local/demo data boundary
 
-Mitzone currently uses a persistent, locally generated identity to represent the user during development.
+Mitzone may retain local repositories, deterministic fixtures, and explicit
+test-only local identities for unfinished social-domain migration and
+automated tests. These are not a normal application runtime and are not
+selected by plain `flutter run`.
 - **Identity ID**: A stable UUID v4 generated once upon onboarding completion.
 - **Storage**: Persisted in `SharedPreferences` as `local_identity.id.v1`.
-- **Purpose**: Provides a stable identifier for profile ownership and future feature data while remaining decoupled from the future Supabase implementation.
+- **Purpose**: Supports explicit local fixtures/tests while remaining separate
+  from the Supabase-authenticated application identity.
 
 ## Visual System
 
@@ -169,7 +197,13 @@ lib/
 
 ## Sprint 3 backend/auth foundation
 
-Supabase configuration and a backend-neutral authentication contract are now present. The default `flutter run` command remains local/demo mode. For Supabase development, copy `config/dev.example.json` to the ignored `config/dev.json`, set only `APP_ENV`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY`, then run `flutter run --dart-define-from-file=config/dev.json`. Never use a service-role key, database password, JWT signing secret, or management token in the client.
+Supabase configuration and a backend-neutral authentication contract are now
+present. Normal development uses the VS Code **Mitzone** launch target or the
+equivalent `flutter run --dart-define-from-file=config/dev.json` command.
+`APP_ENV`, `SUPABASE_URL`, and `SUPABASE_PUBLISHABLE_KEY` are required for
+development, staging, and production. Missing, partial, or invalid values fail
+startup instead of selecting local/demo identity. Never use a service-role key,
+database password, JWT signing secret, or management token in the client.
 
 The supported configured flow is: email/password sign in or sign up → active-session check → authenticated minimum-profile creation when needed → Home. When email confirmation is enabled, signup shows a Check your email state and returns to Sign In without creating a local or remote profile row. Password recovery, confirmation deep-link return, account deletion, and Supabase synchronization for the social domains remain deferred.
 

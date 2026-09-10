@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mitzone/core/identity/identity_providers.dart';
 import 'package:mitzone/core/identity/mock_identity_repository.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/core/storage/local_storage.dart';
 import 'package:mitzone/features/chat/data/chat_providers.dart';
 import 'package:mitzone/features/chat/data/local_chat_repository.dart';
@@ -54,6 +57,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            appConfigProvider.overrideWithValue(
+              AppConfig.validated(env: AppEnvironment.local),
+            ),
             chatRepositoryProvider.overrideWithValue(chat),
             mockIdentityRepositoryProvider.overrideWith(
               (ref) => InMemoryMockIdentityRepository(

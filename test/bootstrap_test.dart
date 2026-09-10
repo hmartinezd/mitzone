@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mitzone/app/app.dart';
 import 'package:mitzone/app/startup_failure_app.dart';
 import 'package:mitzone/bootstrap.dart';
 import 'package:mitzone/core/config/app_config.dart';
@@ -10,12 +9,15 @@ import 'package:mitzone/core/errors/app_exception.dart';
 
 void main() {
   group('Bootstrap', () {
-    test('Test 1: Unconfigured mode', () async {
+    testWidgets('missing Supabase configuration shows startup failure', (
+      tester,
+    ) async {
       bool supabaseCalled = false;
       Widget? capturedApp;
 
       await bootstrap(
-        configLoader: () => AppConfig.validated(env: AppEnvironment.local),
+        configLoader: () =>
+            AppConfig.validated(env: AppEnvironment.development),
         supabaseInitializer: ({required url, required publishableKey}) async {
           supabaseCalled = true;
         },
@@ -23,9 +25,10 @@ void main() {
       );
 
       expect(supabaseCalled, isFalse);
-      expect(capturedApp, isA<ProviderScope>());
-      final providerScope = capturedApp as ProviderScope;
-      expect(providerScope.child, isA<MitzoneApp>());
+      expect(capturedApp, isA<StartupFailureApp>());
+
+      await tester.pumpWidget(capturedApp!);
+      expect(find.textContaining('requires SUPABASE_URL'), findsOneWidget);
     });
 
     test('Test 2: Configured mode', () async {
@@ -90,8 +93,7 @@ void main() {
       expect(capturedApp, isA<StartupFailureApp>());
 
       await tester.pumpWidget(capturedApp!);
-      expect(find.textContaining('Configuration failure'), findsOneWidget);
-      expect(find.textContaining('Invalid env'), findsNothing);
+      expect(find.textContaining('Invalid env'), findsOneWidget);
     });
 
     testWidgets('Test 6: Retry behavior - callback present', (tester) async {

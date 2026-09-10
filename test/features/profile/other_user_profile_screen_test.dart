@@ -7,6 +7,9 @@ import 'package:mitzone/features/encounters/data/encounter_providers.dart';
 import 'package:mitzone/features/encounters/domain/encounter.dart';
 import 'package:mitzone/features/profile/presentation/other_user_profile_screen.dart';
 import 'package:mitzone/core/identity/mock_identity_repository.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
 
 void main() {
   final encounter = Encounter(
@@ -21,6 +24,9 @@ void main() {
   Widget buildScreen({RelationshipState state = RelationshipState.none}) {
     return ProviderScope(
       overrides: [
+        appConfigProvider.overrideWithValue(
+          AppConfig.validated(env: AppEnvironment.local),
+        ),
         encountersForCurrentUserProvider.overrideWith(
           (ref) async => [encounter],
         ),
@@ -52,6 +58,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          appConfigProvider.overrideWithValue(
+            AppConfig.validated(env: AppEnvironment.local),
+          ),
           encountersForCurrentUserProvider.overrideWith((ref) async => []),
         ],
         child: const MaterialApp(

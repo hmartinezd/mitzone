@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/app/router/app_router.dart';
 import 'package:mitzone/app/router/app_routes.dart';
 import 'package:mitzone/core/identity/mock_identity_repository.dart';
@@ -35,6 +38,9 @@ void main() {
   }) {
     return ProviderScope(
       overrides: [
+        appConfigProvider.overrideWithValue(
+          AppConfig.validated(env: AppEnvironment.local),
+        ),
         currentProfileProvider.overrideWithValue(profileState),
         joinedEventIdsProvider.overrideWithValue(joinedEventIdsState),
         encountersForCurrentUserProvider.overrideWithValue(encounterState),

@@ -2,7 +2,7 @@
 
 Status: the Supabase email/password authentication and minimum-profile slice is implemented; the remaining production encounter/backend work is planning only.
 
-The backend/auth foundation includes an email/password vertical slice: compile-time Supabase URL and publishable key configuration is optional, and a backend-neutral session contract wraps Supabase infrastructure types. In configured mode, sign in, signup, restoration, login routing, sign out, and the authenticated user's profile use session state. Signup explicitly represents both an immediate session and a confirmation-required user without a session. Missing configuration continues to run the local demo. Profiles are the first production-backed record, owned by `auth.users.id`, with RLS. All social repositories remain local until later migration blocks.
+The backend/auth foundation includes an email/password vertical slice: compile-time Supabase URL and publishable key configuration is required for development, staging, and production, and a backend-neutral session contract wraps Supabase infrastructure types. Sign in, signup, restoration, login routing, sign out, and the authenticated user's profile use session state. Signup explicitly represents both an immediate session and a confirmation-required user without a session. Missing or invalid configuration fails startup rather than selecting a local identity. Profiles are the first production-backed record, owned by `auth.users.id`, with RLS. All social repositories remain local until later migration blocks.
 
 ## Sprint 2 audit
 

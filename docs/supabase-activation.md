@@ -1,22 +1,16 @@
 # Supabase activation
 
-## Local/demo mode
+## Normal development
 
-Run the app with no Supabase defines:
-
-```bash
-flutter run
-```
-
-This uses the local demo identity and local repositories.
-
-## Supabase development mode
+Mitzone has one normal application runtime: Supabase-backed authenticated mode.
+In VS Code, press **Run / F5** and launch the single **Mitzone** configuration.
+It automatically supplies `--dart-define-from-file=config/dev.json`.
 
 1. Create a new Supabase project.
 2. In Supabase Authentication, enable Email, allow new users to sign up, and
    configure the development email confirmation behavior appropriate for the
    test users. The app supports both confirmation enabled and disabled.
-3. Copy `config/dev.example.json` to `config/dev.json`.
+3. Copy `config/dev.example.json` to the ignored local file `config/dev.json`.
 4. Set `APP_ENV` to `development`, and supply the project's client-safe
    `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` only.
 5. Keep `config/dev.json` local; it is ignored by Git.
@@ -28,6 +22,10 @@ supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 flutter run --dart-define-from-file=config/dev.json
 ```
+
+The command above is the CLI equivalent of pressing F5. A plain `flutter run`
+does not select a local/demo product mode; without required configuration it
+fails clearly at startup.
 
 Do not put a service-role key, database password, JWT signing secret, or
 management token in Flutter configuration.

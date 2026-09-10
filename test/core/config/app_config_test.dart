@@ -5,22 +5,28 @@ import 'package:mitzone/core/errors/app_exception.dart';
 
 void main() {
   group('AppConfig', () {
-    test('local unconfigured mode when values are absent', () {
+    test('explicit local test mode can omit Supabase configuration', () {
       final config = AppConfig.validated(env: AppEnvironment.local);
       expect(config.env, AppEnvironment.local);
       expect(config.isSupabaseConfigured, isFalse);
     });
 
-    test('rejects production mode without Supabase configuration', () {
-      expect(
-        () => AppConfig.validated(env: AppEnvironment.production),
-        throwsA(isA<ConfigException>()),
-      );
-    });
+    for (final environment in [
+      AppEnvironment.development,
+      AppEnvironment.staging,
+      AppEnvironment.production,
+    ]) {
+      test('${environment.name} requires Supabase configuration', () {
+        expect(
+          () => AppConfig.validated(env: environment),
+          throwsA(isA<ConfigException>()),
+        );
+      });
+    }
 
     test('accepts valid HTTP configuration', () {
       final config = AppConfig.validated(
-        env: AppEnvironment.local,
+        env: AppEnvironment.development,
         supabaseUrl: 'http://localhost:54321',
         supabasePublishableKey: 'some_key',
       );
@@ -41,7 +47,7 @@ void main() {
     test('throws ConfigException for URL without key', () {
       expect(
         () => AppConfig.validated(
-          env: AppEnvironment.local,
+          env: AppEnvironment.development,
           supabaseUrl: 'https://example.supabase.co',
         ),
         throwsA(
@@ -59,7 +65,7 @@ void main() {
     test('throws ConfigException for key without URL', () {
       expect(
         () => AppConfig.validated(
-          env: AppEnvironment.local,
+          env: AppEnvironment.development,
           supabasePublishableKey: 'some_key',
         ),
         throwsA(isA<ConfigException>()),
@@ -80,7 +86,7 @@ void main() {
     test('rejects whitespace-only URL with a real key', () {
       expect(
         () => AppConfig.validated(
-          env: AppEnvironment.local,
+          env: AppEnvironment.development,
           supabaseUrl: '   ',
           supabasePublishableKey: 'real-key',
         ),
@@ -91,7 +97,7 @@ void main() {
     test('rejects whitespace-only key with a real URL', () {
       expect(
         () => AppConfig.validated(
-          env: AppEnvironment.local,
+          env: AppEnvironment.development,
           supabaseUrl: 'https://example.supabase.co',
           supabasePublishableKey: '   ',
         ),
@@ -102,7 +108,7 @@ void main() {
     test('rejects invalid URL string', () {
       expect(
         () => AppConfig.validated(
-          env: AppEnvironment.local,
+          env: AppEnvironment.development,
           supabaseUrl: 'not-a-url',
           supabasePublishableKey: 'key',
         ),
@@ -113,7 +119,7 @@ void main() {
     test('rejects relative URL', () {
       expect(
         () => AppConfig.validated(
-          env: AppEnvironment.local,
+          env: AppEnvironment.development,
           supabaseUrl: '/api/v1',
           supabasePublishableKey: 'key',
         ),
@@ -124,7 +130,7 @@ void main() {
     test('rejects URL without host', () {
       expect(
         () => AppConfig.validated(
-          env: AppEnvironment.local,
+          env: AppEnvironment.development,
           supabaseUrl: 'https://',
           supabasePublishableKey: 'key',
         ),
@@ -135,9 +141,20 @@ void main() {
     test('rejects FTP URL', () {
       expect(
         () => AppConfig.validated(
-          env: AppEnvironment.local,
+          env: AppEnvironment.development,
           supabaseUrl: 'ftp://example.com',
           supabasePublishableKey: 'key',
+        ),
+        throwsA(isA<ConfigException>()),
+      );
+    });
+
+    test('rejects copied example placeholders', () {
+      expect(
+        () => AppConfig.validated(
+          env: AppEnvironment.development,
+          supabaseUrl: 'https://YOUR_PROJECT.supabase.co',
+          supabasePublishableKey: 'sb_publishable_REPLACE_ME',
         ),
         throwsA(isA<ConfigException>()),
       );
@@ -177,12 +194,12 @@ void main() {
 
     test('equality and hashCode', () {
       final config1 = AppConfig.validated(
-        env: AppEnvironment.local,
+        env: AppEnvironment.development,
         supabaseUrl: 'https://a.co',
         supabasePublishableKey: 'k',
       );
       final config2 = AppConfig.validated(
-        env: AppEnvironment.local,
+        env: AppEnvironment.development,
         supabaseUrl: 'https://a.co',
         supabasePublishableKey: 'k',
       );

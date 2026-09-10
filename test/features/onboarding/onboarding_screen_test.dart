@@ -6,6 +6,9 @@ import 'package:mitzone/features/onboarding/data/onboarding_providers.dart';
 import 'package:mitzone/features/onboarding/data/onboarding_status_store.dart';
 import 'package:mitzone/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:mitzone/shared/widgets/mitzone_button.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
 
 class FakeOnboardingStatusStore implements OnboardingStatusStore {
   bool completed = false;
@@ -33,7 +36,12 @@ void main() {
 
     Widget createWidget() {
       return ProviderScope(
-        overrides: [onboardingStatusStoreProvider.overrideWithValue(store)],
+        overrides: [
+          appConfigProvider.overrideWithValue(
+            AppConfig.validated(env: AppEnvironment.local),
+          ),
+          onboardingStatusStoreProvider.overrideWithValue(store),
+        ],
         child: MaterialApp(
           theme: AppTheme.darkTheme,
           home: const OnboardingScreen(),
@@ -164,7 +172,12 @@ void main() {
     testWidgets('handles 2.0 text scaling without overflow', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [onboardingStatusStoreProvider.overrideWithValue(store)],
+          overrides: [
+            appConfigProvider.overrideWithValue(
+              AppConfig.validated(env: AppEnvironment.local),
+            ),
+            onboardingStatusStoreProvider.overrideWithValue(store),
+          ],
           child: MaterialApp(
             theme: AppTheme.darkTheme,
             home: const MediaQuery(
@@ -182,7 +195,12 @@ void main() {
     ) async {
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [onboardingStatusStoreProvider.overrideWithValue(store)],
+          overrides: [
+            appConfigProvider.overrideWithValue(
+              AppConfig.validated(env: AppEnvironment.local),
+            ),
+            onboardingStatusStoreProvider.overrideWithValue(store),
+          ],
           child: MaterialApp(
             theme: AppTheme.darkTheme,
             home: const MediaQuery(

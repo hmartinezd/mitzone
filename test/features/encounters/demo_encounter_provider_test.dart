@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/core/identity/mock_identity_repository.dart';
 import 'package:mitzone/features/encounters/data/encounter_providers.dart';
 import 'package:mitzone/features/events/data/event_providers.dart';
@@ -12,6 +15,9 @@ void main() {
       final checkedInAt = DateTime.utc(2028, 2, 10, 18);
       final container = ProviderContainer(
         overrides: [
+          appConfigProvider.overrideWithValue(
+            AppConfig.validated(env: AppEnvironment.local),
+          ),
           utcNowProvider.overrideWithValue(() => checkedInAt),
           eventCheckInsProvider.overrideWithValue(
             AsyncValue.data([

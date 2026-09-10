@@ -17,7 +17,7 @@ import '../data/avatar_picker.dart';
 import '../data/profile_providers.dart';
 import '../../../core/auth/auth_providers.dart';
 
-/// Screen for creating the user's initial local development profile.
+/// Screen for creating the authenticated user's initial profile.
 class CreateMinimumProfileScreen extends ConsumerStatefulWidget {
   const CreateMinimumProfileScreen({super.key});
 

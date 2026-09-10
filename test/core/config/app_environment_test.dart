@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/errors/app_exception.dart';
 
 void main() {
   group('AppEnvironment', () {
     test('fromString parses valid environments correctly', () {
-      expect(AppEnvironment.fromString('local'), AppEnvironment.local);
       expect(
         AppEnvironment.fromString('development'),
         AppEnvironment.development,
@@ -17,7 +17,6 @@ void main() {
     });
 
     test('fromString is case-insensitive', () {
-      expect(AppEnvironment.fromString('LOCAL'), AppEnvironment.local);
       expect(
         AppEnvironment.fromString('DeVeLoPmEnT'),
         AppEnvironment.development,
@@ -25,13 +24,39 @@ void main() {
     });
 
     test('fromString handles whitespace', () {
-      expect(AppEnvironment.fromString('  local  '), AppEnvironment.local);
+      expect(
+        AppEnvironment.fromString('  development  '),
+        AppEnvironment.development,
+      );
     });
 
-    test('fromString defaults to local for unknown values', () {
-      expect(AppEnvironment.fromString('unknown'), AppEnvironment.local);
-      expect(AppEnvironment.fromString(''), AppEnvironment.local);
-      expect(AppEnvironment.fromString(null), AppEnvironment.local);
+    test('local is available only when explicitly enabled for tests', () {
+      expect(
+        AppEnvironment.fromString('local', allowLocal: true),
+        AppEnvironment.local,
+      );
+      expect(
+        () => AppEnvironment.fromString('local'),
+        throwsA(isA<ConfigException>()),
+      );
     });
+
+    test(
+      'fromString rejects unknown values instead of defaulting to local',
+      () {
+        expect(
+          () => AppEnvironment.fromString('unknown'),
+          throwsA(isA<ConfigException>()),
+        );
+        expect(
+          () => AppEnvironment.fromString(''),
+          throwsA(isA<ConfigException>()),
+        );
+        expect(
+          () => AppEnvironment.fromString(null),
+          throwsA(isA<ConfigException>()),
+        );
+      },
+    );
   });
 }

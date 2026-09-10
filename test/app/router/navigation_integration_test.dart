@@ -6,6 +6,9 @@ import 'package:mitzone/app/router/app_routes.dart';
 import 'package:mitzone/core/identity/app_identity.dart';
 import 'package:mitzone/core/identity/identity_gateway.dart';
 import 'package:mitzone/core/identity/identity_providers.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/features/foundation/presentation/entry_failure_screen.dart';
 import 'package:mitzone/features/onboarding/data/onboarding_providers.dart';
 import 'package:mitzone/features/onboarding/data/onboarding_status_store.dart';
@@ -85,6 +88,9 @@ void main() {
   Widget createTestWidget({String? initialLocation}) {
     return ProviderScope(
       overrides: [
+        appConfigProvider.overrideWithValue(
+          AppConfig.validated(env: AppEnvironment.local),
+        ),
         onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
         identityGatewayProvider.overrideWithValue(identityGateway),
         profileRepositoryProvider.overrideWithValue(profileRepo),

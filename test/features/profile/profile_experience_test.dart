@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/features/events/data/event_providers.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
@@ -15,6 +18,9 @@ void main() {
   }) => ProviderScope(
     retry: (_, _) => null,
     overrides: [
+      appConfigProvider.overrideWithValue(
+        AppConfig.validated(env: AppEnvironment.local),
+      ),
       currentProfileProvider.overrideWith((ref) async => profile),
       joinedEventIdsProvider.overrideWith(loadActivity),
     ],

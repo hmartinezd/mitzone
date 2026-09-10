@@ -1,7 +1,8 @@
 class AuthUser {
-  const AuthUser({required this.id, this.email});
+  const AuthUser({required this.id, this.email, this.metadata = const {}});
   final String id;
   final String? email;
+  final Map<String, dynamic> metadata;
 }
 
 class AuthSession {

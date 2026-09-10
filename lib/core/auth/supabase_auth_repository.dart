@@ -10,7 +10,11 @@ class SupabaseAuthRepository implements AuthRepository {
   SupabaseAuthRepository(this.client);
   final SupabaseClient client;
 
-  AuthUser _mapUser(User user) => AuthUser(id: user.id, email: user.email);
+  AuthUser _mapUser(User user) => AuthUser(
+    id: user.id,
+    email: user.email,
+    metadata: Map<String, dynamic>.from(user.userMetadata ?? const {}),
+  );
 
   AuthSession? _map(Session? session) =>
       session == null ? null : AuthSession(user: _mapUser(session.user));

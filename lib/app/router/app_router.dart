@@ -8,7 +8,6 @@ import '../../features/foundation/presentation/entry_failure_screen.dart';
 import '../../features/foundation/presentation/route_error_screen.dart';
 import '../../features/foundation/presentation/visual_system_showcase_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
-import '../../features/profile/presentation/create_minimum_profile_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
@@ -78,10 +77,6 @@ GoRouter createAppRouter({
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.createProfile,
-        builder: (context, state) => const CreateMinimumProfileScreen(),
       ),
       GoRoute(
         path: AppRoutes.entryFailure,

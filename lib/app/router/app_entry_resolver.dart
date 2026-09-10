@@ -58,7 +58,12 @@ class AppEntryResolver {
 
       if (profile == null ||
           !ProfileValidation.hasMinimumProfile(profile.displayName)) {
-        return AppEntryTarget.createProfile;
+        if (session == null) return AppEntryTarget.createProfile;
+        final displayName = _safeDisplayName(session.user);
+        await profileRepository.saveMinimumProfile(
+          identityId: session.user.id,
+          displayName: displayName,
+        );
       }
 
       return AppEntryTarget.ready;
@@ -71,5 +76,25 @@ class AppEntryResolver {
       );
       return AppEntryTarget.entryFailure;
     }
+  }
+
+  static String _safeDisplayName(AuthUser user) {
+    final metadataName = [
+      user.metadata['display_name'],
+      user.metadata['full_name'],
+      user.metadata['name'],
+    ].whereType<String>().map((value) => value.trim()).firstWhere(
+      ProfileValidation.hasMinimumProfile,
+      orElse: () => '',
+    );
+    if (metadataName.isNotEmpty) return metadataName;
+
+    final localPart = user.email?.split('@').first.trim() ?? '';
+    final readable = localPart
+        .replaceAll(RegExp(r'[._-]+'), ' ')
+        .replaceAll(RegExp(r'[^a-zA-Z0-9 ]'), '')
+        .trim();
+    if (ProfileValidation.hasMinimumProfile(readable)) return readable;
+    return 'Mitzone User';
   }
 }

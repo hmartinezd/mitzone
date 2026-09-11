@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import '../../core/identity/identity_gateway.dart';
+import '../../core/auth/auth_models.dart';
 import '../../features/onboarding/data/onboarding_status_store.dart';
 import '../../features/profile/data/profile_repository.dart';
 import '../../features/profile/domain/profile_validation.dart';

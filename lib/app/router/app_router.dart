@@ -43,6 +43,9 @@ GoRouter createAppRouter({
 }) {
   final authRefresh = ValueNotifier<int>(0);
   ref.listen(authSessionProvider, (_, _) => authRefresh.value++);
+  ref.listen(passwordRecoveryEventProvider, (_, next) {
+    if (next.value == true) authRefresh.value++;
+  });
   ref.onDispose(authRefresh.dispose);
 
   return GoRouter(
@@ -247,6 +250,11 @@ FutureOr<String?> _authRedirect(Ref ref, GoRouterState state) {
 
   if (sessionState.value == null) {
     return _isProtectedLocation(location) ? AppRoutes.login : null;
+  }
+
+  if (ref.read(passwordRecoveryEventProvider).value == true &&
+      location != '/reset-password') {
+    return '/reset-password';
   }
 
   if (location == AppRoutes.login) {

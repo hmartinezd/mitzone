@@ -11,6 +11,9 @@ final authRepositoryProvider = Provider<AuthRepository?>((ref) {
       ? SupabaseAuthRepository(Supabase.instance.client)
       : null;
 });
+final passwordRecoveryEventProvider = StreamProvider<bool>((ref) {
+  return ref.watch(authRepositoryProvider)?.recoveryEvents ?? const Stream.empty();
+});
 final productionModeProvider = Provider<bool>(
   (ref) => ref.watch(authRepositoryProvider) != null,
 );

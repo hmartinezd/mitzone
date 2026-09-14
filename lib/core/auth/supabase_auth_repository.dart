@@ -161,4 +161,8 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Stream<AuthSession?> get sessionChanges =>
       client.auth.onAuthStateChange.map((event) => _map(event.session));
+  @override
+  Stream<bool> get recoveryEvents => client.auth.onAuthStateChange
+      .where((event) => event.event == AuthChangeEvent.passwordRecovery)
+      .map((_) => true);
 }

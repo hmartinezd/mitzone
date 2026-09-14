@@ -15,4 +15,5 @@ abstract interface class AuthRepository {
   Future<void> deleteAccount() =>
       throw UnimplementedError('Account deletion is unavailable.');
   Stream<AuthSession?> get sessionChanges;
+  Stream<bool> get recoveryEvents => const Stream<bool>.empty();
 }

@@ -5,7 +5,6 @@ import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../../shared/widgets/mitzone_button.dart';
 import '../../../shared/widgets/mitzone_loading_indicator.dart';
 import '../../../app/theme/app_spacing.dart';
-import '../../../app/router/app_routes.dart';
 import '../data/profile_providers.dart';
 import '../domain/user_profile.dart';
 import '../domain/profile_validation.dart';

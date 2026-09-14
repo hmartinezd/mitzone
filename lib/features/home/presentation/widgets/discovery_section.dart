@@ -67,6 +67,8 @@ class _DiscoveryCard extends StatelessWidget {
               if (item.context != null) Text(item.context!, maxLines: 1, overflow: TextOverflow.ellipsis),
               if (item.subtitle != null) Text(item.subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis),
               if (item.distanceKm != null) Text('${item.distanceKm!.toStringAsFixed(1)} km away'),
+              if (item.source == 'google-places')
+                Text('Google Maps', style: theme.textTheme.labelSmall),
               if (showDemoBadge) const Text('DEMO'),
             ]),
           ),

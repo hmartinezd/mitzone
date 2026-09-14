@@ -30,6 +30,25 @@ fails clearly at startup.
 Do not put a service-role key, database password, JWT signing secret, or
 management token in Flutter configuration.
 
+## Google Places discovery (optional)
+
+The Home discovery source can use the authenticated `nearby-discovery` Edge
+Function. In Google Cloud, create a billing-enabled project, enable Places API
+(New), create a server-side API key restricted to Places API (New), and set it
+as the Supabase secret `GOOGLE_PLACES_API_KEY`. Deploy with
+`supabase functions deploy nearby-discovery` and verify it accepts only
+authenticated Supabase requests. The function requests only
+`places.id,places.displayName,places.primaryType,places.types,places.shortFormattedAddress,places.location`
+from Nearby Search (New), which is in Google's Nearby Search Pro field tier;
+check current regional pricing before enabling billing. No Google key belongs
+in Flutter or `config/dev.json`.
+
+Google-sourced content must retain Google Maps attribution and must not be
+cached beyond policy exceptions; this first slice omits photos and displays
+the provider's place data without a map, so add visible Google Maps text/logo
+attribution before production launch. Place IDs may be retained as allowed by
+Google policy. See Google's current [Places policies](https://developers.google.com/maps/documentation/places/web-service/policies).
+
 ## First smoke test
 
 Use the app's Create Account mode to register a disposable email/password

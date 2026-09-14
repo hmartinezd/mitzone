@@ -112,7 +112,7 @@ class HomeScreen extends ConsumerWidget {
               items: items,
               showDemoBadge: true,
               onSeeAll: () => context.go(AppRoutes.events),
-              onItemTap: (item) => context.go(AppRoutes.events),
+              onItemTap: (_) {},
             ),
             loading: () => const SizedBox(height: 220, child: Center(child: CircularProgressIndicator())),
             error: (_, _) => const SizedBox.shrink(),

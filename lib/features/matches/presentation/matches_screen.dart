@@ -109,6 +109,7 @@ class _EncounterCard extends ConsumerWidget {
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const Text('Unavailable'),
                 data: (state) => switch (state) {
+                  RelationshipState.blocked => const Text('Unavailable'),
                   RelationshipState.outgoingPending => const Text(
                     'Request sent',
                   ),

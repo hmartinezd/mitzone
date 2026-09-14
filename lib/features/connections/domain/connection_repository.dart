@@ -3,6 +3,7 @@ import 'connection_request.dart';
 
 enum RelationshipState {
   none,
+  blocked,
   outgoingPending,
   incomingPending,
   connected,

@@ -325,7 +325,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     String? encounterId,
   }) async {
     if (await blocks?.isPairBlocked(userAId, userBId) == true) {
-      return RelationshipState.none;
+      return RelationshipState.blocked;
     }
     final connections = await getConnections(userAId);
     if (connections.any(

@@ -173,7 +173,21 @@ class _ReportActionState extends ConsumerState<_ReportAction> {
     setState(() => busy = true);
     try {
       await ref.read(reportRepositoryProvider).submit(reportedUserId: widget.userId, reason: reason, details: detailText);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted.')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted.')));
+      final blockToo = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+        title: const Text('Block this user too?'),
+        content: const Text('Blocking prevents future interaction with this person.'),
+        actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Block user'))],
+      ));
+      if (blockToo == true) {
+        try {
+          final blocker = await ref.read(currentUserIdProvider.future);
+          await ref.read(blockRepositoryProvider).block(blockerUserId: blocker, blockedUserId: widget.userId);
+          ref.invalidate(blockedUsersProvider); ref.invalidate(encountersForCurrentUserProvider); ref.invalidate(connectionsProvider); ref.invalidate(relationshipProvider);
+          if (mounted) Navigator.of(context).pop();
+        } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted, but blocking failed.'))); }
+      }
     } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This report could not be submitted.'))); }
     finally { if (mounted) setState(() => busy = false); }
   }
@@ -259,6 +273,7 @@ class _ActionState extends ConsumerState<_Action> {
   bool busy = false;
   @override
   Widget build(BuildContext context) => switch (widget.state) {
+    RelationshipState.blocked => const Center(child: Text('Interaction unavailable')),
     RelationshipState.none => FilledButton(
       onPressed: busy ? null : _sayHi,
       child: busy

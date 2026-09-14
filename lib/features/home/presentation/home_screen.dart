@@ -12,9 +12,8 @@ import '../../connections/data/connection_providers.dart';
 import '../../encounters/data/encounter_providers.dart';
 import '../../profile/data/profile_providers.dart';
 import '../../events/data/event_providers.dart';
-import '../../events/domain/event.dart';
 import 'widgets/home_header.dart';
-import 'widgets/home_event_section.dart';
+import 'widgets/discovery_section.dart';
 import 'widgets/home_social_summary.dart';
 import '../../encounters/presentation/foreground_presence_card.dart';
 import 'home_activity_priority.dart';
@@ -41,10 +40,6 @@ class HomeScreen extends ConsumerWidget {
       connections: connections.value?.length ?? 0,
       conversations: conversations.value?.length ?? 0,
     );
-    void openEvent(Event event) => context.go(
-      AppRoutes.eventDetails(event.id, origin: EventDetailsOrigin.home),
-    );
-
     return MitzonePageBody(
       title: null, // We use custom header instead of default title
       child: Column(
@@ -112,19 +107,15 @@ class HomeScreen extends ConsumerWidget {
           ],
           const ForegroundPresenceCard(),
           const SizedBox(height: AppSpacing.xxl),
-          HomeEventSection(
-            title: 'Happening around you',
-            events: discovery.when(
-              data: (items) => items
-                  .map((item) => catalog.getById(item.id))
-                  .whereType<Event>()
-                  .toList(),
-              loading: () => const [],
-              error: (_, _) => const [],
+          discovery.when(
+            data: (items) => DiscoverySection(
+              items: items,
+              showDemoBadge: true,
+              onSeeAll: () => context.go(AppRoutes.events),
+              onItemTap: (item) => context.go(AppRoutes.events),
             ),
-            showDemoBadge: true,
-            onSeeAll: () => context.go(AppRoutes.events),
-            onEventTap: openEvent,
+            loading: () => const SizedBox(height: 220, child: Center(child: CircularProgressIndicator())),
+            error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: AppSpacing.xxl),
         ],

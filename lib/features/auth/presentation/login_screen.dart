@@ -169,8 +169,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           isLoading: _isSubmitting,
           onPressed: _isSubmitting ? null : _submit,
         ),
+        if (!_isSignUp)
+          TextButton(
+            onPressed: _isSubmitting ? null : _requestReset,
+            child: const Text('Forgot password?'),
+          ),
       ],
     );
+  }
+
+  Future<void> _requestReset() async {
+    final email = _emailController.text.trim();
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      setState(() => _errorMessage = 'Enter a valid email address.');
+      return;
+    }
+    setState(() { _isSubmitting = true; _errorMessage = null; });
+    try {
+      await ref.read(authRepositoryProvider)!.requestPasswordReset(email);
+      if (mounted) setState(() { _isSubmitting = false; _errorMessage = 'If an account exists for this email, we\'ve sent password reset instructions.'; });
+    } catch (_) { if (mounted) setState(() { _isSubmitting = false; _errorMessage = 'We could not send reset instructions. Please try again.'; }); }
   }
 
   Widget _buildModeSelector() {

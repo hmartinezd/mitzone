@@ -8,5 +8,11 @@ abstract interface class AuthRepository {
     required String password,
   });
   Future<void> signOut();
+  Future<void> requestPasswordReset(String email) =>
+      throw UnimplementedError('Password recovery is unavailable.');
+  Future<void> updatePassword(String password) =>
+      throw UnimplementedError('Password reset is unavailable.');
+  Future<void> deleteAccount() =>
+      throw UnimplementedError('Account deletion is unavailable.');
   Stream<AuthSession?> get sessionChanges;
 }

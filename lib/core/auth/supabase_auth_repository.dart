@@ -150,6 +150,15 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<void> signOut() => client.auth.signOut();
   @override
+  Future<void> requestPasswordReset(String email) => client.auth.resetPasswordForEmail(email.trim(), redirectTo: 'mitzone://auth/reset-password');
+  @override
+  Future<void> updatePassword(String password) => client.auth.updateUser(UserAttributes(password: password));
+  @override
+  Future<void> deleteAccount() async {
+    await client.functions.invoke('delete-account');
+    await client.auth.signOut();
+  }
+  @override
   Stream<AuthSession?> get sessionChanges =>
       client.auth.onAuthStateChange.map((event) => _map(event.session));
 }

@@ -24,13 +24,13 @@ class AccountSettingsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Account sign-in is not enabled in this build.',
+            'Manage your Mitzone account.',
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: AppSpacing.xxl),
-          ListTile(
+          if (ref.watch(productionModeProvider)) ListTile(
             title: const Text('Sign out'),
             subtitle: Text(
               ref.watch(productionModeProvider)
@@ -45,20 +45,30 @@ class AccountSettingsScreen extends ConsumerWidget {
               if (context.mounted) context.go('/login');
             },
           ),
-          ListTile(
+          if (ref.watch(productionModeProvider)) ListTile(
             title: Text(
               'Delete account',
               style: TextStyle(
                 color: theme.colorScheme.error.withValues(alpha: 0.5),
               ),
             ),
-            subtitle: const Text('Authentication deferred'),
-            enabled: false,
-            onTap: () {},
+            subtitle: const Text('Permanently remove your account and data'),
+            onTap: () => _confirmDelete(context, ref),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: const Text('Delete account?'),
+      content: const Text('This permanently deletes your account and associated data.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete'))],
+    ));
+    if (confirmed != true || !context.mounted) return;
+    try { await ref.read(authRepositoryProvider)!.deleteAccount(); ref.invalidate(authSessionProvider); ref.invalidate(currentProfileProvider); if (context.mounted) context.go('/login'); }
+    catch (_) { if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account deletion failed. Please try again.'))); }
   }
 }
 

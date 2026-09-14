@@ -28,6 +28,7 @@ import 'app_entry_resolver_provider.dart';
 import 'app_routes.dart';
 import 'app_entry_coordinator.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../core/auth/auth_providers.dart';
 
 /// Global key for the root navigator.
@@ -78,6 +79,7 @@ GoRouter createAppRouter({
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
       ),
+      GoRoute(path: '/reset-password', builder: (_, _) => const ResetPasswordScreen()),
       GoRoute(
         path: AppRoutes.entryFailure,
         builder: (context, state) => const EntryFailureScreen(),

@@ -61,5 +61,11 @@ same session and profile return, sign out, and sign back in.
 The profile row must use the same UUID as `auth.users.id`. Verify through the
 dashboard or a separate authenticated client that one user cannot read or
 update another user's private profile fields. Public profile reads must use
-the `get_public_profiles` RPC. Password recovery, confirmation deep-link
-return, and account deletion are follow-up work.
+the `get_public_profiles` RPC.
+
+For password recovery, add `mitzone://auth/reset-password` to Supabase Auth
+redirect URLs and register the `mitzone` custom URL scheme in the Android and
+iOS app manifests. Deploy the `delete-account` Edge Function with
+`SUPABASE_SERVICE_ROLE_KEY` configured only in the function environment. The
+function resolves the caller from its bearer token and never accepts a target
+user ID. Never put that secret in Flutter configuration.

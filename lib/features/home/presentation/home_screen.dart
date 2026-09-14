@@ -11,7 +11,6 @@ import '../../chat/data/chat_providers.dart';
 import '../../connections/data/connection_providers.dart';
 import '../../encounters/data/encounter_providers.dart';
 import '../../profile/data/profile_providers.dart';
-import '../../events/data/demo_events.dart';
 import '../../events/data/event_providers.dart';
 import '../../events/domain/event.dart';
 import 'widgets/home_header.dart';
@@ -19,6 +18,7 @@ import 'widgets/home_event_section.dart';
 import 'widgets/home_social_summary.dart';
 import '../../encounters/presentation/foreground_presence_card.dart';
 import 'home_activity_priority.dart';
+import '../../discovery/data/discovery_providers.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -27,6 +27,8 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
     final catalog = ref.watch(eventCatalogProvider);
+    final interests = profileAsync.value?.interests.toSet() ?? const <String>{};
+    final discovery = ref.watch(nearbyDiscoveryProvider(interests));
     final production = ref.watch(productionModeProvider);
     final identity = production ? null : ref.watch(mockIdentityRepositoryProvider);
     final encounters = ref.watch(encountersForCurrentUserProvider);
@@ -96,21 +98,34 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xxl),
           ],
+          if (priority == HomeActivityPriority.lowActivity) ...[
+            Text(
+              'Where will you be?',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Go somewhere. Be present. Mitzone does the rest.',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+          ],
           const ForegroundPresenceCard(),
           const SizedBox(height: AppSpacing.xxl),
           HomeEventSection(
             title: 'Happening around you',
-            events: nearbyDemoEvents,
+            events: discovery.when(
+              data: (items) => items
+                  .map((item) => catalog.getById(item.id))
+                  .whereType<Event>()
+                  .toList(),
+              loading: () => const [],
+              error: (_, _) => const [],
+            ),
             showDemoBadge: true,
             onSeeAll: () => context.go(AppRoutes.events),
             onEventTap: openEvent,
           ),
-          if (priority == HomeActivityPriority.lowActivity) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Text('Where will you be?', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: AppSpacing.xs),
-            Text('Go somewhere. Be present. Mitzone does the rest.', style: Theme.of(context).textTheme.bodyLarge),
-          ],
           const SizedBox(height: AppSpacing.xxl),
         ],
       ),

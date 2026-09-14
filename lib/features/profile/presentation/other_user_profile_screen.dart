@@ -14,6 +14,8 @@ import '../../profile/domain/user_profile.dart';
 import 'widgets/profile_avatar.dart';
 import '../../blocking/data/block_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
+import '../../reporting/data/report_providers.dart';
+import '../../reporting/domain/report.dart';
 
 class OtherUserProfileScreen extends ConsumerWidget {
   const OtherUserProfileScreen({
@@ -123,6 +125,7 @@ class OtherUserProfileScreen extends ConsumerWidget {
                 _Action(state: state, encounter: encounter, profile: profile),
           ),
           _BlockAction(userId: profile.id),
+          _ReportAction(userId: profile.id),
         ],
       ),
     );
@@ -135,6 +138,45 @@ class OtherUserProfileScreen extends ConsumerWidget {
     ConnectionGoal.professional => 'Professional',
     ConnectionGoal.both => 'Social + Professional',
   };
+}
+
+class _ReportAction extends ConsumerStatefulWidget {
+  const _ReportAction({required this.userId});
+  final String userId;
+  @override ConsumerState<_ReportAction> createState() => _ReportActionState();
+}
+
+class _ReportActionState extends ConsumerState<_ReportAction> {
+  bool busy = false;
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: busy ? null : _report,
+    child: const Text('Report user'),
+  );
+
+  Future<void> _report() async {
+    var reason = ReportReason.harassment;
+    final details = TextEditingController();
+    final submit = await showDialog<bool>(context: context, builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) => AlertDialog(
+        title: const Text('Report user'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          DropdownButton<ReportReason>(value: reason, isExpanded: true, items: [for (final item in ReportReason.values) DropdownMenuItem(value: item, child: Text(item.label))], onChanged: (value) => setDialogState(() => reason = value!)),
+          TextField(controller: details, maxLength: 500, decoration: const InputDecoration(labelText: 'Details (optional)')),
+        ]),
+        actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit report'))],
+      ),
+    ));
+    final detailText = details.text;
+    details.dispose();
+    if (submit != true || !mounted) return;
+    setState(() => busy = true);
+    try {
+      await ref.read(reportRepositoryProvider).submit(reportedUserId: widget.userId, reason: reason, details: detailText);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted.')));
+    } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This report could not be submitted.'))); }
+    finally { if (mounted) setState(() => busy = false); }
+  }
 }
 
 class _BlockAction extends ConsumerStatefulWidget {

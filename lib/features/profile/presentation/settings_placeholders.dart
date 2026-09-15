@@ -137,8 +137,10 @@ class NotificationsSettingsScreen extends StatelessWidget {
     return MitzonePageBody(
       title: 'Notifications',
       onBack: () => context.pop(),
-      child: const Text(
-        'Notification settings will be available in a future update.',
+      child: const ListTile(
+        leading: Icon(Icons.notifications_outlined),
+        title: Text('Device notifications'),
+        subtitle: Text('Push permission is requested when the signed-in app is ready.'),
       ),
     );
   }

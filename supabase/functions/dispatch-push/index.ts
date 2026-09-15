@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { isAuthorizedWebhook } from './webhook_auth.ts';
 const SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 let cached: { token: string; until: number } | undefined;
@@ -21,6 +22,7 @@ async function getAccessToken(): Promise<string> {
 // Invoked by a Supabase Database Webhook for INSERT on public.notifications.
 // The webhook must send only { record: { id } }; recipient/message data is resolved here.
 Deno.serve(async (req) => {
+  if (!isAuthorizedWebhook(req, Deno.env.get('PUSH_WEBHOOK_SECRET'))) return new Response('unauthorized', { status: 401 });
   const body = await req.json();
   if (body?.type !== 'INSERT' || body?.table !== 'notifications' || body?.schema !== 'public') return new Response('ignored', { status: 202 });
   const id = body?.record?.id;

@@ -6,6 +6,8 @@ import '../../../core/auth/auth_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
 import '../data/chat_providers.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/observability/observability.dart';
+import '../../../core/observability/observability_provider.dart';
 
 class ConversationScreen extends ConsumerStatefulWidget {
   const ConversationScreen({required this.conversationId, super.key});
@@ -18,6 +20,14 @@ class ConversationScreen extends ConsumerStatefulWidget {
 class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   final input = TextEditingController();
   String? _clientMessageId;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(observabilityProvider).log(MitzoneEvents.conversationOpened);
+    });
+  }
 
   @override
   void dispose() {
@@ -127,6 +137,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       _clientMessageId = null;
       ref.invalidate(chatMessagesProvider(widget.conversationId));
       ref.invalidate(chatConversationsProvider);
+      ref.read(observabilityProvider).log(MitzoneEvents.messageSent);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

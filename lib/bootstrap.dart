@@ -9,6 +9,9 @@ import 'app/startup_failure_app.dart';
 import 'core/config/app_config.dart';
 import 'core/providers/core_providers.dart';
 import 'core/errors/app_exception.dart';
+import 'core/observability/observability.dart';
+import 'core/observability/observability_provider.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 /// Typedef for loading application configuration.
 typedef AppConfigLoader = AppConfig Function();
@@ -48,6 +51,11 @@ Future<void> bootstrap({
       }
 
       try {
+        try {
+          await Firebase.initializeApp();
+        } catch (e) {
+          if (kDebugMode) developer.log('Firebase unavailable: ${e.runtimeType}', name: 'mitzone.bootstrap');
+        }
         if (config.isSupabaseConfigured) {
           await supabaseInitializer(
             url: config.supabaseUrl!,
@@ -66,7 +74,10 @@ Future<void> bootstrap({
 
       appRunner(
         ProviderScope(
-          overrides: [appConfigProvider.overrideWithValue(config)],
+          overrides: [
+            appConfigProvider.overrideWithValue(config),
+            observabilityProvider.overrideWithValue(await initializeObservability()),
+          ],
           child: const MitzoneApp(),
         ),
       );

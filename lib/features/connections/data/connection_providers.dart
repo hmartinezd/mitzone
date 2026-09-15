@@ -14,6 +14,8 @@ import '../../../core/auth/auth_providers.dart';
 import 'supabase_connection_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/identity/current_user_provider.dart';
+import '../../../core/observability/observability.dart';
+import '../../../core/observability/observability_provider.dart';
 
 final connectionRepositoryProvider = Provider<ConnectionRepository>(
   (ref) => ref.watch(productionModeProvider)
@@ -104,6 +106,7 @@ class ConnectionController {
             ),
           );
     }
+    ref.read(observabilityProvider).log(MitzoneEvents.connectionRequestSent);
     return _refresh(request);
   }
 
@@ -128,17 +131,20 @@ class ConnectionController {
             ),
           );
     }
+    ref.read(observabilityProvider).log(MitzoneEvents.connectionRequestAccepted);
     return _refresh(result);
   }
 
-  Future<ConnectionRequest> decline(String id) async => _refresh(
-    await ref
+  Future<ConnectionRequest> decline(String id) async {
+    final result = await ref
         .read(connectionRepositoryProvider)
         .declineRequest(
           requestId: id,
           recipientUserId: await ref.read(currentUserIdProvider.future),
-        ),
-  );
+        );
+    ref.read(observabilityProvider).log(MitzoneEvents.connectionRequestDeclined);
+    return _refresh(result);
+  }
   Future<void> remove(String connectionId) async {
     await ref
         .read(connectionRepositoryProvider)

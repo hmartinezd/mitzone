@@ -6,11 +6,20 @@ Demo uses the existing local repository. Production uses Supabase, where clients
 
 Read state is stored in `read_at`, so unread counts survive restart, sign-in, and multiple devices. Opening a notification must still re-check the destination's current authorization and safety; a stale or blocked resource is handled as unavailable.
 
+FCM HTTP v1 authentication is server-side. `dispatch-push` signs a short-lived
+service-account JWT and exchanges it at Google's OAuth endpoint using the scope
+`https://www.googleapis.com/auth/firebase.messaging`. It reuses a valid token
+for warm invocations and refreshes it automatically. Configure Supabase secrets
+`FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, and `FCM_PRIVATE_KEY`, mapped from
+`project_id`, `client_email`, and `private_key` in the downloaded service-account
+JSON. Store the PEM key only as a secret; escaped `\\n` sequences are handled
+by the function. `FCM_ACCESS_TOKEN` is not used.
+
 Push foundation: Firebase Cloud Messaging (APNs-backed on iOS) registers private,
 owner-scoped rows in `device_tokens`. A Supabase Database Webhook on notification
 INSERT invokes `dispatch-push`, which re-reads the canonical row and sends only
 safe text plus type/entity routing metadata. Invalid tokens are removed and
 temporary failures preserve tokens. Configure Firebase files locally, APNs,
-and Supabase secrets `FCM_PROJECT_ID`, `FCM_ACCESS_TOKEN`, and service-role
+and Supabase secrets `FCM_PROJECT_ID`, `FCM_CLIENT_EMAIL`, `FCM_PRIVATE_KEY`, and service-role
 credentials; never put these values in Flutter or source control. Push remains
 best-effort, and denied permission leaves in-app notifications usable.

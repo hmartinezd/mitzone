@@ -48,5 +48,9 @@ app.*.map.json
 config/*.json
 !config/*.example.json
 
+# Firebase platform configuration (generated locally; never commit)
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+
 # AI tool working artifacts
 .artifacts/

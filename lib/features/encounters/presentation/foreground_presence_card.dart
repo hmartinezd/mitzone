@@ -45,7 +45,7 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
         builder: (context) => AlertDialog(
           title: const Text('Discover people nearby'),
           content: const Text(
-            'Mitzone uses your location only while you actively use this feature to help identify people who may have shared the same place and time. It does not track you in the background or share your exact location.',
+            'When you choose “I’m here”, Mitzone may use your current location while this feature is active to help discover people associated with nearby real-world activity. It uses coarse place context, not your exact location, and does not track you in the background. You can stop at any time.',
           ),
           actions: [
             TextButton(

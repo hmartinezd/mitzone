@@ -19,17 +19,13 @@ final nearbyDiscoveryProvider = FutureProvider.family<List<DiscoveryItem>, Set<S
     if (!ref.watch(productionModeProvider)) {
       return repository.getNearby(interests: interests);
     }
-    try {
-      final location = await ref
-          .read(locationObservationSourceProvider)
-          .observeForeground();
-      return await repository.getNearby(
-        interests: interests,
-        latitude: location.latitude,
-        longitude: location.longitude,
-      );
-    } catch (_) {
-      return const DemoDiscoveryRepository().getNearby();
-    }
+    final location = await ref
+        .read(locationObservationSourceProvider)
+        .observeForeground();
+    return repository.getNearby(
+      interests: interests,
+      latitude: location.latitude,
+      longitude: location.longitude,
+    );
   },
 );

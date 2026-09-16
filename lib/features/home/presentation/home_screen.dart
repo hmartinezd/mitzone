@@ -108,20 +108,39 @@ class HomeScreen extends ConsumerWidget {
           const ForegroundPresenceCard(),
           const SizedBox(height: AppSpacing.xxl),
           discovery.when(
-            data: (items) => DiscoverySection(
+            data: (items) => items.isEmpty
+                ? const _DiscoveryUnavailable(message: 'Nothing nearby was found yet.')
+                : DiscoverySection(
               items: items,
-              showDemoBadge: true,
+              showDemoBadge: !production,
               onSeeAll: () => context.go(AppRoutes.events),
               onItemTap: (_) {},
             ),
             loading: () => const SizedBox(height: 220, child: Center(child: CircularProgressIndicator())),
-            error: (_, _) => const SizedBox.shrink(),
+            error: (_, _) => _DiscoveryUnavailable(
+              message: 'We couldn’t load nearby discovery right now.',
+              onRetry: () => ref.invalidate(nearbyDiscoveryProvider(interests)),
+            ),
           ),
           const SizedBox(height: AppSpacing.xxl),
         ],
       ),
     );
   }
+}
+
+class _DiscoveryUnavailable extends StatelessWidget {
+  const _DiscoveryUnavailable({required this.message, this.onRetry});
+  final String message;
+  final VoidCallback? onRetry;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+    child: Row(children: [
+      Expanded(child: Text(message)),
+      if (onRetry != null) TextButton(onPressed: onRetry, child: const Text('Try again')),
+    ]),
+  );
 }
 
 class _HomeProfileError extends StatelessWidget {

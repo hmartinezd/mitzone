@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../core/identity/identity_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
@@ -17,8 +16,7 @@ import 'local_event_participation_repository.dart';
 import 'mock_event_attendees.dart';
 import 'event_repository.dart';
 import '../../encounters/data/presence_providers.dart';
-import '../../encounters/data/encounter_providers.dart';
-import '../../encounters/domain/presence_evidence.dart';
+import 'supabase_event_participation_repository.dart';
 
 typedef DemoPresenceRequest = ({String eventId, DateTime referenceTime});
 
@@ -45,6 +43,9 @@ final nearbyEventsProvider = FutureProvider<List<Event>>((ref) async {
 
 final eventParticipationRepositoryProvider =
     Provider<EventParticipationRepository>((ref) {
+      if (ref.watch(productionModeProvider)) {
+        return SupabaseEventParticipationRepository(Supabase.instance.client);
+      }
       return LocalEventParticipationRepository(ref.watch(localStorageProvider));
     });
 
@@ -98,32 +99,6 @@ class EventParticipationController {
   }) async {
     if (!_mutatingEventIds.add(eventId)) return false;
     try {
-      if (_ref.read(productionModeProvider)) {
-        final id = await _ref.read(currentUserIdProvider.future);
-        final participation = _ref.read(eventParticipationRepositoryProvider);
-        if (!await participation.isJoined(identityId: id, eventId: eventId)) {
-          return false;
-        }
-        final now = _ref.read(utcNowProvider)().toUtc();
-        final evidence = PresenceEvidence(
-          id: Uuid().v5(Namespace.url.value, 'presence:$id:$eventId'),
-          subjectUserId: id,
-          contextId: eventId,
-          observedStart: now,
-          observedEnd: now.add(const Duration(minutes: 45)),
-          source: PresenceEvidenceSource.eventParticipation,
-          consentScope: 'explicit-check-in',
-          expiresAt: now.add(const Duration(days: 30)),
-        );
-        final recorded = await _ref
-            .read(presenceRepositoryProvider)
-            .recordEvidence(evidence, actorUserId: id);
-        await _ref
-            .read(encounterRepositoryProvider)
-            .processEvidence(recorded, actorUserId: id);
-        _ref.invalidate(eventCheckInsProvider);
-        return true;
-      }
       final identity = await _ref
           .read(identityGatewayProvider)
           .ensureIdentity();

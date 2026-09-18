@@ -106,7 +106,7 @@ For this development phase, the following boundaries apply:
 - Responsive layouts (320px to Tablet) and accessibility (2.0 text scale).
 - Local avatar storage with safe replacement and fallback.
 - Personalized discovery dashboard with demo content.
-- Identity-scoped event participation persisted as event IDs under `local_event_participation.v1.<identityId>`.
+- Event participation is persisted server-side for authenticated users in `event_participation`; local deterministic mode uses `local_event_participation.v1.<identityId>`.
 - Upcoming activities synchronized with joined events without restarting.
 - Local/demo check-in presence and deterministic encounters derived from real interval overlap.
 - Local contextual connection requests and established connections.
@@ -119,7 +119,7 @@ For this development phase, the following boundaries apply:
 - **Production Matching — Future**: Encounter data is a deterministic local demo, not a production recommendation or matching system.
 - **QR Check-in — Future**: Scanner functionality is not implemented.
 - **Geolocation — Future**: GPS functionality is not implemented.
-- **Event Content**: The catalog remains deterministic demo data; participation is local intent, not verified presence.
+- **Event Content**: Configured mode uses normalized Ticketmaster events; participation is an authenticated intent record, not verified presence. Deterministic demo events remain available in local/test mode.
 - **Backend Sync**: Encounters, requests, connections, conversations, and messages remain local to the device.
 - **Web**: Only Android/iOS platforms are currently targeted.
 

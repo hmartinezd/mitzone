@@ -88,34 +88,28 @@ class PrivacySettingsScreen extends ConsumerWidget {
                 for (final id in ids)
                   ListTile(
                     leading: ProfileAvatar(
-                      displayName: MockUsers.all
-                          .firstWhere(
-                            (u) => u.id == id,
-                            orElse: () => UserProfile(id: id, displayName: id),
-                          )
-                          .displayName,
+                      displayName: _blockedDisplayName(ref, id),
                       radius: 20,
                     ),
-                    title: Text(
-                      MockUsers.all
-                          .firstWhere(
-                            (u) => u.id == id,
-                            orElse: () => UserProfile(id: id, displayName: id),
-                          )
-                          .displayName,
-                    ),
+                    title: Text(_blockedDisplayName(ref, id)),
                     trailing: TextButton(
                       onPressed: () async {
-                        await ref
-                            .read(blockRepositoryProvider)
-                            .unblock(
-                              blockerUserId: ref
-                                  .read(mockIdentityRepositoryProvider)
-                                  .currentUser
-                                  .id,
-                              blockedUserId: id,
+                        try {
+                          final blockerId = ref.read(productionModeProvider)
+                              ? await ref.read(currentUserIdProvider.future)
+                              : ref.read(mockIdentityRepositoryProvider).currentUser.id;
+                          await ref.read(blockRepositoryProvider).unblock(
+                            blockerUserId: blockerId,
+                            blockedUserId: id,
+                          );
+                          ref.invalidate(blockedUsersProvider);
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Couldn\'t unblock this user. Please try again.')),
                             );
-                        ref.invalidate(blockedUsersProvider);
+                          }
+                        }
                       },
                       child: const Text('Unblock'),
                     ),
@@ -126,6 +120,16 @@ class PrivacySettingsScreen extends ConsumerWidget {
             error: (_, _) => const Text('Privacy controls unavailable.'),
           ),
     );
+  }
+
+  String _blockedDisplayName(WidgetRef ref, String id) {
+    if (ref.read(productionModeProvider)) return 'Blocked user';
+    return MockUsers.all
+        .firstWhere(
+          (u) => u.id == id,
+          orElse: () => const UserProfile(id: 'unknown', displayName: 'Blocked user'),
+        )
+        .displayName;
   }
 }
 

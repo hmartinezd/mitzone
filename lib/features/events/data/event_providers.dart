@@ -127,6 +127,7 @@ class EventCheckInController {
   final Set<String> _mutatingEventIds = {};
 
   Future<bool> recordLocalDemoCheckIn(String eventId) async {
+    if (_ref.read(productionModeProvider)) return false;
     eventId = eventId.trim();
     if (eventId.isEmpty || !_mutatingEventIds.add(eventId)) return false;
     try {

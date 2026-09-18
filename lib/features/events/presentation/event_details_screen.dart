@@ -314,14 +314,15 @@ class _EventDetailsContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          _CheckInSection(
-            event: event,
-            joinedIds: joinedIds,
-            checkIns: checkIns,
-            isCheckingIn: isCheckingIn,
-            onCheckIn: onCheckIn,
-            onRetry: onRetryCheckIns,
-          ),
+          if (!ref.watch(productionModeProvider))
+            _CheckInSection(
+              event: event,
+              joinedIds: joinedIds,
+              checkIns: checkIns,
+              isCheckingIn: isCheckingIn,
+              onCheckIn: onCheckIn,
+              onRetry: onRetryCheckIns,
+            ),
           if (kDebugMode) ...[
             const SizedBox(height: AppSpacing.lg),
             _DeveloperPresenceSection(eventId: event.id),

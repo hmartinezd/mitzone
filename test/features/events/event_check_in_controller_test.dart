@@ -150,4 +150,22 @@ void main() {
         .recordLocalDemoCheckIn('event-one');
     expect(checkIns.records, [same(original)]);
   });
+
+  test('production cannot execute the local demo check-in action', () async {
+    final production = ProviderContainer(
+      overrides: [
+        productionModeProvider.overrideWithValue(true),
+        eventCheckInRepositoryProvider.overrideWithValue(checkIns),
+      ],
+    );
+    addTearDown(production.dispose);
+
+    expect(
+      await production
+          .read(eventCheckInControllerProvider)
+          .recordLocalDemoCheckIn('event-one'),
+      isFalse,
+    );
+    expect(checkIns.records, isEmpty);
+  });
 }

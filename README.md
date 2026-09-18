@@ -23,6 +23,7 @@ demo baseline, not a production-readiness claim.
 9. **Sprint 1 Local Demo Hardening**: Robust async profile loading, removal of nested scaffolds, centralized validation, improved accessibility, corruption-safe local persistence, and transactional avatar replacement.
 10. **Event Experience & Local Participation Foundation — Complete**: Event details, stable local catalog IDs, identity-scoped participation, and participation-aware upcoming activities.
 11. **Supabase Authentication + Minimum Profile**: Email/password sign in and sign up, session restoration, explicit email-confirmation handling, and authenticated profile creation owned by the Supabase user UUID.
+12. **Real nearby event discovery foundation**: Configured mode queries the authenticated `nearby-events` Edge Function, which normalizes Ticketmaster Discovery API results. Production never falls back to demo events.
 
 **Future / Deferred**:
 - **Password Recovery and Email-Confirmation Deep Links — Future**
@@ -80,7 +81,7 @@ secret, or management token to Flutter configuration.
 
 Mitzone features exactly five primary destinations accessible via a Material 3 bottom navigation bar:
 - **Home**: The central discovery dashboard. Features personalized greeting and curated discovery sections.
-- **Events**: Interactive discovery and details backed by deterministic demo data, with local participation.
+- **Events**: Nearby provider-sourced discovery in configured mode, with deterministic fixtures retained for local/test mode and local participation.
 - **Matches**: Encounters derived from shared event presence, plus local connection-request management.
 - **Chat**: Local conversations and messages between established connections.
 - **Profile**: Functional profile management and application settings.
@@ -194,6 +195,14 @@ lib/
     └── chat/             # Authorized local conversations/messages
 ```
 ## Local presence
+
+## Real event discovery boundary
+
+Implemented: `nearby-events` authenticates the Mitzone session, calls Ticketmaster Discovery API server-side for events within 25 km and the next 14 days, and returns normalized event data. Flutter never receives the provider API key. Provider IDs, URLs, and image attribution metadata are retained for compliant display; ticket purchasing is out of scope.
+
+Owner action: activate a Ticketmaster Developer/Discovery API account, set the Supabase Edge Function secret `TICKETMASTER_API_KEY`, deploy the function, and review current Ticketmaster terms and attribution/affiliate requirements.
+
+Runtime validation still required: deployed Supabase function, authenticated Android/iOS foreground location, regional provider coverage, attribution rendering, and physical-device empty/error behavior. This change does not claim provider activation or production validation.
 
 ## Sprint 3 backend/auth foundation
 

@@ -72,4 +72,13 @@ class DemoEventCatalog implements EventCatalog {
     }
     return null;
   }
+  @override
+  void replace(List<Event> events) {}
+}
+
+class RuntimeEventCatalog implements EventCatalog {
+  List<Event> _events = const [];
+  @override List<Event> getAll() => _events;
+  @override Event? getById(String id) => _events.where((e) => e.id == id).firstOrNull;
+  @override void replace(List<Event> events) => _events = List.unmodifiable(events);
 }

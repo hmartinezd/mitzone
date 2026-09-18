@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../core/identity/identity_providers.dart';
@@ -6,6 +7,7 @@ import '../../../core/identity/current_user_provider.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/storage/storage_providers.dart';
 import '../domain/event_catalog.dart';
+import '../domain/event.dart';
 import '../domain/event_check_in.dart';
 import '../domain/event_check_in_repository.dart';
 import '../domain/event_participation_repository.dart';
@@ -13,6 +15,7 @@ import 'demo_events.dart';
 import 'local_event_check_in_repository.dart';
 import 'local_event_participation_repository.dart';
 import 'mock_event_attendees.dart';
+import 'event_repository.dart';
 import '../../encounters/data/presence_providers.dart';
 import '../../encounters/data/encounter_providers.dart';
 import '../../encounters/domain/presence_evidence.dart';
@@ -28,8 +31,17 @@ final mockEventAttendeesProvider =
     );
 
 final eventCatalogProvider = Provider<EventCatalog>(
-  (ref) => const DemoEventCatalog(),
+  (ref) => ref.watch(productionModeProvider) ? RuntimeEventCatalog() : const DemoEventCatalog(),
 );
+
+final nearbyEventsProvider = FutureProvider<List<Event>>((ref) async {
+  if (!ref.watch(productionModeProvider)) return demoEvents;
+  final location = await ref.read(locationObservationSourceProvider).observeForeground();
+  final events = await SupabaseEventRepository(Supabase.instance.client)
+      .getNearby(latitude: location.latitude, longitude: location.longitude);
+  ref.read(eventCatalogProvider).replace(events);
+  return events;
+});
 
 final eventParticipationRepositoryProvider =
     Provider<EventParticipationRepository>((ref) {

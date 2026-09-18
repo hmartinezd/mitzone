@@ -7,7 +7,8 @@ class Event {
     required this.category,
     required this.description,
     this.locationLabel,
-    this.imageKey,
+    this.imageKey, this.source = 'mitzone', this.sourceUrl,
+    this.imageAttribution, this.startsAt, this.endsAt,
   });
 
   final String id;
@@ -18,4 +19,9 @@ class Event {
   final String description;
   final String? locationLabel;
   final String? imageKey;
+  final String source;
+  final String? sourceUrl;
+  final String? imageAttribution;
+  final DateTime? startsAt;
+  final DateTime? endsAt;
 }

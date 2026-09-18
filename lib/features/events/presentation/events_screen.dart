@@ -28,7 +28,8 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final all = ref.watch(eventCatalogProvider).getAll();
+    final eventsAsync = ref.watch(nearbyEventsProvider);
+    final all = eventsAsync.value ?? const [];
     final joined = ref.watch(joinedEventIdsProvider);
     final categories = all.map((e) => e.category).toSet().toList();
     final query = search.text.trim().toLowerCase();
@@ -55,6 +56,9 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          if (eventsAsync.isLoading) const Center(child: CircularProgressIndicator()),
+          if (eventsAsync.hasError)
+            const Center(child: Text("Couldn't load nearby events. Try again.")),
           TextField(
             controller: search,
             onChanged: (_) => setState(() {}),
@@ -99,7 +103,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             _ParticipationError(
               onRetry: () => ref.invalidate(joinedEventIdsProvider),
             ),
-          if ((!joinedOnly || joined.hasValue) && filtered.isEmpty)
+          if (!eventsAsync.isLoading && !eventsAsync.hasError && (!joinedOnly || joined.hasValue) && filtered.isEmpty)
             _EmptyEvents(
               message: joinedOnly
                   ? 'No joined events match your filters.'
@@ -127,14 +131,8 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
               },
             ),
           const SizedBox(height: AppSpacing.xxl),
-          Center(
-            child: Text(
-              'Showing demo events for local development.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
-              ),
-            ),
-          ),
+          if (!ref.watch(productionModeProvider))
+            Center(child: Text('Showing deterministic demo events for local development.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withAlpha(150)))),
           const SizedBox(height: AppSpacing.xxl),
         ],
       ),

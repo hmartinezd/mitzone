@@ -196,6 +196,21 @@ class _EventDetailsContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(event.description, style: theme.textTheme.bodyLarge),
+          if (event.source.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Text('Source: ${event.source}', style: theme.textTheme.bodySmall),
+          ],
+          if (event.imageAttribution case final attribution?)
+            Text(attribution, style: theme.textTheme.bodySmall),
+          if (event.sourceUrl case final url?)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _showProviderUrl(context, url),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('View event source'),
+              ),
+            ),
           const SizedBox(height: AppSpacing.xl),
           MitzoneCard(
             child: joinedIds.when(
@@ -315,6 +330,14 @@ class _EventDetailsContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  void _showProviderUrl(BuildContext context, String url) {
+    showDialog<void>(context: context, builder: (context) => AlertDialog(
+      title: const Text('Event source'),
+      content: SelectableText(url),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+    ));
   }
 }
 

@@ -19,7 +19,7 @@ Deno.serve(async req=>{
 });
 function normalize(e:any){
   if(typeof e.id!=='string'||typeof e.name!=='string') return null;
-  const venue=e._embedded?.venues?.[0], start=e.dates?.start?.dateTime ?? (e.dates?.start?.localDate?`${e.dates.start.localDate}T${e.dates.start.localTime??'00:00:00'}`:null);
+  const venue=e._embedded?.venues?.[0], start=e.dates?.start?.dateTime ?? (e.dates?.start?.localDate ? (e.dates.start.localTime ? `${e.dates.start.localDate}T${e.dates.start.localTime}` : e.dates.start.localDate) : null);
   if(!venue?.name||!start) return null;
   const c=e.classifications?.[0], cats=[c?.segment?.name,c?.genre?.name].filter(x=>typeof x==='string');
   const image=e.images?.find((x:any)=>x.ratio==='16_9')??e.images?.[0];

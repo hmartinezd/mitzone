@@ -1,5 +1,31 @@
 # Supabase activation
 
+## Nearby events status
+
+Implemented and code-verified: the configured event flow uses foreground
+location, the authenticated `nearby-events` Edge Function, normalized
+Ticketmaster metadata, local event catalog details, and the existing
+participation/upcoming surfaces. Provider failures remain errors and an
+authentic empty provider response remains empty; demo events are limited to
+local/test mode.
+
+The production `nearby-events` Edge Function has been deployed and its
+provider secret has been activated. This records configuration work only; it
+does not claim end-to-end provider success.
+
+Still requiring runtime/device validation:
+
+- authenticated physical-device invocation;
+- foreground location permission and real coordinates;
+- actual regional Ticketmaster results;
+- real provider image and source rendering;
+- empty and error behavior on a device.
+
+Owner verification is still needed for any current Ticketmaster attribution or
+provider-policy requirements beyond the metadata/display behavior implemented
+in the app. Mitzone does not provide ticket purchasing, resale, seat maps,
+checkout, affiliate links, or embedded provider browsing.
+
 ## Normal development
 
 Mitzone has one normal application runtime: Supabase-backed authenticated mode.

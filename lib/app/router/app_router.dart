@@ -82,7 +82,10 @@ GoRouter createAppRouter({
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
       ),
-      GoRoute(path: '/reset-password', builder: (_, _) => const ResetPasswordScreen()),
+      GoRoute(
+        path: '/reset-password',
+        builder: (_, _) => const ResetPasswordScreen(),
+      ),
       GoRoute(
         path: AppRoutes.entryFailure,
         builder: (context, state) => const EntryFailureScreen(),
@@ -136,12 +139,15 @@ GoRouter createAppRouter({
                     builder: (context, state) {
                       final userId = state.pathParameters['userId'];
                       final encounterId = state.pathParameters['encounterId'];
-                      if (userId == null ||
-                          encounterId == null ||
-                          !ref
-                              .read(mockIdentityRepositoryProvider)
-                              .users
-                              .any((u) => u.id == userId)) {
+                      if (!matchProfileRouteParametersAreValid(
+                        userId: userId,
+                        encounterId: encounterId,
+                        production: ref.read(productionModeProvider),
+                        localUserIds: ref
+                            .read(mockIdentityRepositoryProvider)
+                            .users
+                            .map((u) => u.id),
+                      )) {
                         return const RouteErrorScreen(error: null);
                       }
                       return OtherUserProfileScreen(
@@ -227,6 +233,21 @@ GoRouter createAppRouter({
       ),
     ],
   );
+}
+
+bool matchProfileRouteParametersAreValid({
+  required String? userId,
+  required String? encounterId,
+  required bool production,
+  required Iterable<String> localUserIds,
+}) {
+  final structurallyValid =
+      userId != null &&
+      encounterId != null &&
+      userId.trim().isNotEmpty &&
+      encounterId.trim().isNotEmpty;
+  if (!structurallyValid || production) return structurallyValid;
+  return localUserIds.contains(userId);
 }
 
 FutureOr<String?> _authRedirect(Ref ref, GoRouterState state) {

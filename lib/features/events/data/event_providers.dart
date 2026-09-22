@@ -20,6 +20,8 @@ import 'supabase_event_participation_repository.dart';
 
 typedef DemoPresenceRequest = ({String eventId, DateTime referenceTime});
 
+const _nearbyEventsTimeout = Duration(seconds: 20);
+
 final mockEventAttendeesProvider =
     Provider.family<List<EventCheckIn>, DemoPresenceRequest>(
       (ref, request) => mockAttendeesForEvent(
@@ -34,9 +36,16 @@ final eventCatalogProvider = Provider<EventCatalog>(
 
 final nearbyEventsProvider = FutureProvider<List<Event>>((ref) async {
   if (!ref.watch(productionModeProvider)) return demoEvents;
-  final location = await ref.read(locationObservationSourceProvider).observeForeground();
+  final location = await ref
+      .read(locationObservationSourceProvider)
+      .observeForeground()
+      .timeout(_nearbyEventsTimeout);
   final events = await SupabaseEventRepository(Supabase.instance.client)
-      .getNearby(latitude: location.latitude, longitude: location.longitude);
+      .getNearby(
+        latitude: location.latitude,
+        longitude: location.longitude,
+      )
+      .timeout(_nearbyEventsTimeout);
   ref.read(eventCatalogProvider).replace(events);
   return events;
 });

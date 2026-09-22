@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../../app/router/app_entry_coordinator.dart';
 import '../../../app/router/app_entry_resolver_provider.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/auth/auth_models.dart';
@@ -44,6 +42,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keep the session stream active while sign-in is in progress. Without an
+    // active listener, Riverpod can leave authSessionProvider.future pending
+    // even after Supabase has restored the authenticated session.
+    ref.watch(authSessionProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -357,11 +359,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _routeAfterAuthentication(AuthSession session) async {
+    // Rebuild the session provider from Supabase's current session, then wait
+    // for it to settle before resolving the destination. Navigating while
+    // this provider is still AsyncLoading makes GoRouter send a newly signed-
+    // in user back through Splash.
     ref.invalidate(authSessionProvider);
-    final target = await ref.read(appEntryResolverProvider).resolve();
-    ref.invalidate(currentProfileProvider);
+    final authenticatedSession = await ref.read(authSessionProvider.future);
+    if (authenticatedSession == null ||
+        authenticatedSession.user.id != session.user.id) {
+      throw const DomainError(
+        DomainErrorCode.invalidState,
+        'Authentication state did not settle after sign-in.',
+      );
+    }
+    await ref.read(appEntryResolverProvider).resolve();
     if (!mounted) return;
-    context.go(AppEntryCoordinator.locationForTarget(target));
+    ref.invalidate(currentProfileProvider);
+
+    // The authenticated route guard owns navigation from /login. Calling
+    // context.go here races that guard's async entry-policy redirect and can
+    // leave the user on the login screen. The resolver call above still
+    // validates profile/entry readiness; the guard will use the same policy
+    // to choose the destination once the session refresh is visible.
   }
 
   String _messageForDomainError(DomainError error) {

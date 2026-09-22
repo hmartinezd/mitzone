@@ -26,60 +26,35 @@ typedef SupabaseInitializer =
 /// Typedef for running the application widget tree.
 typedef AppRunner = void Function(Widget app);
 
+Zone? _bindingZone;
+
 /// Bootstraps the application with injected dependencies for testability.
 Future<void> bootstrap({
   AppConfigLoader configLoader = AppConfig.fromEnvironment,
   SupabaseInitializer supabaseInitializer = Supabase.initialize,
   AppRunner appRunner = runApp,
 }) async {
+  // A retry is invoked from the startup-failure widget's zone. Reusing that
+  // zone keeps it aligned with the zone in which Flutter bindings were
+  // initialized; creating a second guarded zone would trigger Flutter's
+  // zone-mismatch assertion when runApp is called.
+  if (_bindingZone != null && identical(_bindingZone, Zone.current)) {
+    await _bootstrapInCurrentZone(
+      configLoader: configLoader,
+      supabaseInitializer: supabaseInitializer,
+      appRunner: appRunner,
+    );
+    return;
+  }
+
   await runZonedGuarded(
     () async {
-      // Initialize bindings in the same zone that will call runApp.
       WidgetsFlutterBinding.ensureInitialized();
-
-      final AppConfig config;
-      try {
-        config = configLoader();
-      } catch (e, stack) {
-        _handleStartupError(
-          category: 'Configuration failure',
-          error: e,
-          stackTrace: stack,
-          appRunner: appRunner,
-        );
-        return;
-      }
-
-      try {
-        try {
-          await Firebase.initializeApp();
-        } catch (e) {
-          if (kDebugMode) developer.log('Firebase unavailable: ${e.runtimeType}', name: 'mitzone.bootstrap');
-        }
-        if (config.isSupabaseConfigured) {
-          await supabaseInitializer(
-            url: config.supabaseUrl!,
-            publishableKey: config.supabasePublishableKey!,
-          );
-        }
-      } catch (e, stack) {
-        _handleStartupError(
-          category: 'Initialization failure',
-          error: e,
-          stackTrace: stack,
-          appRunner: appRunner,
-        );
-        return;
-      }
-
-      appRunner(
-        ProviderScope(
-          overrides: [
-            appConfigProvider.overrideWithValue(config),
-            observabilityProvider.overrideWithValue(await initializeObservability()),
-          ],
-          child: const MitzoneApp(),
-        ),
+      _bindingZone = Zone.current;
+      await _bootstrapInCurrentZone(
+        configLoader: configLoader,
+        supabaseInitializer: supabaseInitializer,
+        appRunner: appRunner,
       );
     },
     (error, stack) {
@@ -90,6 +65,62 @@ Future<void> bootstrap({
         appRunner: appRunner,
       );
     },
+  );
+}
+
+Future<void> _bootstrapInCurrentZone({
+  required AppConfigLoader configLoader,
+  required SupabaseInitializer supabaseInitializer,
+  required AppRunner appRunner,
+}) async {
+  final AppConfig config;
+  try {
+    config = configLoader();
+  } catch (e, stack) {
+    _handleStartupError(
+      category: 'Configuration failure',
+      error: e,
+      stackTrace: stack,
+      appRunner: appRunner,
+    );
+    return;
+  }
+
+  try {
+    try {
+      await Firebase.initializeApp();
+    } catch (e) {
+      if (kDebugMode) {
+        developer.log(
+          'Firebase unavailable: ${e.runtimeType}',
+          name: 'mitzone.bootstrap',
+        );
+      }
+    }
+    if (config.isSupabaseConfigured) {
+      await supabaseInitializer(
+        url: config.supabaseUrl!,
+        publishableKey: config.supabasePublishableKey!,
+      );
+    }
+  } catch (e, stack) {
+    _handleStartupError(
+      category: 'Initialization failure',
+      error: e,
+      stackTrace: stack,
+      appRunner: appRunner,
+    );
+    return;
+  }
+
+  appRunner(
+    ProviderScope(
+      overrides: [
+        appConfigProvider.overrideWithValue(config),
+        observabilityProvider.overrideWithValue(await initializeObservability()),
+      ],
+      child: const MitzoneApp(),
+    ),
   );
 }
 

@@ -17,7 +17,7 @@ class _MitzoneAppState extends ConsumerState<MitzoneApp> {
   bool _loggedOpen = false;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     ref.watch(pushLifecycleProvider);
     if (!_loggedOpen) {
       _loggedOpen = true;

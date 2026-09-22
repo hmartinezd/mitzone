@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/auth/auth_providers.dart';
 import '../../../shared/widgets/mitzone_card.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../data/event_providers.dart';
@@ -112,7 +113,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
   }
 }
 
-class _EventDetailsContent extends StatelessWidget {
+class _EventDetailsContent extends ConsumerWidget {
   const _EventDetailsContent({
     required this.event,
     required this.joinedIds,
@@ -138,7 +139,7 @@ class _EventDetailsContent extends StatelessWidget {
   final VoidCallback onRetryCheckIns;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return MitzonePageBody(
       onBack: onBack,

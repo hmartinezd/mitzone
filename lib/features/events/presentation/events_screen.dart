@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_spacing.dart';
+import '../../../core/auth/auth_providers.dart';
+import '../../../core/errors/domain_error.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../data/event_providers.dart';
+import '../../encounters/data/foreground_location_sources.dart';
 import 'widgets/event_list_card.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
@@ -56,9 +61,15 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          if (eventsAsync.isLoading) const Center(child: CircularProgressIndicator()),
+          if (eventsAsync.isLoading &&
+              !eventsAsync.hasValue &&
+              !eventsAsync.hasError)
+            const Center(child: CircularProgressIndicator()),
           if (eventsAsync.hasError)
-            const Center(child: Text("Couldn't load nearby events. Try again.")),
+            _EventsLoadError(
+              message: _eventsLoadErrorMessage(eventsAsync.error),
+              onRetry: () => ref.invalidate(nearbyEventsProvider),
+            ),
           TextField(
             controller: search,
             onChanged: (_) => setState(() {}),
@@ -81,19 +92,23 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                 selected: joinedOnly,
                 onSelected: (_) => setState(() => joinedOnly = true),
               ),
-              DropdownButton<String>(
-                hint: const Text('Category'),
-                value: category,
-                items: [
-                  const DropdownMenuItem(
-                    value: null,
-                    child: Text('All categories'),
-                  ),
-                  ...categories.map(
-                    (c) => DropdownMenuItem(value: c, child: Text(c)),
-                  ),
-                ],
-                onChanged: (v) => setState(() => category = v),
+              SizedBox(
+                width: 180,
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  hint: const Text('Category'),
+                  value: category,
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('All categories'),
+                    ),
+                    ...categories.map(
+                      (c) => DropdownMenuItem(value: c, child: Text(c)),
+                    ),
+                  ],
+                  onChanged: (v) => setState(() => category = v),
+                ),
               ),
             ],
           ),
@@ -103,7 +118,10 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             _ParticipationError(
               onRetry: () => ref.invalidate(joinedEventIdsProvider),
             ),
-          if (!eventsAsync.isLoading && !eventsAsync.hasError && (!joinedOnly || joined.hasValue) && filtered.isEmpty)
+          if (!eventsAsync.isLoading &&
+              !eventsAsync.hasError &&
+              (!joinedOnly || joined.hasValue) &&
+              filtered.isEmpty)
             _EmptyEvents(
               message: joinedOnly
                   ? 'No joined events match your filters.'
@@ -135,6 +153,51 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             Center(child: Text('Showing deterministic demo events for local development.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withAlpha(150)))),
           const SizedBox(height: AppSpacing.xxl),
         ],
+      ),
+    );
+  }
+}
+
+String _eventsLoadErrorMessage(Object? error) {
+  if (error is ForegroundLocationException) {
+    switch (error.failure) {
+      case ForegroundLocationFailure.servicesDisabled:
+        return 'Turn on Location Services to load nearby events.';
+      case ForegroundLocationFailure.permissionDenied:
+        return 'Allow location access while using Mitzone to load nearby events.';
+      case ForegroundLocationFailure.permissionPermanentlyDenied:
+        return 'Allow location access in Settings to load nearby events.';
+      case ForegroundLocationFailure.temporarilyUnavailable:
+        return 'Your location is temporarily unavailable. Try again.';
+    }
+  }
+  if (error is TimeoutException) {
+    return 'Nearby events took too long to load. Check your connection and try again.';
+  }
+  if (error is DomainError && error.code == DomainErrorCode.unavailable) {
+    return '${error.message} Try again.';
+  }
+  return "Couldn't load nearby events. Try again.";
+}
+
+class _EventsLoadError extends StatelessWidget {
+  const _EventsLoadError({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Center(
+        child: Column(
+          children: [
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: AppSpacing.sm),
+            TextButton(onPressed: onRetry, child: const Text('Try again')),
+          ],
+        ),
       ),
     );
   }

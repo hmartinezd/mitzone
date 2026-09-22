@@ -5,11 +5,13 @@ import 'push_notification_service.dart';
 import 'notification_providers.dart';
 
 final pushLifecycleProvider = Provider<void>((ref) {
-  final session = ref.watch(authSessionProvider).valueOrNull;
+  final session = ref.watch(authSessionProvider).value;
   final repository = ref.watch(deviceTokenRepositoryProvider);
   if (session == null || repository == null) return;
   final service = PushNotificationService(repository, session.user.id);
-  service.onForeground = () => ref.invalidate(notificationsProvider);
+  service.onForeground = () async {
+    ref.invalidate(notificationsProvider);
+  };
   service.start();
   ref.onDispose(service.dispose);
 });

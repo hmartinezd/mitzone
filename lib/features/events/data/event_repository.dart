@@ -1,11 +1,32 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/errors/domain_error.dart';
 import '../domain/event.dart';
 
 abstract interface class EventRepository { Future<List<Event>> getNearby({required double latitude, required double longitude}); }
 class SupabaseEventRepository implements EventRepository {
   const SupabaseEventRepository(this.client); final SupabaseClient client;
   @override Future<List<Event>> getNearby({required double latitude, required double longitude}) async {
-    final response = await client.functions.invoke('nearby-events', body: {'latitude': latitude, 'longitude': longitude});
+    late final FunctionResponse response;
+    try {
+      response = await client.functions.invoke(
+        'nearby-events',
+        body: {'latitude': latitude, 'longitude': longitude},
+      );
+    } on FunctionsHttpException catch (error) {
+      if (error.status == 502) {
+        throw const DomainError(
+          DomainErrorCode.unavailable,
+          'Nearby event provider is unavailable.',
+        );
+      }
+      if (error.status == 503) {
+        throw const DomainError(
+          DomainErrorCode.unavailable,
+          'Nearby event provider is not configured.',
+        );
+      }
+      rethrow;
+    }
     final data = response.data;
     if (data is! Map || data['events'] is! List) return const [];
     return (data['events'] as List).whereType<Map>().map(normalizeExternalEvent).whereType<Event>().toList();

@@ -151,8 +151,8 @@ GoRouter createAppRouter({
                         return const RouteErrorScreen(error: null);
                       }
                       return OtherUserProfileScreen(
-                        userId: userId,
-                        encounterId: encounterId,
+                        userId: userId!,
+                        encounterId: encounterId!,
                       );
                     },
                   ),

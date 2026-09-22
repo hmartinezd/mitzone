@@ -46,7 +46,9 @@ class PushNotificationService {
 
   Future<void> dispose() async {
     await _refresh?.cancel();
-    for (final subscription in _messageSubscriptions) await subscription.cancel();
+    for (final subscription in _messageSubscriptions) {
+      await subscription.cancel();
+    }
     if (_token != null) await repository.remove(userId, _token!);
   }
 }

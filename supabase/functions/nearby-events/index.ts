@@ -10,13 +10,24 @@ Deno.serve(async req=>{
     if(!(await supabase.auth.getUser()).data.user) return json({error:'Unauthorized'},401);
     const b=await req.json(), lat=Number(b.latitude), lon=Number(b.longitude);
     if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180) return json({error:'Invalid location'},400);
-    const p=new URLSearchParams({apikey:Deno.env.get('TICKETMASTER_API_KEY')!,latlong:`${lat},${lon}`,radius:'25',unit:'km',size:'20',sort:'date,asc',startDateTime:new Date().toISOString(),endDateTime:new Date(Date.now()+14*86400000).toISOString()});
+    const ticketmasterApiKey=Deno.env.get('TICKETMASTER_API_KEY')?.trim();
+    if(!ticketmasterApiKey){
+      console.error('TICKETMASTER_API_KEY is not configured');
+      return json({error:'Event provider not configured'},503);
+    }
+    const startDateTime=formatProviderDate(new Date());
+    const endDateTime=formatProviderDate(new Date(Date.now()+14*86400000));
+    const p=new URLSearchParams({apikey:ticketmasterApiKey,latlong:`${lat},${lon}`,radius:'25',unit:'km',size:'20',sort:'date,asc',startDateTime,endDateTime});
     const response=await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${p}`);
-    if(!response.ok) return json({error:'Event provider unavailable'},502);
+    if(!response.ok){
+      console.error('Ticketmaster request failed', {status:response.status});
+      return json({error:'Event provider unavailable',providerStatus:response.status},502);
+    }
     const data=await response.json();
     return json({events:(data._embedded?.events??[]).map(normalize).filter(Boolean)});
   } catch (_) { return json({error:'Events unavailable'},500); }
 });
+function formatProviderDate(value:Date){ return value.toISOString().replace(/\.\d{3}Z$/,'Z'); }
 function normalize(e:any){
   if(typeof e.id!=='string'||typeof e.name!=='string') return null;
   const venue=e._embedded?.venues?.[0], start=e.dates?.start?.dateTime ?? (e.dates?.start?.localDate ? (e.dates.start.localTime ? `${e.dates.start.localDate}T${e.dates.start.localTime}` : e.dates.start.localDate) : null);

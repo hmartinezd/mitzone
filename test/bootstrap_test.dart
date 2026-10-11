@@ -8,6 +8,30 @@ import 'package:mitzone/core/config/app_environment.dart';
 import 'package:mitzone/core/errors/app_exception.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  var firebaseInitializationCalls = 0;
+  const firebaseCoreChannel =
+      'dev.flutter.pigeon.firebase_core_platform_interface.FirebaseCoreHostApi.initializeCore';
+
+  setUp(() {
+    firebaseInitializationCalls = 0;
+    // No native Firebase plugin runs in widget tests. Complete its platform
+    // reply in the test zone instead of waiting for the host callback while
+    // bootstrap is awaited inside the fake async widget-test environment.
+    // A null reply models Firebase being unavailable, exercising bootstrap's
+    // non-fatal Firebase error handling without initializing real services.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler(firebaseCoreChannel, (_) async {
+          firebaseInitializationCalls++;
+          return null;
+        });
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler(firebaseCoreChannel, null);
+  });
   group('Bootstrap', () {
     testWidgets('missing Supabase configuration shows startup failure', (
       tester,
@@ -25,13 +49,14 @@ void main() {
       );
 
       expect(supabaseCalled, isFalse);
+      expect(firebaseInitializationCalls, 0);
       expect(capturedApp, isA<StartupFailureApp>());
 
       await tester.pumpWidget(capturedApp!);
       expect(find.textContaining('requires SUPABASE_URL'), findsOneWidget);
     });
 
-    test('Test 2: Configured mode', () async {
+    test('Test 2: Configured mode tolerates unavailable Firebase', () async {
       bool supabaseCalled = false;
       String? capturedUrl;
       String? capturedKey;
@@ -52,6 +77,7 @@ void main() {
       );
 
       expect(supabaseCalled, isTrue);
+      expect(firebaseInitializationCalls, 1);
       expect(capturedUrl, 'https://test.supabase.co');
       expect(capturedKey, 'test-key');
       expect(capturedApp, isA<ProviderScope>());
@@ -59,6 +85,7 @@ void main() {
 
     testWidgets('Test 3: Supabase initialization failure', (tester) async {
       Widget? capturedApp;
+      bool supabaseCalled = false;
 
       await bootstrap(
         configLoader: () => AppConfig.validated(
@@ -67,11 +94,14 @@ void main() {
           supabasePublishableKey: 'test-key',
         ),
         supabaseInitializer: ({required url, required publishableKey}) async {
+          supabaseCalled = true;
           throw Exception('Network error');
         },
         appRunner: (app) => capturedApp = app,
       );
 
+      expect(firebaseInitializationCalls, 1);
+      expect(supabaseCalled, isTrue);
       expect(capturedApp, isA<StartupFailureApp>());
 
       await tester.pumpWidget(capturedApp!);

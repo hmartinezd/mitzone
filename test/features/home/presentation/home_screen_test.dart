@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/auth/auth_providers.dart';
+import 'package:mitzone/core/identity/current_user_provider.dart';
+import 'package:mitzone/core/identity/identity_providers.dart';
 import 'package:mitzone/core/config/app_environment.dart';
 import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/app/router/app_router.dart';
@@ -17,6 +21,12 @@ import 'package:mitzone/features/encounters/data/encounter_providers.dart';
 import 'package:mitzone/features/encounters/domain/encounter.dart';
 import 'package:mitzone/features/events/data/event_providers.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
+import 'package:mitzone/features/discovery/data/discovery_providers.dart';
+import 'package:mitzone/features/discovery/domain/discovery_item.dart';
+import 'package:mitzone/features/discovery/domain/discovery_repository.dart';
+import 'package:mitzone/core/storage/local_storage.dart';
+import 'package:mitzone/core/storage/storage_providers.dart';
+import 'package:mitzone/features/events/data/demo_events.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 
@@ -35,12 +45,41 @@ void main() {
       [],
     ),
     String initialLocation = AppRoutes.home,
+    AsyncValue<List<DiscoveryItem>> discoveryState = const AsyncValue.data([
+      discoveryItem,
+    ]),
+    DiscoveryRepository? discoveryRepository,
+    double textScale = 1,
+    bool production = false,
   }) {
     return ProviderScope(
+      retry: (_, _) => null,
       overrides: [
         appConfigProvider.overrideWithValue(
           AppConfig.validated(env: AppEnvironment.local),
         ),
+        localStorageProvider.overrideWithValue(_MemoryStorage()),
+        if (production) ...[
+          productionModeProvider.overrideWithValue(true),
+          currentUserIdProvider.overrideWithValue(
+            const AsyncValue.data('real-user'),
+          ),
+          mockIdentityRepositoryProvider.overrideWith(
+            (ref) =>
+                throw StateError('Production must not access demo identities'),
+          ),
+        ],
+        if (discoveryRepository == null) ...[
+          homeDiscoveryInterestsProvider.overrideWithValue(const <String>{}),
+          nearbyDiscoveryProvider(
+            const <String>{},
+          ).overrideWithValue(discoveryState),
+        ] else
+          discoveryRepositoryProvider.overrideWithValue(discoveryRepository),
+        nearbyEventsProvider.overrideWithValue(AsyncValue.data(demoEvents)),
+        chatMessagesProvider(
+          'conversation',
+        ).overrideWithValue(const AsyncValue.data([])),
         currentProfileProvider.overrideWithValue(profileState),
         joinedEventIdsProvider.overrideWithValue(joinedEventIdsState),
         encountersForCurrentUserProvider.overrideWithValue(encounterState),
@@ -52,7 +91,15 @@ void main() {
       child: Consumer(
         builder: (context, ref, _) {
           final router = ref.watch(routerProvider);
-          return MaterialApp.router(routerConfig: router);
+          return MaterialApp.router(
+            routerConfig: router,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child!,
+            ),
+          );
         },
       ),
     );
@@ -107,10 +154,10 @@ void main() {
       await tester.pumpWidget(
         createHomeScreen(profileState: const AsyncValue.loading()),
       );
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
       expect(findHomeText('Welcome back'), findsOneWidget);
-      expect(findHomeText('Events near you'), findsOneWidget);
+      expect(findHomeText('Happening around you'), findsOneWidget);
     });
 
     testWidgets('renders friendly error when profile fails to load', (
@@ -128,143 +175,116 @@ void main() {
     });
   });
 
-  group('HomeScreen - Upcoming activities', () {
-    testWidgets('shows the empty participation state', (tester) async {
+  group('HomeScreen - Discovery', () {
+    testWidgets('low activity emphasizes presence and discovery', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createHomeScreen(profileState: const AsyncValue.data(null)),
       );
       await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        findHomeText('No upcoming activities yet.'),
-        200,
-        scrollable: findHomeScrollable(),
-      );
-      expect(findHomeText('Find an event'), findsOneWidget);
+      expect(findHomeText('Where will you be?'), findsOneWidget);
+      expect(findHomeText('I’m here'), findsOneWidget);
+      expect(findHomeText('Happening around you'), findsOneWidget);
+      expect(findHomeText('Upcoming activities'), findsNothing);
+      expect(findHomeText('Events near you'), findsNothing);
+      expect(findHomeText('Your connections'), findsNothing);
     });
 
-    testWidgets('shows joined catalog events', (tester) async {
+    testWidgets('empty discovery does not render fabricated items', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createHomeScreen(
           profileState: const AsyncValue.data(null),
-          joinedEventIdsState: const AsyncValue.data({'tech-mixer-2026'}),
+          discoveryState: const AsyncValue.data([]),
         ),
       );
       await tester.pumpAndSettle();
+      expect(findHomeText('Nothing nearby was found yet.'), findsOneWidget);
+      expect(findHomeText(discoveryItem.title), findsNothing);
+    });
+
+    testWidgets('loading discovery stays distinct from empty and error', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(null),
+          discoveryState: const AsyncValue.loading(),
+        ),
+      );
+      // The indeterminate progress indicator intentionally never settles.
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(findHomeText('Nothing nearby was found yet.'), findsNothing);
+      expect(
+        findHomeText('We couldn’t load nearby discovery right now.'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('discovery retry starts one new request and reaches success', (
+      tester,
+    ) async {
+      final repository = _DiscoveryRepository();
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncValue.data(
+            UserProfile(id: '1', displayName: 'Hector', interests: ['Art']),
+          ),
+          discoveryRepository: repository,
+        ),
+      );
+      repository.pending.completeError(Exception('failed'), StackTrace.empty);
+      await tester.pump();
+      await tester.pump();
       await tester.scrollUntilVisible(
-        findHomeText('Upcoming activities'),
+        findHomeText('Try again'),
         200,
         scrollable: findHomeScrollable(),
       );
-      final upcoming = find
-          .ancestor(
-            of: findHomeText('Upcoming activities'),
-            matching: find.byType(Column),
-          )
-          .first;
       expect(
-        find.descendant(of: upcoming, matching: find.text('Tech Mixer 2026')),
+        findHomeText('We couldn’t load nearby discovery right now.'),
         findsOneWidget,
       );
-    });
-
-    testWidgets('shows a distinct participation error state', (tester) async {
-      await tester.pumpWidget(
-        createHomeScreen(
-          profileState: const AsyncValue.data(null),
-          joinedEventIdsState: AsyncValue.error(
-            Exception('failed'),
-            StackTrace.empty,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        findHomeText("We couldn't load your upcoming activities."),
-        200,
-        scrollable: findHomeScrollable(),
-      );
-      expect(findHomeText('Try again'), findsOneWidget);
-      expect(findHomeText('No upcoming activities yet.'), findsNothing);
-    });
-
-    testWidgets('participation retry invalidates and reaches success', (
-      tester,
-    ) async {
-      var attempts = 0;
-      var allowSuccess = false;
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            currentProfileProvider.overrideWithValue(
-              const AsyncValue.data(null),
-            ),
-            joinedEventIdsProvider.overrideWith((ref) async {
-              attempts += 1;
-              if (!allowSuccess) throw Exception('failed');
-              return <String>{};
-            }),
-            routerInitialLocationProvider.overrideWithValue(AppRoutes.home),
-          ],
-          child: Consumer(
-            builder: (context, ref, _) =>
-                MaterialApp.router(routerConfig: ref.watch(routerProvider)),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        findHomeText("We couldn't load your upcoming activities."),
-        200,
-        scrollable: findHomeScrollable(),
-      );
-      allowSuccess = true;
-      final attemptsBeforeRetry = attempts;
+      repository.pending = Completer<List<DiscoveryItem>>();
       await tester.tap(findHomeText('Try again'));
+      await tester.pump();
+      repository.pending.complete([discoveryItem]);
       await tester.pumpAndSettle();
-      expect(attempts, greaterThan(attemptsBeforeRetry));
-      expect(findHomeText('No upcoming activities yet.'), findsOneWidget);
+      expect(repository.calls, 2);
+      expect(repository.interests, {'Art'});
+      expect(findHomeText(discoveryItem.title), findsOneWidget);
+      expect(
+        findHomeText('We couldn’t load nearby discovery right now.'),
+        findsNothing,
+      );
     });
 
-    testWidgets('unknown joined IDs safely show the empty state', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        createHomeScreen(
-          profileState: const AsyncValue.data(null),
-          joinedEventIdsState: const AsyncValue.data({'removed-event'}),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        findHomeText('No upcoming activities yet.'),
-        200,
-        scrollable: findHomeScrollable(),
-      );
-      expect(findHomeText('removed-event'), findsNothing);
-    });
+    testWidgets(
+      'profile interests keep discovery request stable after completion',
+      (tester) async {
+        final repository = _DiscoveryRepository();
+        await tester.pumpWidget(
+          createHomeScreen(
+            profileState: const AsyncValue.data(
+              UserProfile(id: '1', displayName: 'Hector', interests: ['Art']),
+            ),
+            discoveryRepository: repository,
+          ),
+        );
+        repository.pending.complete([discoveryItem]);
+        await tester.pumpAndSettle();
+        expect(repository.calls, 1);
+        expect(repository.interests, {'Art'});
+        expect(findHomeText(discoveryItem.title), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+      },
+    );
   });
 
   group('HomeScreen - Router Actions', () {
-    testWidgets('Home -> Explore events -> Events (index 1)', (tester) async {
-      const profile = UserProfile(id: '1', displayName: 'Hector');
-      await tester.pumpWidget(
-        createHomeScreen(profileState: const AsyncValue.data(profile)),
-      );
-      await tester.pumpAndSettle();
-
-      final scrollable = findHomeScrollable();
-      final exploreBtn = findHomeText('Explore events');
-
-      // Scroll to Matches card to find "Explore events"
-      await tester.scrollUntilVisible(exploreBtn, 200, scrollable: scrollable);
-      await tester.tap(exploreBtn);
-      await tester.pumpAndSettle();
-
-      expect(find.text('Discover what\'s happening.'), findsOneWidget);
-      final nav = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(nav.selectedIndex, 1);
-    });
-
     testWidgets('See all -> Events (index 1)', (tester) async {
       const profile = UserProfile(id: '1', displayName: 'Hector');
       await tester.pumpWidget(
@@ -281,23 +301,14 @@ void main() {
       expect(nav.selectedIndex, 1);
     });
 
-    testWidgets('Home -> View profile -> Profile (index 4)', (tester) async {
+    testWidgets('Home -> Profile tab -> Profile (index 4)', (tester) async {
       const profile = UserProfile(id: '1', displayName: 'Hector');
       await tester.pumpWidget(
         createHomeScreen(profileState: const AsyncValue.data(profile)),
       );
       await tester.pumpAndSettle();
 
-      final scrollable = findHomeScrollable();
-      final viewProfileBtn = findHomeText('View profile');
-
-      // Scroll to Profile card to find "View profile"
-      await tester.scrollUntilVisible(
-        viewProfileBtn,
-        200,
-        scrollable: scrollable,
-      );
-      await tester.tap(viewProfileBtn);
+      await tester.tap(find.byIcon(Icons.person_outline));
       await tester.pumpAndSettle();
 
       final nav = tester.widget<NavigationBar>(find.byType(NavigationBar));
@@ -323,28 +334,6 @@ void main() {
       contextId: 'urban-art-opening:${MockUsers.joseId}:${MockUsers.sofiaId}',
       connectedAt: observedAt,
     );
-
-    testWidgets('empty social state explains check-in and offers Events', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        createHomeScreen(profileState: const AsyncValue.data(null)),
-      );
-      await tester.pumpAndSettle();
-      await tester.scrollUntilVisible(
-        findHomeText('No shared moments yet'),
-        200,
-        scrollable: findHomeScrollable(),
-      );
-
-      expect(
-        findHomeText(
-          'Check in at an event to discover people you crossed paths with.',
-        ),
-        findsOneWidget,
-      );
-      expect(findHomeText('Explore events'), findsOneWidget);
-    });
 
     testWidgets('encounters resolve person and event without obsolete copy', (
       tester,
@@ -400,6 +389,59 @@ void main() {
         2,
       );
     });
+
+    testWidgets(
+      'production social state does not expose demo identities or event context',
+      (tester) async {
+        await tester.pumpWidget(
+          createHomeScreen(
+            profileState: const AsyncValue.data(
+              UserProfile(id: 'real-user', displayName: 'Hector'),
+            ),
+            encounterState: AsyncValue.data([encounter]),
+            production: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(findHomeText('Someone'), findsOneWidget);
+        expect(findHomeText('Shared event'), findsOneWidget);
+        expect(findHomeText('Sofia'), findsNothing);
+        expect(findHomeText('Urban Art Gallery Opening'), findsNothing);
+        expect(findHomeText('DEMO'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'social errors remain distinct from empty and preserve discovery',
+      (tester) async {
+        await tester.pumpWidget(
+          createHomeScreen(
+            profileState: const AsyncValue.data(null),
+            encounterState: AsyncValue.data([encounter]),
+            requestState: AsyncValue.error(
+              Exception('requests failed'),
+              StackTrace.empty,
+            ),
+            connectionState: AsyncValue.error(
+              Exception('connections failed'),
+              StackTrace.empty,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          findHomeText('Connection requests are unavailable right now.'),
+          findsOneWidget,
+        );
+        expect(
+          findHomeText('Your connections are unavailable right now.'),
+          findsOneWidget,
+        );
+        expect(findHomeText('No shared moments yet'), findsNothing);
+        expect(findHomeText('Happening around you'), findsOneWidget);
+      },
+    );
 
     testWidgets('established connections have distinct product copy', (
       tester,
@@ -489,9 +531,10 @@ void main() {
         createHomeScreen(
           profileState: const AsyncValue.data(null),
           encounterState: const AsyncValue.loading(),
+          connectionState: AsyncValue.data([connection]),
         ),
       );
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.scrollUntilVisible(
         findHomeText('Loading shared moments…'),
         200,
@@ -508,6 +551,7 @@ void main() {
           profileState: const AsyncValue.data(
             UserProfile(id: '1', displayName: 'Hector'),
           ),
+          encounterState: AsyncValue.data([encounter]),
           conversationState: AsyncValue.error(
             Exception('chat failed'),
             StackTrace.empty,
@@ -516,82 +560,144 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(findHomeText('Hi, Hector'), findsOneWidget);
-      expect(findHomeText('Events near you'), findsOneWidget);
+      expect(findHomeText('Happening around you'), findsOneWidget);
       await tester.scrollUntilVisible(
         findHomeText('Recent conversations are unavailable right now.'),
         200,
         scrollable: findHomeScrollable(),
       );
-      expect(findHomeText('No shared moments yet'), findsOneWidget);
+      expect(findHomeText('People you crossed paths with'), findsOneWidget);
     });
   });
 
-  group('HomeScreen - Viewport Coverage', () {
-    final viewports = {
-      '320x480': const Size(320, 480),
-      '414x896': const Size(414, 896),
-      '896x414': const Size(896, 414),
-      '1024x768': const Size(1024, 768),
-    };
+  test('discovery interests update when profile interests change', () async {
+    final container = ProviderContainer(
+      overrides: [
+        currentProfileProvider.overrideWithValue(
+          const AsyncValue.data(
+            UserProfile(id: '1', displayName: 'Hector', interests: ['Art']),
+          ),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+    final subscription = container.listen(
+      homeDiscoveryInterestsProvider,
+      (_, _) {},
+    );
+    addTearDown(subscription.close);
+    expect(subscription.read(), {'Art'});
+    container.updateOverrides([
+      currentProfileProvider.overrideWithValue(
+        const AsyncValue.data(
+          UserProfile(id: '1', displayName: 'Hector', interests: ['Music']),
+        ),
+      ),
+    ]);
+    await container.pump();
+    expect(subscription.read(), {'Music'});
+  });
 
-    for (final entry in viewports.entries) {
-      testWidgets('renders without overflow at ${entry.key}', (tester) async {
-        tester.view.physicalSize = entry.value;
-        tester.view.devicePixelRatio = 1.0;
-
-        await tester.pumpWidget(
-          createHomeScreen(profileState: const AsyncValue.data(null)),
-        );
-        await tester.pumpAndSettle();
-
-        // Scroll through the page
-        final scrollable = findHomeScrollable();
-        await tester.drag(scrollable, const Offset(0, -1000));
-        await tester.pump();
-
-        expect(tester.takeException(), isNull);
-
-        addTearDown(() {
-          tester.view.resetPhysicalSize();
-          tester.view.resetDevicePixelRatio();
+  group('HomeScreen - Responsive discovery', () {
+    for (final size in [
+      const Size(320, 480),
+      const Size(414, 896),
+      const Size(896, 414),
+      const Size(1024, 768),
+    ]) {
+      for (final scale in [1.0, 2.0]) {
+        testWidgets('no overflow at $size with ${scale}x text', (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(
+            createHomeScreen(
+              profileState: const AsyncValue.data(null),
+              textScale: scale,
+              discoveryState: const AsyncValue.data([
+                discoveryItem,
+                discoveryItem,
+              ]),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          final discoveryText = findHomeText('Happening around you');
+          expect(
+            MediaQuery.textScalerOf(tester.element(discoveryText)).scale(10),
+            10 * scale,
+          );
+          for (final label in [
+            'Welcome back',
+            'Where will you be?',
+            'I’m here',
+            'Happening around you',
+            'Google Maps',
+            'DEMO',
+          ]) {
+            await tester.scrollUntilVisible(
+              findHomeText(label).first,
+              100,
+              scrollable: findHomeScrollable(),
+            );
+            expect(findHomeText(label), findsWidgets);
+            expect(tester.takeException(), isNull);
+          }
+          await tester.drag(
+            find.byType(SingleChildScrollView).last,
+            const Offset(-280, 0),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
         });
-      });
+      }
     }
   });
+}
 
-  group('HomeScreen - Text Scaling', () {
-    testWidgets('renders without overflow at 2.0x text scale and scrolls', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
-          child: createHomeScreen(profileState: const AsyncValue.data(null)),
-        ),
-      );
-      await tester.pumpAndSettle();
+const discoveryItem = DiscoveryItem(
+  id: 'place',
+  source: 'google-places',
+  type: DiscoveryItemType.place,
+  title: 'A nearby gallery with a long descriptive name',
+  category: ['Arts and culture'],
+  context: 'A neighborhood gathering place',
+  subtitle: 'Open today for visitors',
+  distanceKm: 1.2,
+  imageReference: 'https://example.com/gallery.png',
+);
 
-      final scrollable = findHomeScrollable();
+class _DiscoveryRepository implements DiscoveryRepository {
+  Completer<List<DiscoveryItem>> pending = Completer<List<DiscoveryItem>>();
+  int calls = 0;
+  Set<String>? interests;
+  @override
+  Future<List<DiscoveryItem>> getNearby({
+    Set<String> interests = const {},
+    double? latitude,
+    double? longitude,
+    DateTime? now,
+  }) {
+    calls++;
+    this.interests = interests;
+    return pending.future;
+  }
+}
 
-      // Verify key sections exist and are reachable
-      final sections = [
-        'Real moments.\nMeaningful connections.',
-        'Events near you',
-        'Upcoming activities',
-        'Your connections',
-        'Complete your profile',
-        'How Mitzone works',
-      ];
+class _MemoryStorage implements LocalStorage {
+  final Map<String, Object> values = {};
+  @override
+  Future<String?> getString(String key) async => values[key] as String?;
+  @override
+  Future<bool?> getBool(String key) async => values[key] as bool?;
+  @override
+  Future<void> setString(String key, String value) async {
+    values[key] = value;
+  }
 
-      for (final section in sections) {
-        await tester.scrollUntilVisible(
-          findHomeText(section).first,
-          200,
-          scrollable: scrollable,
-        );
-        expect(findHomeText(section), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      }
-    });
-  });
+  @override
+  Future<void> setBool(String key, bool value) async {
+    values[key] = value;
+  }
 }

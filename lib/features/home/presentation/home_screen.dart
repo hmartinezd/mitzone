@@ -19,6 +19,15 @@ import '../../encounters/presentation/foreground_presence_card.dart';
 import 'home_activity_priority.dart';
 import '../../discovery/data/discovery_providers.dart';
 
+// Keep the family key stable while discovery itself changes async state.
+// A fresh Set in build would subscribe to a new request on every completion.
+final homeDiscoveryInterestsProvider = Provider<Set<String>>((ref) {
+  final interests = ref.watch(
+    currentProfileProvider.select((profile) => profile.value?.interests),
+  );
+  return interests?.toSet() ?? const <String>{};
+});
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -26,10 +35,12 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
     final catalog = ref.watch(eventCatalogProvider);
-    final interests = profileAsync.value?.interests.toSet() ?? const <String>{};
+    final interests = ref.watch(homeDiscoveryInterestsProvider);
     final discovery = ref.watch(nearbyDiscoveryProvider(interests));
     final production = ref.watch(productionModeProvider);
-    final identity = production ? null : ref.watch(mockIdentityRepositoryProvider);
+    final identity = production
+        ? null
+        : ref.watch(mockIdentityRepositoryProvider);
     final encounters = ref.watch(encountersForCurrentUserProvider);
     final incomingRequests = ref.watch(incomingConnectionRequestsProvider);
     final connections = ref.watch(connectionsProvider);
@@ -109,14 +120,19 @@ class HomeScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xxl),
           discovery.when(
             data: (items) => items.isEmpty
-                ? const _DiscoveryUnavailable(message: 'Nothing nearby was found yet.')
+                ? const _DiscoveryUnavailable(
+                    message: 'Nothing nearby was found yet.',
+                  )
                 : DiscoverySection(
-              items: items,
-              showDemoBadge: !production,
-              onSeeAll: () => context.go(AppRoutes.events),
-              onItemTap: (_) {},
+                    items: items,
+                    showDemoBadge: !production,
+                    onSeeAll: () => context.go(AppRoutes.events),
+                    onItemTap: (_) {},
+                  ),
+            loading: () => const SizedBox(
+              height: 220,
+              child: Center(child: CircularProgressIndicator()),
             ),
-            loading: () => const SizedBox(height: 220, child: Center(child: CircularProgressIndicator())),
             error: (_, _) => _DiscoveryUnavailable(
               message: 'We couldn’t load nearby discovery right now.',
               onRetry: () => ref.invalidate(nearbyDiscoveryProvider(interests)),
@@ -136,10 +152,13 @@ class _DiscoveryUnavailable extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-    child: Row(children: [
-      Expanded(child: Text(message)),
-      if (onRetry != null) TextButton(onPressed: onRetry, child: const Text('Try again')),
-    ]),
+    child: Row(
+      children: [
+        Expanded(child: Text(message)),
+        if (onRetry != null)
+          TextButton(onPressed: onRetry, child: const Text('Try again')),
+      ],
+    ),
   );
 }
 
@@ -156,19 +175,38 @@ class _HomeProfileError extends StatelessWidget {
         color: theme.colorScheme.errorContainer.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.error_outline, color: theme.colorScheme.error),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              "We couldn't load your profile.",
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
-          TextButton(onPressed: onRetry, child: const Text('Try again')),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final action = TextButton(
+            onPressed: onRetry,
+            child: const Text('Try again'),
+          );
+          final stackAction =
+              constraints.maxWidth / MediaQuery.textScalerOf(context).scale(1) <
+              300;
+          final message = Row(
+            children: [
+              Icon(Icons.error_outline, color: theme.colorScheme.error),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  "We couldn't load your profile.",
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+              if (!stackAction) action,
+            ],
+          );
+          return stackAction
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    message,
+                    Align(alignment: Alignment.centerRight, child: action),
+                  ],
+                )
+              : message;
+        },
       ),
     );
   }
@@ -187,20 +225,38 @@ class _HomeMissingProfile extends StatelessWidget {
         color: theme.colorScheme.primaryContainer.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.info_outline, color: theme.colorScheme.primary),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              "Complete your profile to get the most out of Mitzone.",
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          TextButton(onPressed: onFinish, child: const Text('Finish now')),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final action = TextButton(
+            onPressed: onFinish,
+            child: const Text('Finish now'),
+          );
+          final stackAction =
+              constraints.maxWidth / MediaQuery.textScalerOf(context).scale(1) <
+              300;
+          final message = Row(
+            children: [
+              Icon(Icons.info_outline, color: theme.colorScheme.primary),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  "Complete your profile to get the most out of Mitzone.",
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+              if (!stackAction) action,
+            ],
+          );
+          return stackAction
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    message,
+                    Align(alignment: Alignment.centerRight, child: action),
+                  ],
+                )
+              : message;
+        },
       ),
     );
   }

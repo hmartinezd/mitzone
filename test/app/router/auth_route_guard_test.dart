@@ -20,11 +20,18 @@ import 'package:mitzone/features/onboarding/data/onboarding_status_store.dart';
 import 'package:mitzone/features/onboarding/presentation/onboarding_screen.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/data/profile_repository.dart';
-import 'package:mitzone/features/profile/presentation/create_minimum_profile_screen.dart';
 import 'package:mitzone/features/auth/presentation/login_screen.dart';
 import 'package:mitzone/features/splash/presentation/splash_screen.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
+import 'package:mitzone/core/storage/storage_providers.dart';
+import 'package:mitzone/features/chat/data/chat_providers.dart';
+import 'package:mitzone/features/connections/data/connection_providers.dart';
+import 'package:mitzone/features/encounters/data/encounter_providers.dart';
+import 'package:mitzone/features/discovery/data/discovery_providers.dart';
+import '../../support/memory_local_storage.dart';
+import 'package:mitzone/features/profile/presentation/profile_screen.dart';
+import 'package:mitzone/features/foundation/presentation/entry_failure_screen.dart';
 
 void main() {
   group('configured application route policy', () {
@@ -47,6 +54,21 @@ void main() {
     Widget buildApp({String initialLocation = AppRoutes.splash}) {
       return ProviderScope(
         overrides: [
+          localStorageProvider.overrideWithValue(MemoryLocalStorage()),
+          homeDiscoveryInterestsProvider.overrideWithValue(const <String>{}),
+          nearbyDiscoveryProvider(
+            const <String>{},
+          ).overrideWithValue(const AsyncValue.data([])),
+          encountersForCurrentUserProvider.overrideWithValue(
+            const AsyncValue.data([]),
+          ),
+          incomingConnectionRequestsProvider.overrideWithValue(
+            const AsyncValue.data([]),
+          ),
+          connectionsProvider.overrideWithValue(const AsyncValue.data([])),
+          chatConversationsProvider.overrideWithValue(
+            const AsyncValue.data([]),
+          ),
           appConfigProvider.overrideWithValue(
             AppConfig.validated(
               env: AppEnvironment.development,
@@ -110,32 +132,33 @@ void main() {
 
         expect(onboarding.completed, isTrue);
         expect(find.byType(LoginScreen), findsOneWidget);
-        expect(find.byType(CreateMinimumProfileScreen), findsNothing);
+        expect(find.byType(HomeScreen), findsNothing);
       },
     );
 
-    testWidgets('configured session without profile routes to create profile', (
-      tester,
-    ) async {
-      auth.session = const AuthSession(user: AuthUser(id: 'user-1'));
-      profiles.profile = null;
-      await tester.pumpWidget(buildApp());
-      await completeSplash(tester);
+    testWidgets(
+      'configured session without profile creates a minimum profile and opens Home',
+      (tester) async {
+        auth.session = const AuthSession(user: AuthUser(id: 'user-1'));
+        profiles.profile = null;
+        await tester.pumpWidget(buildApp());
+        await completeSplash(tester);
 
-      expect(find.byType(CreateMinimumProfileScreen), findsOneWidget);
-      expect(find.byType(LoginScreen), findsNothing);
-    });
+        expect(find.byType(HomeScreen), findsOneWidget);
+        expect(profiles.profile?.id, 'user-1');
+        expect(profiles.profile?.displayName, 'Mitzone User');
+        expect(find.byType(LoginScreen), findsNothing);
+      },
+    );
 
     testWidgets('direct protected routes redirect without a session', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        buildApp(initialLocation: AppRoutes.createProfile),
-      );
+      await tester.pumpWidget(buildApp(initialLocation: AppRoutes.profile));
       await completeSplash(tester);
 
       expect(find.byType(LoginScreen), findsOneWidget);
-      expect(find.byType(CreateMinimumProfileScreen), findsNothing);
+      expect(find.byType(HomeScreen), findsNothing);
     });
 
     testWidgets('direct application shell route redirects without a session', (
@@ -163,12 +186,15 @@ void main() {
       tester,
     ) async {
       auth.session = const AuthSession(user: AuthUser(id: 'user-1'));
-      await tester.pumpWidget(
-        buildApp(initialLocation: AppRoutes.createProfile),
-      );
+      await tester.pumpWidget(buildApp(initialLocation: AppRoutes.profile));
+      // Restoration routes through Splash and the normal Home entry policy.
+      await completeSplash(tester);
+      ProviderScope.containerOf(
+        tester.element(find.byType(HomeScreen)),
+      ).read(routerProvider).go(AppRoutes.profile);
       await tester.pumpAndSettle();
 
-      expect(find.byType(CreateMinimumProfileScreen), findsOneWidget);
+      expect(find.byType(ProfileScreen), findsOneWidget);
       expect(find.byType(LoginScreen), findsNothing);
     });
 
@@ -176,17 +202,20 @@ void main() {
       tester,
     ) async {
       auth.session = const AuthSession(user: AuthUser(id: 'user-1'));
-      await tester.pumpWidget(
-        buildApp(initialLocation: AppRoutes.createProfile),
-      );
+      await tester.pumpWidget(buildApp(initialLocation: AppRoutes.profile));
+      // Restoration routes through Splash and the normal Home entry policy.
+      await completeSplash(tester);
+      ProviderScope.containerOf(
+        tester.element(find.byType(HomeScreen)),
+      ).read(routerProvider).go(AppRoutes.profile);
       await tester.pumpAndSettle();
-      expect(find.byType(CreateMinimumProfileScreen), findsOneWidget);
+      expect(find.byType(ProfileScreen), findsOneWidget);
 
       auth.emit(null);
       await tester.pumpAndSettle();
 
       expect(find.byType(LoginScreen), findsOneWidget);
-      expect(find.byType(CreateMinimumProfileScreen), findsNothing);
+      expect(find.byType(ProfileScreen), findsNothing);
     });
 
     testWidgets('authenticated session arriving on login uses entry policy', (
@@ -200,7 +229,7 @@ void main() {
       auth.emit(auth.session);
       await tester.pumpAndSettle();
 
-      expect(find.byType(CreateMinimumProfileScreen), findsOneWidget);
+      expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.byType(LoginScreen), findsNothing);
     });
 
@@ -209,9 +238,7 @@ void main() {
     ) async {
       final restore = Completer<AuthSession?>();
       auth.restoreCompleter = restore;
-      await tester.pumpWidget(
-        buildApp(initialLocation: AppRoutes.createProfile),
-      );
+      await tester.pumpWidget(buildApp(initialLocation: AppRoutes.profile));
       await tester.pump();
 
       expect(find.byType(SplashScreen), findsOneWidget);
@@ -223,7 +250,7 @@ void main() {
     });
   });
 
-  testWidgets('local mode keeps the existing local entry behavior', (
+  testWidgets('local entry without authentication fails closed', (
     tester,
   ) async {
     final onboarding = FakeOnboardingStore()..completed = true;
@@ -250,7 +277,7 @@ void main() {
     await tester.pump(const Duration(seconds: 3));
     await tester.pumpAndSettle();
 
-    expect(find.byType(CreateMinimumProfileScreen), findsOneWidget);
+    expect(find.byType(EntryFailureScreen), findsOneWidget);
     expect(find.byType(LoginScreen), findsNothing);
   });
 }
@@ -259,6 +286,20 @@ class FakeAuthRepository implements AuthRepository {
   AuthSession? session;
   Completer<AuthSession?>? restoreCompleter;
   final _changes = StreamController<AuthSession?>.broadcast();
+
+  // These tests do not exercise recovery or account deletion. Fail explicitly
+  // if either operation is used instead of simulating a successful mutation.
+  @override
+  Future<void> requestPasswordReset(String email) async =>
+      throw UnimplementedError('Password recovery is unavailable.');
+  @override
+  Future<void> updatePassword(String password) async =>
+      throw UnimplementedError('Password reset is unavailable.');
+  @override
+  Future<void> deleteAccount() async =>
+      throw UnimplementedError('Account deletion is unavailable.');
+  @override
+  Stream<bool> get recoveryEvents => const Stream<bool>.empty();
 
   @override
   Future<AuthSession?> restoreSession() =>
@@ -330,11 +371,14 @@ class FakeProfileRepository implements ProfileRepository {
     required String identityId,
     required String displayName,
     String? avatarUri,
-  }) async => UserProfile(
-    id: identityId,
-    displayName: displayName,
-    avatarUri: avatarUri,
-  );
+  }) async {
+    profile = UserProfile(
+      id: identityId,
+      displayName: displayName,
+      avatarUri: avatarUri,
+    );
+    return profile!;
+  }
 
   @override
   Future<UserProfile> saveProfile(UserProfile profile) async => profile;

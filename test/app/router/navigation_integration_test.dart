@@ -16,9 +16,10 @@ import 'package:mitzone/features/onboarding/presentation/onboarding_screen.dart'
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/data/profile_repository.dart';
-import 'package:mitzone/features/profile/presentation/create_minimum_profile_screen.dart';
 import 'package:mitzone/features/splash/presentation/splash_screen.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
+import 'package:mitzone/core/storage/storage_providers.dart';
+import '../../support/memory_local_storage.dart';
 import 'package:mitzone/features/events/presentation/events_screen.dart';
 import 'package:mitzone/features/matches/presentation/matches_screen.dart';
 import 'package:mitzone/features/chat/presentation/chat_screen.dart';
@@ -88,6 +89,7 @@ void main() {
   Widget createTestWidget({String? initialLocation}) {
     return ProviderScope(
       overrides: [
+        localStorageProvider.overrideWithValue(MemoryLocalStorage()),
         appConfigProvider.overrideWithValue(
           AppConfig.validated(env: AppEnvironment.local),
         ),
@@ -118,21 +120,22 @@ void main() {
       expect(find.byType(OnboardingScreen), findsOneWidget);
     });
 
-    testWidgets(
-      'Splash -> Create Profile when onboarding done but no profile',
-      (tester) async {
-        onboardingStore.completed = true;
-        profileRepo.profile = null;
-        await tester.pumpWidget(createTestWidget());
+    testWidgets('Splash -> Entry Failure without authentication', (
+      tester,
+    ) async {
+      onboardingStore.completed = true;
+      profileRepo.profile = null;
+      await tester.pumpWidget(createTestWidget());
 
-        await tester.pump(const Duration(seconds: 5));
-        await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
 
-        expect(find.byType(CreateMinimumProfileScreen), findsOneWidget);
-      },
-    );
+      expect(find.byType(EntryFailureScreen), findsOneWidget);
+    });
 
-    testWidgets('Splash -> Home when everything ready', (tester) async {
+    testWidgets('Splash fails closed even when a local profile exists', (
+      tester,
+    ) async {
       onboardingStore.completed = true;
       profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
       await tester.pumpWidget(createTestWidget());
@@ -140,8 +143,8 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
 
-      expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.byType(MainNavigationShell), findsOneWidget);
+      expect(find.byType(EntryFailureScreen), findsOneWidget);
+      expect(find.byType(MainNavigationShell), findsNothing);
     });
 
     testWidgets('Splash -> Entry Failure on critical error', (tester) async {
@@ -179,7 +182,9 @@ void main() {
     testWidgets('Main Navigation tabs work', (tester) async {
       onboardingStore.completed = true;
       profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
-      await tester.pumpWidget(createTestWidget());
+      await tester.pumpWidget(
+        createTestWidget(initialLocation: AppRoutes.home),
+      );
       await tester.pump(const Duration(seconds: 5));
       await tester.pumpAndSettle();
 

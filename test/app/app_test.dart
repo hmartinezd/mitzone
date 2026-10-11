@@ -1,3 +1,4 @@
+import 'package:mitzone/features/foundation/presentation/entry_failure_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mitzone/app/app.dart';
@@ -8,7 +9,6 @@ import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/core/identity/app_identity.dart';
 import 'package:mitzone/core/identity/identity_gateway.dart';
 import 'package:mitzone/core/identity/identity_providers.dart';
-import 'package:mitzone/features/home/presentation/home_screen.dart';
 import 'package:mitzone/features/foundation/presentation/route_error_screen.dart';
 import 'package:mitzone/features/splash/presentation/splash_screen.dart';
 import 'package:mitzone/features/onboarding/data/onboarding_providers.dart';
@@ -17,7 +17,6 @@ import 'package:mitzone/features/onboarding/presentation/onboarding_screen.dart'
 import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/data/profile_repository.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
-import 'package:mitzone/features/profile/presentation/create_minimum_profile_screen.dart';
 
 class FakeOnboardingStatusStore implements OnboardingStatusStore {
   bool completed = false;
@@ -110,24 +109,23 @@ void main() {
       expect(find.byType(OnboardingScreen), findsOneWidget);
     });
 
+    testWidgets('fails closed if onboarding completed without authentication', (
+      tester,
+    ) async {
+      onboardingStore.completed = true;
+      profileRepo.profile = null;
+
+      await tester.pumpWidget(createRoot());
+
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(EntryFailureScreen), findsOneWidget);
+    });
+
     testWidgets(
-      'navigates to CreateProfile if onboarding completed but no profile',
-      (tester) async {
-        onboardingStore.completed = true;
-        profileRepo.profile = null;
-
-        await tester.pumpWidget(createRoot());
-
-        await tester.pump(const Duration(seconds: 5));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        expect(find.byType(CreateMinimumProfileScreen), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'navigates to Home if onboarding completed and profile exists',
+      'a local profile cannot authorize entry without authentication',
       (tester) async {
         onboardingStore.completed = true;
         profileRepo.profile = const UserProfile(
@@ -141,7 +139,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
 
-        expect(find.byType(HomeScreen), findsOneWidget);
+        expect(find.byType(EntryFailureScreen), findsOneWidget);
       },
     );
 
@@ -174,14 +172,7 @@ void main() {
       // Advance past RouteErrorScreen pop and splash rendering
       await tester.pumpAndSettle();
 
-      // It might have already resolved to Onboarding or Shell
-      expect(
-        find.byType(SplashScreen).evaluate().isNotEmpty ||
-            find.byType(OnboardingScreen).evaluate().isNotEmpty ||
-            find.byType(CreateMinimumProfileScreen).evaluate().isNotEmpty ||
-            find.byType(HomeScreen).evaluate().isNotEmpty,
-        isTrue,
-      );
+      expect(find.byType(OnboardingScreen), findsOneWidget);
 
       // Finally ensure it's not on RouteErrorScreen
       expect(find.byType(RouteErrorScreen), findsNothing);

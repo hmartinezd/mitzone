@@ -3,14 +3,26 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
+import 'package:mitzone/app/router/app_router.dart';
+import 'package:mitzone/app/router/app_routes.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/providers/core_providers.dart';
+import 'package:mitzone/features/home/presentation/home_screen.dart';
+import 'package:mitzone/features/chat/data/chat_providers.dart';
+import 'package:mitzone/features/connections/data/connection_providers.dart';
+import 'package:mitzone/features/encounters/data/encounter_providers.dart';
+import 'package:mitzone/features/discovery/data/discovery_providers.dart';
 import 'package:mitzone/app/theme/app_theme.dart';
 import 'package:mitzone/core/auth/auth_models.dart';
 import 'package:mitzone/core/auth/auth_providers.dart';
 import 'package:mitzone/core/auth/auth_repository.dart';
 import 'package:mitzone/core/errors/domain_error.dart';
-import 'package:mitzone/features/auth/presentation/login_screen.dart';
 import 'package:mitzone/features/profile/data/profile_providers.dart';
+import 'package:mitzone/features/onboarding/data/onboarding_providers.dart';
+import 'package:mitzone/features/onboarding/data/onboarding_status_store.dart';
+import 'package:mitzone/core/storage/storage_providers.dart';
+import '../../support/memory_local_storage.dart';
 import 'package:mitzone/features/profile/data/profile_repository.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/shared/widgets/mitzone_button.dart';
@@ -25,29 +37,41 @@ void main() {
       profiles = FakeProfileRepository();
     });
 
+    tearDown(() async => auth.dispose());
+
     Widget buildTestWidget() {
-      final router = GoRouter(
-        initialLocation: '/login',
-        routes: [
-          GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
-          GoRoute(
-            path: '/profile/create',
-            builder: (_, _) => const Text('create-profile-route'),
-          ),
-          GoRoute(
-            path: '/app/home',
-            builder: (_, _) => const Text('home-route'),
-          ),
-        ],
-      );
       return ProviderScope(
         overrides: [
+          appConfigProvider.overrideWithValue(
+            AppConfig.validated(env: AppEnvironment.local),
+          ),
+          routerInitialLocationProvider.overrideWithValue(AppRoutes.login),
+          homeDiscoveryInterestsProvider.overrideWithValue(const <String>{}),
+          nearbyDiscoveryProvider(
+            const <String>{},
+          ).overrideWithValue(const AsyncValue.data([])),
+          encountersForCurrentUserProvider.overrideWithValue(
+            const AsyncValue.data([]),
+          ),
+          incomingConnectionRequestsProvider.overrideWithValue(
+            const AsyncValue.data([]),
+          ),
+          connectionsProvider.overrideWithValue(const AsyncValue.data([])),
+          chatConversationsProvider.overrideWithValue(
+            const AsyncValue.data([]),
+          ),
+          localStorageProvider.overrideWithValue(MemoryLocalStorage()),
+          onboardingStatusStoreProvider.overrideWithValue(
+            _CompletedOnboardingStore(),
+          ),
           authRepositoryProvider.overrideWithValue(auth),
           profileRepositoryProvider.overrideWithValue(profiles),
         ],
-        child: MaterialApp.router(
-          theme: AppTheme.darkTheme,
-          routerConfig: router,
+        child: Consumer(
+          builder: (context, ref, _) => MaterialApp.router(
+            theme: AppTheme.darkTheme,
+            routerConfig: ref.watch(routerProvider),
+          ),
         ),
       );
     }
@@ -164,7 +188,7 @@ void main() {
 
         expect(find.text('Check your email'), findsOneWidget);
         expect(find.textContaining('new@example.com'), findsOneWidget);
-        expect(find.text('create-profile-route'), findsNothing);
+        expect(find.byType(HomeScreen), findsNothing);
         expect(auth.signUpCalls, 1);
 
         await tapButton(tester, 'Back to Sign In');
@@ -175,7 +199,7 @@ void main() {
       },
     );
 
-    testWidgets('immediate signup routes to minimum profile when missing', (
+    testWidgets('immediate signup creates a minimum profile and routes home', (
       tester,
     ) async {
       await tester.pumpWidget(buildTestWidget());
@@ -185,8 +209,10 @@ void main() {
       await tapButton(tester, 'Create Account');
       await tester.pumpAndSettle();
 
-      expect(find.text('create-profile-route'), findsOneWidget);
+      expect(find.byType(HomeScreen), findsOneWidget);
       expect(profiles.requestedId, 'user-1');
+      expect(profiles.profile?.id, 'user-1');
+      expect(profiles.profile?.displayName, 'new');
     });
 
     testWidgets('existing profile routes to home after sign in', (
@@ -202,7 +228,7 @@ void main() {
       await tapButton(tester, 'Sign In');
       await tester.pumpAndSettle();
 
-      expect(find.text('home-route'), findsOneWidget);
+      expect(find.byType(HomeScreen), findsOneWidget);
       expect(auth.signInEmail, 'user@example.com');
     });
 
@@ -262,12 +288,15 @@ void main() {
 
       completer.complete(auth.signupResult);
       await tester.pumpAndSettle();
-      expect(find.text('create-profile-route'), findsOneWidget);
+      expect(find.byType(HomeScreen), findsOneWidget);
     });
   });
 }
 
 class FakeAuthRepository implements AuthRepository {
+  AuthSession? session;
+  final _changes = StreamController<AuthSession?>.broadcast();
+  Future<void> dispose() => _changes.close();
   AuthSignUpResult signupResult = const AuthSignUpResult(
     user: AuthUser(id: 'user-1', email: 'new@example.com'),
     session: AuthSession(
@@ -281,8 +310,22 @@ class FakeAuthRepository implements AuthRepository {
   Object? signInError;
   Object? signupError;
 
+  // These tests do not exercise recovery or account deletion. Fail explicitly
+  // if either operation is used instead of simulating a successful mutation.
   @override
-  Future<AuthSession?> restoreSession() async => null;
+  Future<void> requestPasswordReset(String email) async =>
+      throw UnimplementedError('Password recovery is unavailable.');
+  @override
+  Future<void> updatePassword(String password) async =>
+      throw UnimplementedError('Password reset is unavailable.');
+  @override
+  Future<void> deleteAccount() async =>
+      throw UnimplementedError('Account deletion is unavailable.');
+  @override
+  Stream<bool> get recoveryEvents => const Stream<bool>.empty();
+
+  @override
+  Future<AuthSession?> restoreSession() async => session;
 
   @override
   Future<AuthSession> signIn({
@@ -291,26 +334,35 @@ class FakeAuthRepository implements AuthRepository {
   }) async {
     signInEmail = email;
     if (signInError != null) throw signInError!;
-    return const AuthSession(
+    session = const AuthSession(
       user: AuthUser(id: 'user-1', email: 'user@example.com'),
     );
+    _changes.add(session);
+    return session!;
   }
 
   @override
   Future<AuthSignUpResult> signUp({
     required String email,
     required String password,
-  }) {
+  }) async {
     signUpCalls++;
-    if (signupError != null) return Future.error(signupError!);
-    return signupCompleter?.future ?? Future.value(signupResult);
+    if (signupError != null) throw signupError!;
+    final result =
+        await (signupCompleter?.future ?? Future.value(signupResult));
+    session = result.session;
+    if (session != null) _changes.add(session);
+    return result;
   }
 
   @override
-  Future<void> signOut() async {}
+  Future<void> signOut() async {
+    session = null;
+    _changes.add(null);
+  }
 
   @override
-  Stream<AuthSession?> get sessionChanges => const Stream.empty();
+  Stream<AuthSession?> get sessionChanges => _changes.stream;
 }
 
 class FakeProfileRepository implements ProfileRepository {
@@ -328,12 +380,22 @@ class FakeProfileRepository implements ProfileRepository {
     required String identityId,
     required String displayName,
     String? avatarUri,
-  }) async => UserProfile(
-    id: identityId,
-    displayName: displayName,
-    avatarUri: avatarUri,
-  );
+  }) async {
+    profile = UserProfile(
+      id: identityId,
+      displayName: displayName,
+      avatarUri: avatarUri,
+    );
+    return profile!;
+  }
 
   @override
   Future<UserProfile> saveProfile(UserProfile profile) async => profile;
+}
+
+class _CompletedOnboardingStore implements OnboardingStatusStore {
+  @override
+  Future<bool> isCompleted() async => true;
+  @override
+  Future<void> markCompleted() async {}
 }

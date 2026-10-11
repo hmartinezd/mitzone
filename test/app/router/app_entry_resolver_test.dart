@@ -78,6 +78,20 @@ class FakeAuthRepository implements AuthRepository {
 
   AuthSession? session;
 
+  // These tests do not exercise recovery or account deletion. Fail explicitly
+  // if either operation is used instead of simulating a successful mutation.
+  @override
+  Future<void> requestPasswordReset(String email) async =>
+      throw UnimplementedError('Password recovery is unavailable.');
+  @override
+  Future<void> updatePassword(String password) async =>
+      throw UnimplementedError('Password reset is unavailable.');
+  @override
+  Future<void> deleteAccount() async =>
+      throw UnimplementedError('Account deletion is unavailable.');
+  @override
+  Stream<bool> get recoveryEvents => const Stream<bool>.empty();
+
   @override
   Future<AuthSession?> restoreSession() async => session;
 
@@ -120,6 +134,9 @@ void main() {
         onboardingStatusStore: onboardingStore,
         identityGateway: identityGateway,
         profileRepository: profileRepo,
+        authRepository: FakeAuthRepository(
+          const AuthSession(user: AuthUser(id: 'test-id')),
+        ),
       );
     });
 
@@ -130,7 +147,7 @@ void main() {
     });
 
     test(
-      'resolves to createProfile when onboarding complete but no profile',
+      'creates a minimum profile and resolves to ready when no profile exists',
       () async {
         onboardingStore.completed = true;
         profileRepo.profile = null;
@@ -140,16 +157,13 @@ void main() {
       },
     );
 
-    test(
-      'resolves to createProfile when profile incomplete (short name)',
-      () async {
-        onboardingStore.completed = true;
-        profileRepo.profile = const UserProfile(id: 'id', displayName: 'H');
+    test('repairs an incomplete profile and resolves to ready', () async {
+      onboardingStore.completed = true;
+      profileRepo.profile = const UserProfile(id: 'id', displayName: 'H');
 
-        final target = await resolver.resolve();
-        expect(target, AppEntryTarget.ready);
-      },
-    );
+      final target = await resolver.resolve();
+      expect(target, AppEntryTarget.ready);
+    });
 
     test('resolves to ready when profile complete', () async {
       onboardingStore.completed = true;
@@ -168,12 +182,15 @@ void main() {
       },
     );
 
-    test('resolves to entryFailure when identity gateway throws', () async {
-      onboardingStore.completed = true;
-      identityGateway.shouldThrow = true;
-      final target = await resolver.resolve();
-      expect(target, AppEntryTarget.entryFailure);
-    });
+    test(
+      'authenticated entry ignores a failing local identity gateway',
+      () async {
+        onboardingStore.completed = true;
+        identityGateway.shouldThrow = true;
+        final target = await resolver.resolve();
+        expect(target, AppEntryTarget.ready);
+      },
+    );
 
     test('uses authenticated session user id for profile resolution', () async {
       onboardingStore.completed = true;
@@ -193,7 +210,7 @@ void main() {
 
       final target = await resolver.resolve();
 
-        expect(target, AppEntryTarget.ready);
+      expect(target, AppEntryTarget.ready);
       expect(profileRepo.requestedIdentityId, 'supabase-user-id');
     });
 
@@ -212,22 +229,19 @@ void main() {
       expect(profileRepo.requestedIdentityId, isNull);
     });
 
-    test(
-      'resolves authenticated user without a profile to createProfile',
-      () async {
-        onboardingStore.completed = true;
-        resolver = AppEntryResolver(
-          onboardingStatusStore: onboardingStore,
-          identityGateway: identityGateway,
-          profileRepository: profileRepo,
-          authRepository: FakeAuthRepository(
-            const AuthSession(user: AuthUser(id: 'supabase-user-id')),
-          ),
-        );
+    test('resolves authenticated user without a profile to ready', () async {
+      onboardingStore.completed = true;
+      resolver = AppEntryResolver(
+        onboardingStatusStore: onboardingStore,
+        identityGateway: identityGateway,
+        profileRepository: profileRepo,
+        authRepository: FakeAuthRepository(
+          const AuthSession(user: AuthUser(id: 'supabase-user-id')),
+        ),
+      );
 
-        expect(await resolver.resolve(), AppEntryTarget.ready);
-      },
-    );
+      expect(await resolver.resolve(), AppEntryTarget.ready);
+    });
 
     test('resolves authenticated user with a valid profile to ready', () async {
       onboardingStore.completed = true;
@@ -247,15 +261,20 @@ void main() {
       expect(await resolver.resolve(), AppEntryTarget.ready);
     });
 
-    test('uses the local identity in demo mode', () async {
+    test('local entry without an authenticated session fails closed', () async {
       onboardingStore.completed = true;
+      resolver = AppEntryResolver(
+        onboardingStatusStore: onboardingStore,
+        identityGateway: identityGateway,
+        profileRepository: profileRepo,
+      );
       identityGateway.identity = const AppIdentity(
         id: 'local-demo-id',
         type: AppIdentityType.localDevelopment,
       );
 
-        expect(await resolver.resolve(), AppEntryTarget.ready);
-      expect(profileRepo.requestedIdentityId, 'local-demo-id');
+      expect(await resolver.resolve(), AppEntryTarget.entryFailure);
+      expect(profileRepo.requestedIdentityId, isNull);
     });
   });
 }

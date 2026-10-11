@@ -74,6 +74,20 @@ class FakeAuth implements AuthRepository {
   );
   Object? signupFailure;
   Object? signInFailure;
+  // These tests do not exercise recovery or account deletion. Fail explicitly
+  // if either operation is used instead of simulating a successful mutation.
+  @override
+  Future<void> requestPasswordReset(String email) async =>
+      throw UnimplementedError('Password recovery is unavailable.');
+  @override
+  Future<void> updatePassword(String password) async =>
+      throw UnimplementedError('Password reset is unavailable.');
+  @override
+  Future<void> deleteAccount() async =>
+      throw UnimplementedError('Account deletion is unavailable.');
+  @override
+  Stream<bool> get recoveryEvents => const Stream<bool>.empty();
+
   @override
   Future<AuthSession?> restoreSession() async => value;
   @override

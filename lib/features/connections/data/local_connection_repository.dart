@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'local_relationship_transaction.dart';
+import 'package:uuid/uuid.dart';
 import '../../../core/storage/local_storage.dart';
 import '../domain/connection.dart';
 import '../domain/connection_repository.dart';
@@ -128,7 +130,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     required String recipientUserId,
     required String encounterId,
     String? contextId,
-  }) async {
+  }) => localRelationshipTransaction(storage, () async {
     if (await blocks?.isPairBlocked(senderUserId, recipientUserId) == true) {
       throw StateError('Interaction is unavailable');
     }
@@ -144,7 +146,18 @@ class LocalConnectionRepository implements ConnectionRepository {
     )) {
       throw StateError('Users are already connected');
     }
-    final requests = _parseRequests(data['requests']);
+    final requests = _parseRequests(data['requests'])
+        .where(
+          (r) =>
+              !(r.status == ConnectionRequestStatus.accepted &&
+                  _samePair(
+                    r.senderUserId,
+                    r.recipientUserId,
+                    senderUserId,
+                    recipientUserId,
+                  )),
+        )
+        .toList();
     final context = contextId ?? encounterId;
     final existing = requests
         .where(
@@ -158,7 +171,7 @@ class LocalConnectionRepository implements ConnectionRepository {
         .firstOrNull;
     if (existing != null) return existing;
     final request = ConnectionRequest(
-      id: '$senderUserId-$recipientUserId-$context',
+      id: const Uuid().v4(),
       senderUserId: senderUserId,
       recipientUserId: recipientUserId,
       encounterId: encounterId,
@@ -170,7 +183,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     data['requests'] = requests.map(_requestJson).toList();
     await _write(data);
     return request;
-  }
+  });
 
   @override
   Future<List<ConnectionRequest>> getIncomingRequests(String id) async {
@@ -203,7 +216,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     String id,
     String user,
     ConnectionRequestStatus status,
-  ) async {
+  ) => localRelationshipTransaction(storage, () async {
     final data = await _read();
     final requests = _parseRequests(data['requests']);
     final index = requests.indexWhere(
@@ -238,7 +251,8 @@ class LocalConnectionRepository implements ConnectionRepository {
       if (!connections.any((c) => c.userAId == a && c.userBId == b)) {
         connections.add(
           Connection(
-            id: '$a-$b',
+            // Each mutual-consent cycle has a new identity; old chats cannot reopen.
+            id: const Uuid().v4(),
             userAId: a,
             userBId: b,
             encounterId: old.encounterId,
@@ -262,7 +276,7 @@ class LocalConnectionRepository implements ConnectionRepository {
     }
     await _write(data);
     return updated;
-  }
+  });
 
   @override
   Future<ConnectionRequest> acceptRequest({
@@ -292,7 +306,7 @@ class LocalConnectionRepository implements ConnectionRepository {
   Future<void> removeConnection({
     required String connectionId,
     required String userId,
-  }) async {
+  }) => localRelationshipTransaction(storage, () async {
     final data = await _read();
     final connections = _parseConnections(data['connections']);
     final index = connections.indexWhere((c) => c.id == connectionId);
@@ -314,8 +328,40 @@ class LocalConnectionRepository implements ConnectionRepository {
           },
         )
         .toList();
+    data['requests'] = _parseRequests(data['requests'])
+        .where(
+          (r) =>
+              !(r.status == ConnectionRequestStatus.accepted &&
+                  _samePair(
+                    r.senderUserId,
+                    r.recipientUserId,
+                    connection.userAId,
+                    connection.userBId,
+                  )),
+        )
+        .map(_requestJson)
+        .toList();
     await _write(data);
-  }
+  });
+
+  static bool _samePair(String a, String b, String x, String y) =>
+      (a == x && b == y) || (a == y && b == x);
+
+  /// Terminates the relationship, leaving historical chat storage untouched.
+  /// Called when a block is persisted, not when it is merely rendered.
+  Future<void> terminatePair(String a, String b) =>
+      localRelationshipTransaction(storage, () async {
+        final data = await _read();
+        data['connections'] = (data['connections'] as List).where((raw) {
+          final c = _tryConnection(raw);
+          return c != null && !_samePair(c.userAId, c.userBId, a, b);
+        }).toList();
+        data['requests'] = _parseRequests(data['requests'])
+            .where((r) => !_samePair(r.senderUserId, r.recipientUserId, a, b))
+            .map(_requestJson)
+            .toList();
+        await _write(data);
+      });
 
   @override
   Future<RelationshipState> getRelationshipState({

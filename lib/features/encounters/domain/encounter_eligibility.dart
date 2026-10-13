@@ -7,12 +7,14 @@ enum EncounterEligibility { visible, actionable, unavailable }
 /// Small, storage-neutral safety boundary shared by encounter presentation
 /// and future interaction commands.
 class EncounterEligibilityPolicy {
-  const EncounterEligibilityPolicy(this.blocks);
+  const EncounterEligibilityPolicy(this.blocks, {this.now = _now});
+  static DateTime _now() => DateTime.now().toUtc();
+  final DateTime Function() now;
   final BlockRepository blocks;
 
   Future<EncounterEligibility> evaluate(Encounter encounter) async {
     if (encounter.currentUserId == encounter.otherUserId ||
-        encounter.overlapEnd.isBefore(DateTime.now().toUtc())) {
+        encounter.overlapEnd.isBefore(now().toUtc())) {
       return EncounterEligibility.unavailable;
     }
     try {

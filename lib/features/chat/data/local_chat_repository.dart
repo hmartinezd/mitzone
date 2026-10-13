@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../connections/data/local_relationship_transaction.dart';
 import '../../../core/storage/local_storage.dart';
 import '../../connections/domain/connection_repository.dart';
 import 'package:mitzone/features/connections/domain/connection.dart';
@@ -110,22 +111,23 @@ class LocalChatRepository implements ChatRepository {
       : <Message>[];
 
   @override
-  Future<List<Conversation>> getConversations(String userId) async {
-    final all = _conversations(
-      (await _read())['conversations'],
-    ).where((c) => c.userAId == userId || c.userBId == userId).toList();
-    final active = await connections.getConnections(userId);
-    final activeIds = active.map((c) => c.id).toSet();
-    final conversations = all
-        .where((c) => activeIds.contains(c.connectionId))
-        .toList();
-    conversations.sort((a, b) {
-      final aActivity = a.lastMessageAt ?? a.createdAt;
-      final bActivity = b.lastMessageAt ?? b.createdAt;
-      return bActivity.compareTo(aActivity);
-    });
-    return conversations;
-  }
+  Future<List<Conversation>> getConversations(String userId) =>
+      localRelationshipTransaction(storage, () async {
+        final all = _conversations(
+          (await _read())['conversations'],
+        ).where((c) => c.userAId == userId || c.userBId == userId).toList();
+        final active = await connections.getConnections(userId);
+        final activeIds = active.map((c) => c.id).toSet();
+        final conversations = all
+            .where((c) => activeIds.contains(c.connectionId))
+            .toList();
+        conversations.sort((a, b) {
+          final aActivity = a.lastMessageAt ?? a.createdAt;
+          final bActivity = b.lastMessageAt ?? b.createdAt;
+          return bActivity.compareTo(aActivity);
+        });
+        return conversations;
+      });
 
   Future<Connection> _authorized(String id, String user) async {
     final cs = await connections.getConnections(user);
@@ -138,7 +140,7 @@ class LocalChatRepository implements ChatRepository {
   Future<Conversation> getOrCreateConversation({
     required String connectionId,
     required String userId,
-  }) async {
+  }) => localRelationshipTransaction(storage, () async {
     final c = await _authorized(connectionId, userId);
     final d = await _read();
     final list = _conversations(d['conversations']);
@@ -155,13 +157,13 @@ class LocalChatRepository implements ChatRepository {
     d['conversations'] = list.map(_cj).toList();
     await _write(d);
     return x;
-  }
+  });
 
   @override
   Future<List<Message>> getMessages({
     required String conversationId,
     required String userId,
-  }) async {
+  }) => localRelationshipTransaction(storage, () async {
     final data = await _read();
     final conversation = _conversations(
       data['conversations'],
@@ -175,7 +177,7 @@ class LocalChatRepository implements ChatRepository {
         data['messages'],
       ).where((message) => message.conversationId == conversationId).toList()
       ..sort((a, b) => a.sentAt.compareTo(b.sentAt));
-  }
+  });
 
   @override
   Future<Message> sendMessage({
@@ -183,7 +185,7 @@ class LocalChatRepository implements ChatRepository {
     required String senderUserId,
     required String text,
     String? clientMessageId,
-  }) async {
+  }) => localRelationshipTransaction(storage, () async {
     final value = text.trim();
     if (value.isEmpty) throw ArgumentError('Message cannot be empty');
     final d = await _read();
@@ -226,5 +228,5 @@ class LocalChatRepository implements ChatRepository {
       ),
     );
     return m;
-  }
+  });
 }

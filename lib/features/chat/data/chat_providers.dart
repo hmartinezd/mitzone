@@ -13,21 +13,28 @@ import 'supabase_chat_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/identity/current_user_provider.dart';
 
-final chatRepositoryProvider = Provider<ChatRepository>((ref) => ref.watch(productionModeProvider)
-  ? SupabaseChatRepository(Supabase.instance.client)
-  : LocalChatRepository(
-    ref.watch(localStorageProvider),
-    ref.watch(connectionRepositoryProvider),
-    notifications: ref.watch(notificationRepositoryProvider),
-  ));
+final chatRepositoryProvider = Provider<ChatRepository>(
+  (ref) => ref.watch(productionModeProvider)
+      ? SupabaseChatRepository(Supabase.instance.client)
+      : LocalChatRepository(
+          ref.watch(localStorageProvider),
+          ref.watch(connectionRepositoryProvider),
+          notifications: ref.watch(notificationRepositoryProvider),
+        ),
+);
 
-final chatConversationsProvider = FutureProvider<List<Conversation>>(
-  (ref) async => ref
+final chatConversationsProvider = FutureProvider<List<Conversation>>((
+  ref,
+) async {
+  ref.watch(connectionsProvider);
+  return ref
       .watch(chatRepositoryProvider)
       .getConversations(
-        ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id,
-      ),
-);
+        ref.watch(productionModeProvider)
+            ? await ref.watch(currentUserIdProvider.future)
+            : ref.watch(mockIdentityRepositoryProvider).currentUser.id,
+      );
+});
 
 final chatMessagesProvider = FutureProvider.family<List<Message>, String>((
   ref,
@@ -39,7 +46,9 @@ final chatMessagesProvider = FutureProvider.family<List<Message>, String>((
       .watch(chatRepositoryProvider)
       .getMessages(
         conversationId: id,
-        userId: ref.watch(productionModeProvider) ? await ref.watch(currentUserIdProvider.future) : ref.watch(mockIdentityRepositoryProvider).currentUser.id,
+        userId: ref.watch(productionModeProvider)
+            ? await ref.watch(currentUserIdProvider.future)
+            : ref.watch(mockIdentityRepositoryProvider).currentUser.id,
       );
 });
 

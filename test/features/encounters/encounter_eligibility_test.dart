@@ -41,22 +41,35 @@ void main() {
       expect(
         await EncounterEligibilityPolicy(
           FakeBlocks(true),
+          now: () => DateTime.utc(2026, 1, 1),
         ).evaluate(encounter()),
         EncounterEligibility.unavailable,
       );
       expect(
         await EncounterEligibilityPolicy(
           FakeBlocks(false),
+          now: () => DateTime.utc(2026, 1, 1),
         ).evaluate(encounter()),
         EncounterEligibility.actionable,
       );
     },
   );
 
+  test('expired overlap remains unavailable after unblocking', () async {
+    expect(
+      await EncounterEligibilityPolicy(
+        FakeBlocks(false),
+        now: () => DateTime.utc(2026, 1, 2),
+      ).evaluate(encounter()),
+      EncounterEligibility.unavailable,
+    );
+  });
+
   test('unavailable eligibility rejects sensitive actions', () async {
     expect(
       () => EncounterEligibilityPolicy(
         FakeBlocks(true),
+        now: () => DateTime.utc(2026, 1, 1),
       ).requireActionable(encounter()),
       throwsA(isA<Exception>()),
     );

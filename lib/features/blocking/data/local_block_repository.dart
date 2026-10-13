@@ -1,4 +1,6 @@
 import 'dart:convert';
+import '../../connections/data/local_relationship_transaction.dart';
+import '../../connections/data/local_connection_repository.dart';
 import '../../../core/storage/local_storage.dart';
 import '../domain/block_repository.dart';
 
@@ -10,12 +12,13 @@ class LocalBlockRepository implements BlockRepository {
       await isBlocked(a, b) || await isBlocked(b, a);
   String key(String id) => 'local_blocks.v1.$id';
   Future<Set<String>> _read(String id) async {
-    try {
-      final v = jsonDecode(await storage.getString(key(id)) ?? '[]');
-      return v is List ? v.whereType<String>().toSet() : {};
-    } catch (_) {
-      return {};
+    final raw = await storage.getString(key(id));
+    if (raw == null) return {};
+    final value = jsonDecode(raw);
+    if (value is! List || value.any((id) => id is! String)) {
+      throw StateError('Block state is unavailable');
     }
+    return value.cast<String>().toSet();
   }
 
   Future<void> _write(String id, Set<String> values) =>
@@ -31,9 +34,14 @@ class LocalBlockRepository implements BlockRepository {
     if (blockerUserId == blockedUserId) {
       throw ArgumentError('Cannot block yourself');
     }
-    final v = await _read(blockerUserId);
-    v.add(blockedUserId);
-    await _write(blockerUserId, v);
+    await localRelationshipTransaction(storage, () async {
+      final v = await _read(blockerUserId);
+      v.add(blockedUserId);
+      await _write(blockerUserId, v);
+    });
+    await LocalConnectionRepository(
+      storage,
+    ).terminatePair(blockerUserId, blockedUserId);
   }
 
   @override
@@ -41,9 +49,16 @@ class LocalBlockRepository implements BlockRepository {
     required String blockerUserId,
     required String blockedUserId,
   }) async {
-    final v = await _read(blockerUserId);
-    v.remove(blockedUserId);
-    await _write(blockerUserId, v);
+    if (!await isBlocked(blockerUserId, blockedUserId)) return;
+    // Also invalidate legacy relationships that were only hidden by a block.
+    await LocalConnectionRepository(
+      storage,
+    ).terminatePair(blockerUserId, blockedUserId);
+    await localRelationshipTransaction(storage, () async {
+      final v = await _read(blockerUserId);
+      v.remove(blockedUserId);
+      await _write(blockerUserId, v);
+    });
   }
 
   @override

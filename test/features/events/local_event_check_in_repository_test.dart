@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mitzone/core/errors/domain_error.dart';
 import 'package:mitzone/core/storage/local_storage.dart';
 import 'package:mitzone/features/events/data/local_event_check_in_repository.dart';
 import 'package:mitzone/features/events/domain/event_check_in.dart';
@@ -62,13 +63,29 @@ void main() {
     expect(records.single.checkedInAt, first);
   });
 
-  test('isolates identities and ignores blank mutations', () async {
-    await repository.recordCheckIn(record('a', 'one', first));
-    await repository.recordCheckIn(record('b', 'two', first));
-    await repository.recordCheckIn(record('a', '  ', first));
-    expect((await repository.getCheckIns('a')).single.eventId, 'one');
-    expect((await repository.getCheckIns('b')).single.eventId, 'two');
-  });
+  test(
+    'isolates identities and rejects blank mutations before persistence',
+    () async {
+      await repository.recordCheckIn(record('a', 'one', first));
+      await repository.recordCheckIn(record('b', 'two', first));
+      final beforeInvalidInput = Map<String, Object>.of(storage.values);
+      for (final ids in [('a', '  '), ('  ', 'one')]) {
+        expect(
+          () => record(ids.$1, ids.$2, first),
+          throwsA(
+            isA<DomainError>().having(
+              (error) => error.code,
+              'code',
+              DomainErrorCode.validation,
+            ),
+          ),
+        );
+      }
+      expect(storage.values, beforeInvalidInput);
+      expect((await repository.getCheckIns('a')).single.eventId, 'one');
+      expect((await repository.getCheckIns('b')).single.eventId, 'two');
+    },
+  );
 
   test('malformed JSON and unexpected root safely resolve empty', () async {
     storage.values['${LocalEventCheckInRepository.keyPrefix}a'] = 'bad';
@@ -130,12 +147,37 @@ void main() {
   test(
     'writes deterministic UTC JSON without duplicating event data',
     () async {
-      await repository.recordCheckIn(record('a', 'two', first.toLocal()));
+      expect(
+        () => record('a', 'two', first.toLocal()),
+        throwsA(
+          isA<DomainError>().having(
+            (error) => error.code,
+            'code',
+            DomainErrorCode.validation,
+          ),
+        ),
+      );
+      expect(storage.values, isEmpty);
+      await repository.recordCheckIn(
+        record('a', 'two', first.toLocal().toUtc()),
+      );
       await repository.recordCheckIn(record('a', 'one', first));
       final value = storage.values['${LocalEventCheckInRepository.keyPrefix}a'];
       expect(value, contains('"eventId":"one"'));
       expect(value, contains('"checkedInAt":"2026-08-21T23:42:00.000Z"'));
       expect(value, isNot(contains('title')));
+      expect(jsonDecode(value! as String), [
+        {
+          'eventId': 'one',
+          'checkedInAt': first.toIso8601String(),
+          'method': 'localDemo',
+        },
+        {
+          'eventId': 'two',
+          'checkedInAt': first.toIso8601String(),
+          'method': 'localDemo',
+        },
+      ]);
     },
   );
 }

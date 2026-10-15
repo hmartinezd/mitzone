@@ -15,8 +15,10 @@ import 'package:mitzone/features/events/domain/event_check_in_repository.dart';
 import 'package:mitzone/features/events/domain/event_participation_repository.dart';
 import 'package:mitzone/features/events/presentation/event_details_screen.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
-import 'package:mitzone/features/home/presentation/widgets/home_event_card.dart';
-import 'package:mitzone/features/home/presentation/widgets/home_event_section.dart';
+import 'package:mitzone/core/storage/storage_providers.dart';
+import 'package:mitzone/features/encounters/data/presence_providers.dart';
+import 'package:mitzone/features/encounters/domain/location_observation.dart';
+import '../../support/memory_local_storage.dart';
 
 class TestIdentityGateway implements IdentityGateway {
   static const identity = AppIdentity(
@@ -108,9 +110,14 @@ void main() {
     String location,
     TestParticipationRepository repository, {
     TestCheckInRepository? checkIns,
+    _CountingLocation? locationSource,
   }) {
     return ProviderScope(
       overrides: [
+        localStorageProvider.overrideWithValue(MemoryLocalStorage()),
+        locationObservationSourceProvider.overrideWithValue(
+          locationSource ?? _CountingLocation(),
+        ),
         appConfigProvider.overrideWithValue(
           AppConfig.validated(env: AppEnvironment.local),
         ),
@@ -179,12 +186,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tech Mixer 2026'), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'Innovation Hub');
+    await tester.pump();
     expect(find.text('Tech Mixer 2026'), findsOneWidget);
     expect(find.text('Urban Art Gallery Opening'), findsNothing);
     await tester.tap(find.text('Joined'));
     await tester.pumpAndSettle();
     expect(find.text('Tech Mixer 2026'), findsOneWidget);
     expect(find.text('Live Jazz Night'), findsNothing);
+    // Clear the venue search so the Joined filter is tested independently.
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump();
+    expect(find.text('Tech Mixer 2026'), findsOneWidget);
+    expect(find.text('Urban Art Gallery Opening'), findsNothing);
+    await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Urban Art');
+    await tester.pump();
+    expect(find.text('Urban Art Gallery Opening'), findsOneWidget);
+    expect(find.text('Tech Mixer 2026'), findsNothing);
   });
 
   testWidgets(
@@ -448,104 +467,100 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('Home event details backs to Home with Home selected', (
+  testWidgets('Home-origin event details back to Home with Home selected', (
     tester,
   ) async {
+    // The current Home carousel does not open event details. Verify the
+    // supported origin route directly instead of tapping removed Home cards.
     await tester.pumpWidget(
-      appAt(AppRoutes.home, TestParticipationRepository()),
-    );
-    await tester.pumpAndSettle();
-    final homeScrollable = find
-        .descendant(
-          of: find.byType(HomeScreen),
-          matching: find.byType(Scrollable),
-        )
-        .first;
-    await tester.scrollUntilVisible(
-      find.text('Tech Mixer 2026').first,
-      200,
-      scrollable: homeScrollable,
-    );
-    await tester.tap(
-      find.bySemanticsLabel(
-        'Tech Mixer 2026. Networking. The Innovation Hub. Tonight, 7:00 PM.',
+      appAt(
+        AppRoutes.eventDetails(
+          'tech-mixer-2026',
+          origin: EventDetailsOrigin.home,
+        ),
+        TestParticipationRepository(),
       ),
     );
     await tester.pumpAndSettle();
     expect(find.byType(EventDetailsScreen), findsOneWidget);
+    expect(find.text('Tech Mixer 2026'), findsOneWidget);
     expect(
       tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
       1,
     );
     await tester.tap(find.byTooltip('Back'));
     await tester.pumpAndSettle();
+    expect(find.byType(HomeScreen), findsOneWidget);
     expect(
       tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
       0,
     );
   });
 
-  testWidgets('join and leave synchronize Home without manual refresh', (
-    tester,
-  ) async {
-    final repository = TestParticipationRepository();
-    await tester.pumpWidget(appAt(AppRoutes.home, repository));
-    await tester.pumpAndSettle();
-    final navigationBar = find.byType(NavigationBar);
-    await tester.tap(
-      find.descendant(of: navigationBar, matching: find.text('Events')),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Tech Mixer 2026'));
-    await tester.pumpAndSettle();
-    await revealAndTap(tester, 'Join event');
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(of: navigationBar, matching: find.text('Home')),
-    );
-    await tester.pumpAndSettle();
+  testWidgets(
+    'join and leave survive Home navigation without implying presence',
+    (tester) async {
+      final repository = TestParticipationRepository();
+      final checkIns = TestCheckInRepository();
+      final location = _CountingLocation();
+      await tester.pumpWidget(
+        appAt(
+          AppRoutes.home,
+          repository,
+          checkIns: checkIns,
+          locationSource: location,
+        ),
+      );
+      await tester.pumpAndSettle();
+      Future<void> selectTab(String label) async {
+        await tester.tap(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text(label),
+          ),
+        );
+        await tester.pumpAndSettle();
+      }
 
-    final upcoming = find.byWidgetPredicate(
-      (widget) =>
-          widget is HomeEventSection && widget.title == 'Upcoming activities',
-    );
-    expect(upcoming, findsOneWidget);
-    expect(
-      find.descendant(of: upcoming, matching: find.text('Tech Mixer 2026')),
-      findsOneWidget,
-    );
+      void expectNoPresence() {
+        expect(checkIns.records, isEmpty);
+        expect(location.observations, 0);
+        expect(find.text('✓ Checked in locally'), findsNothing);
+      }
 
-    final homeScrollable = find
-        .descendant(
-          of: find.byType(HomeScreen),
-          matching: find.byType(Scrollable),
-        )
-        .first;
-    await tester.scrollUntilVisible(
-      find.descendant(of: upcoming, matching: find.text('Tech Mixer 2026')),
-      200,
-      scrollable: homeScrollable,
-    );
-    await tester.tap(
-      find.descendant(of: upcoming, matching: find.byType(HomeEventCard)),
-    );
-    await tester.pumpAndSettle();
-    await revealAndTap(tester, 'Leave event');
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.descendant(of: navigationBar, matching: find.text('Home')),
-    );
-    await tester.pumpAndSettle();
-    expect(find.byType(HomeScreen), findsOneWidget);
-    expect(
-      find.byWidgetPredicate(
-        (widget) =>
-            widget is HomeEventSection && widget.title == 'Upcoming activities',
-      ),
-      findsNothing,
-    );
-    expect(find.text('No upcoming activities yet.'), findsOneWidget);
-  });
+      await selectTab('Events');
+      await tester.tap(find.text('Tech Mixer 2026'));
+      await tester.pumpAndSettle();
+      await revealAndTap(tester, 'Join event');
+      await tester.pumpAndSettle();
+      expect(repository.idsByIdentity['identity-a'], {'tech-mixer-2026'});
+      expectNoPresence();
+      await selectTab('Home');
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.text('Where will you be?'), findsOneWidget);
+      expect(find.text('Upcoming activities'), findsNothing);
+      expectNoPresence();
+      await selectTab('Events');
+      expect(find.byType(EventDetailsScreen), findsOneWidget);
+      expect(find.text("You're participating"), findsOneWidget);
+      await revealAndTap(tester, 'Leave event');
+      await tester.pumpAndSettle();
+      expect(repository.idsByIdentity['identity-a'], isEmpty);
+      expectNoPresence();
+      await selectTab('Home');
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(find.text('Where will you be?'), findsOneWidget);
+      expectNoPresence();
+      await selectTab('Events');
+      expect(find.text('Join event'), findsOneWidget);
+      // Selecting the active Events tab resets its retained detail stack.
+      await selectTab('Events');
+      await tester.tap(find.text('Joined'));
+      await tester.pumpAndSettle();
+      expect(find.text('No joined events match your filters.'), findsOneWidget);
+      expectNoPresence();
+    },
+  );
 
   testWidgets('Events and joined details remain usable at 320x480 and 2.0x', (
     tester,
@@ -671,5 +686,14 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Join event'), findsOneWidget);
     });
+  }
+}
+
+class _CountingLocation implements LocationObservationSource {
+  int observations = 0;
+  @override
+  Future<LocationObservation> observeForeground() async {
+    observations++;
+    throw StateError('Joining an event must not collect location');
   }
 }

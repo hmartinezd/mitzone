@@ -206,16 +206,18 @@ void main() {
       expect(find.text('Delete account'), findsNothing);
     });
 
-    testWidgets('account actions are disabled', (tester) async {
-      await tester.pumpWidget(createWidget(AppRoutes.settingsAccount));
-      await tester.pumpAndSettle();
-
-      final signOutFinder = find.ancestor(
-        of: find.text('Sign out'),
-        matching: find.byType(ListTile),
-      );
-      final signOut = tester.widget<ListTile>(signOutFinder);
-      expect(signOut.enabled, isFalse);
-    });
+    testWidgets(
+      'local account actions are absent and do not mutate the profile',
+      (tester) async {
+        final before = repo.profile;
+        await tester.pumpWidget(createWidget(AppRoutes.settingsAccount));
+        await tester.pumpAndSettle();
+        expect(find.text('Manage your Mitzone account.'), findsOneWidget);
+        expect(find.text('Sign out'), findsNothing);
+        expect(find.text('Delete account'), findsNothing);
+        expect(repo.profile, same(before));
+        expect(repo.saveCount, 0);
+      },
+    );
   });
 }

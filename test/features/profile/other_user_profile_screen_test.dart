@@ -5,6 +5,10 @@ import 'package:mitzone/features/connections/domain/connection_repository.dart';
 import 'package:mitzone/features/connections/data/connection_providers.dart';
 import 'package:mitzone/features/encounters/data/encounter_providers.dart';
 import 'package:mitzone/features/encounters/domain/encounter.dart';
+import 'package:mitzone/features/encounters/domain/encounter_eligibility.dart';
+import 'package:mitzone/features/blocking/data/block_providers.dart';
+import 'package:mitzone/core/storage/storage_providers.dart';
+import '../../support/memory_local_storage.dart';
 import 'package:mitzone/features/profile/presentation/other_user_profile_screen.dart';
 import 'package:mitzone/core/identity/mock_identity_repository.dart';
 import 'package:mitzone/core/config/app_config.dart';
@@ -12,24 +16,36 @@ import 'package:mitzone/core/config/app_environment.dart';
 import 'package:mitzone/core/providers/core_providers.dart';
 
 void main() {
+  final testNow = DateTime.utc(2026, 8, 30, 10, 30);
   final encounter = Encounter(
     id: 'jose-sofia-event-1',
     currentUserId: MockUsers.joseId,
     otherUserId: MockUsers.sofiaId,
     eventId: 'event-1',
-    overlapStart: DateTime(2026, 8, 30, 10),
-    overlapEnd: DateTime(2026, 8, 30, 11),
+    overlapStart: DateTime.utc(2026, 8, 30, 10),
+    overlapEnd: DateTime.utc(2026, 8, 30, 11),
   );
 
-  Widget buildScreen({RelationshipState state = RelationshipState.none}) {
+  Widget buildScreen({
+    RelationshipState state = RelationshipState.none,
+    DateTime? now,
+  }) {
     return ProviderScope(
       overrides: [
+        localStorageProvider.overrideWithValue(MemoryLocalStorage()),
         appConfigProvider.overrideWithValue(
           AppConfig.validated(env: AppEnvironment.local),
         ),
-        encountersForCurrentUserProvider.overrideWith(
-          (ref) async => [encounter],
-        ),
+        encountersForCurrentUserProvider.overrideWith((ref) async {
+          final policy = EncounterEligibilityPolicy(
+            ref.watch(blockRepositoryProvider),
+            now: () => now ?? testNow,
+          );
+          return await policy.evaluate(encounter) ==
+                  EncounterEligibility.actionable
+              ? [encounter]
+              : [];
+        }),
         relationshipProvider(encounter).overrideWith((ref) async => state),
       ],
       child: MaterialApp(
@@ -46,9 +62,12 @@ void main() {
   ) async {
     await tester.pumpWidget(buildScreen());
     await tester.pumpAndSettle();
-    expect(find.text('Sofia'), findsOneWidget);
-    expect(find.text('Shared interests'), findsOneWidget);
-    expect(find.text('Shared languages'), findsOneWidget);
+    expect(find.text('Sofia'), findsNWidgets(2));
+    expect(find.text('Shared interests'), findsNothing);
+    expect(find.text('Shared languages'), findsNothing);
+    // The public-profile DTO does not expose private affinity or trait data.
+    expect(find.text('Personality'), findsNothing);
+    expect(find.text('Why you crossed paths'), findsOneWidget);
     expect(find.text('Say Hi'), findsOneWidget);
   });
 
@@ -75,6 +94,22 @@ void main() {
     expect(find.text('This encounter is no longer available.'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'expired encounter cannot expose the profile or connection actions',
+    (tester) async {
+      await tester.pumpWidget(
+        buildScreen(now: testNow.add(const Duration(hours: 1))),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('This encounter is no longer available.'),
+        findsOneWidget,
+      );
+      expect(find.text('Sofia'), findsNothing);
+      expect(find.text('Say Hi'), findsNothing);
+    },
+  );
 
   for (final entry in const {
     RelationshipState.outgoingPending: 'Request sent',

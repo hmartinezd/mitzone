@@ -84,12 +84,14 @@ void main() {
       child: Consumer(
         builder: (context, ref, _) {
           final router = ref.watch(routerProvider);
-          return MediaQuery(
-            data: MediaQueryData(
-              size: size,
-              textScaler: TextScaler.linear(textScale),
+          return MaterialApp.router(
+            routerConfig: router,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(size: size, textScaler: TextScaler.linear(textScale)),
+              child: child!,
             ),
-            child: MaterialApp.router(routerConfig: router),
           );
         },
       ),
@@ -229,7 +231,7 @@ void main() {
     });
 
     testWidgets(
-      'Account settings with 2.0 text scale keeps deferred actions readable',
+      'local Account settings remains readable at actual 2.0 text scale',
       (tester) async {
         await tester.pumpWidget(
           createTestWidget(
@@ -239,8 +241,15 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Sign out'), findsOneWidget);
-        expect(find.text('Delete account'), findsOneWidget);
+        final description = find.text('Manage your Mitzone account.');
+        expect(description, findsOneWidget);
+        expect(
+          MediaQuery.textScalerOf(tester.element(description)).scale(10),
+          20,
+        );
+        expect(find.text('Sign out'), findsNothing);
+        expect(find.text('Delete account'), findsNothing);
+        expect(find.byTooltip('Back'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

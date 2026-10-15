@@ -1,14 +1,195 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthUser;
 import 'auth_models.dart';
 import 'auth_repository.dart';
+import 'password_recovery.dart';
 import '../errors/domain_error.dart';
 
-class SupabaseAuthRepository implements AuthRepository {
-  SupabaseAuthRepository(this.client);
+class SupabaseAuthRepository
+    implements AuthRepository, PasswordRecoveryRepository {
+  SupabaseAuthRepository(this.client, {DateTime Function()? clock})
+    : _clock = clock ?? DateTime.now {
+    _authSubscription = client.auth.onAuthStateChange.listen(
+      _onAuthChange,
+      onError: (Object error, StackTrace stack) {
+        if (_recoveryState == PasswordRecoveryState.ready ||
+            _recoveryState == PasswordRecoveryState.validating) {
+          _setRecoveryState(_linkFailureState(error));
+        }
+      },
+    );
+  }
+
   final SupabaseClient client;
+  final DateTime Function() _clock;
+  final _recoveryChanges = StreamController<PasswordRecoveryState>.broadcast();
+  late final StreamSubscription<AuthState> _authSubscription;
+  StreamSubscription<Uri>? _linkSubscription;
+  PasswordRecoveryState _recoveryState = PasswordRecoveryState.idle;
+  String? _recoveryAccessToken;
+  Timer? _expiryTimer;
+  DateTime? _lastResetRequest;
+  bool _requestingReset = false;
+  bool _updatingPassword = false;
+  bool _handlingLink = false;
+  bool _disposed = false;
+  int _generation = 0;
+
+  void _setRecoveryState(PasswordRecoveryState state) {
+    if (_disposed) return;
+    _recoveryState = state;
+    if (state != PasswordRecoveryState.ready) {
+      _recoveryAccessToken = null;
+      _expiryTimer?.cancel();
+    }
+    _recoveryChanges.add(state);
+  }
+
+  void _onAuthChange(AuthState change) {
+    // A refreshed, replaced or signed-out session cannot inherit a previous
+    // recovery grant. userUpdated is emitted by the password update itself.
+    if (change.event == AuthChangeEvent.signedOut) {
+      _generation++;
+      _setRecoveryState(PasswordRecoveryState.idle);
+    } else if (_recoveryState == PasswordRecoveryState.ready &&
+        change.session?.accessToken != _recoveryAccessToken) {
+      _generation++;
+      _setRecoveryState(PasswordRecoveryState.expired);
+    }
+  }
+
+  @override
+  Stream<PasswordRecoveryState> get passwordRecoveryStates =>
+      Stream.multi((sink) {
+        final subscription = _recoveryChanges.stream.listen(
+          sink.add,
+          onDone: sink.close,
+        );
+        sink.add(_recoveryState);
+        sink.onCancel = subscription.cancel;
+      });
+
+  void startLinkHandling({
+    required Stream<Uri> links,
+    required Future<Uri?> Function() initialLink,
+  }) {
+    // app_links includes the initial link in its stream. Using that one source
+    // on mobile avoids exchanging a one-time PKCE code twice at cold start.
+    _linkSubscription = links.listen(
+      (uri) => unawaited(handleAuthLink(uri)),
+      onError: (Object error, StackTrace stack) {
+        _setRecoveryState(PasswordRecoveryState.invalid);
+      },
+    );
+    if (kIsWeb) {
+      unawaited(
+        initialLink()
+            .then((uri) async {
+              if (uri != null) await handleAuthLink(uri);
+            })
+            .catchError((Object _) {
+              _setRecoveryState(PasswordRecoveryState.invalid);
+            }),
+      );
+    }
+  }
+
+  PasswordRecoveryState _linkFailureState(Object error) {
+    if (error is AuthException &&
+        (error.code == 'otp_expired' ||
+            error.statusCode == 'otp_expired' ||
+            error.code == 'session_expired' ||
+            error.code == 'refresh_token_not_found')) {
+      return PasswordRecoveryState.expired;
+    }
+    return PasswordRecoveryState.invalid;
+  }
+
+  Future<void> handleAuthLink(Uri uri) async {
+    if (_disposed ||
+        uri.scheme != 'mitzone' ||
+        uri.host != 'auth' ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasPort) {
+      return;
+    }
+    if (_handlingLink || _updatingPassword) return;
+    final recovery = uri.path == '/reset-password';
+    _handlingLink = true;
+    final generation = _generation;
+    if (recovery) _setRecoveryState(PasswordRecoveryState.validating);
+    try {
+      if (!recovery) {
+        // Preserve existing registration/OAuth callbacks without granting
+        // password recovery authority to an ordinary sign-in link.
+        await client.auth.getSessionFromUrl(uri);
+        return;
+      }
+      // Supabase can return redirect errors in a query or URL fragment.
+      // Error parsing never grants authority to implicit token fragments.
+      final parameters = {
+        ...Uri.splitQueryString(uri.fragment),
+        ...uri.queryParameters,
+      };
+      if (parameters.containsKey('error') ||
+          parameters.containsKey('error_code')) {
+        _setRecoveryState(
+          parameters['error_code'] == 'otp_expired'
+              ? PasswordRecoveryState.expired
+              : PasswordRecoveryState.invalid,
+        );
+        return;
+      }
+      final code = uri.queryParameters['code'];
+      // Recovery accepts only PKCE, never tokens or a caller-supplied type.
+      // Supabase binds the recovery event to the locally stored verifier.
+      if (code == null || code.isEmpty || uri.fragment.isNotEmpty) {
+        _setRecoveryState(PasswordRecoveryState.invalid);
+        return;
+      }
+      final result = await client.auth.exchangeCodeForSession(code);
+      if (_disposed) return;
+      if (generation != _generation) {
+        _setRecoveryState(PasswordRecoveryState.invalid);
+        return;
+      }
+      if (result.redirectType != AuthChangeEvent.passwordRecovery.name ||
+          client.auth.currentSession?.accessToken !=
+              result.session.accessToken) {
+        _setRecoveryState(PasswordRecoveryState.invalid);
+        return;
+      }
+      final expiresAt = result.session.expiresAt;
+      final now = _clock().millisecondsSinceEpoch ~/ 1000;
+      if (expiresAt == null || expiresAt <= now) {
+        _setRecoveryState(PasswordRecoveryState.expired);
+        return;
+      }
+      _recoveryAccessToken = result.session.accessToken;
+      _setRecoveryState(PasswordRecoveryState.ready);
+      _expiryTimer = Timer(Duration(seconds: expiresAt - now), () {
+        _setRecoveryState(PasswordRecoveryState.expired);
+      });
+    } catch (error) {
+      if (recovery && !_disposed && generation == _generation) {
+        _setRecoveryState(_linkFailureState(error));
+      }
+      // Auth URLs and provider errors may contain credentials. Never log them.
+    } finally {
+      _handlingLink = false;
+    }
+  }
+
+  Future<void> dispose() async {
+    _disposed = true;
+    _expiryTimer?.cancel();
+    await _linkSubscription?.cancel();
+    await _authSubscription.cancel();
+    await _recoveryChanges.close();
+  }
 
   AuthUser _mapUser(User user) => AuthUser(
     id: user.id,
@@ -148,21 +329,131 @@ class SupabaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signOut() => client.auth.signOut();
+  Future<void> signOut() async {
+    _generation++;
+    await client.auth.signOut();
+    _setRecoveryState(PasswordRecoveryState.idle);
+  }
+
   @override
-  Future<void> requestPasswordReset(String email) => client.auth.resetPasswordForEmail(email.trim(), redirectTo: 'mitzone://auth/reset-password');
+  Future<void> requestPasswordReset(String email) async {
+    if (_requestingReset ||
+        (_lastResetRequest != null &&
+            _clock().difference(_lastResetRequest!) <
+                const Duration(minutes: 1))) {
+      throw const DomainError(
+        DomainErrorCode.unavailable,
+        'Please wait a minute before requesting another recovery email.',
+      );
+    }
+    _requestingReset = true;
+    _lastResetRequest = _clock();
+    try {
+      await client.auth.resetPasswordForEmail(
+        email.trim(),
+        redirectTo: passwordRecoveryRedirect,
+      );
+    } on AuthException catch (error) {
+      // Some server configurations return these errors for unknown accounts.
+      // Present the identical acknowledgement, never the provider's message.
+      if (error.code == 'user_not_found' || error.code == 'email_not_found') {
+        return;
+      }
+      if (error.code == 'over_email_send_rate_limit' ||
+          error.code == 'over_request_rate_limit') {
+        throw const DomainError(
+          DomainErrorCode.unavailable,
+          'Please wait a minute before requesting another recovery email.',
+        );
+      }
+      throw const DomainError(
+        DomainErrorCode.unavailable,
+        'We could not send recovery instructions. Please try again later.',
+      );
+    } catch (_) {
+      throw const DomainError(
+        DomainErrorCode.unavailable,
+        'We could not send recovery instructions. Check your connection and try again later.',
+      );
+    } finally {
+      _requestingReset = false;
+    }
+  }
+
   @override
-  Future<void> updatePassword(String password) => client.auth.updateUser(UserAttributes(password: password));
+  Future<void> updatePassword(String password) async {
+    final session = client.auth.currentSession;
+    final expiresAt = session?.expiresAt;
+    if (_updatingPassword) {
+      throw const DomainError(
+        DomainErrorCode.unavailable,
+        'A password update is already in progress.',
+      );
+    }
+    if (_recoveryState != PasswordRecoveryState.ready ||
+        session == null ||
+        session.accessToken != _recoveryAccessToken ||
+        expiresAt == null ||
+        expiresAt <= _clock().millisecondsSinceEpoch ~/ 1000) {
+      if (_recoveryState == PasswordRecoveryState.ready) {
+        _setRecoveryState(PasswordRecoveryState.expired);
+      }
+      throw const DomainError(
+        DomainErrorCode.unauthorized,
+        'This recovery session is invalid or expired. Request a new link.',
+      );
+    }
+    _updatingPassword = true;
+    final generation = _generation;
+    try {
+      await client.auth.updateUser(UserAttributes(password: password));
+      if (generation != _generation ||
+          client.auth.currentSession?.accessToken != session.accessToken) {
+        throw const DomainError(
+          DomainErrorCode.unauthorized,
+          'Your session changed. Sign in again to continue.',
+        );
+      }
+      _setRecoveryState(PasswordRecoveryState.completed);
+    } on AuthWeakPasswordException {
+      throw const DomainError(
+        DomainErrorCode.validation,
+        'Your password does not meet the account security requirements. Choose a stronger password.',
+      );
+    } on AuthException catch (error) {
+      if (error.code == 'same_password') {
+        throw const DomainError(
+          DomainErrorCode.validation,
+          'Choose a different password from your current password.',
+        );
+      }
+      if (error.statusCode == '401' || error.statusCode == '403') {
+        _setRecoveryState(PasswordRecoveryState.expired);
+        throw const DomainError(
+          DomainErrorCode.unauthorized,
+          'Your recovery session expired. Request a new link.',
+        );
+      }
+      throw const DomainError(
+        DomainErrorCode.unavailable,
+        'We could not update your password. Please try again.',
+      );
+    } finally {
+      _updatingPassword = false;
+    }
+  }
+
   @override
   Future<void> deleteAccount() async {
     await client.functions.invoke('delete-account');
     await client.auth.signOut();
   }
+
   @override
   Stream<AuthSession?> get sessionChanges =>
       client.auth.onAuthStateChange.map((event) => _map(event.session));
   @override
-  Stream<bool> get recoveryEvents => client.auth.onAuthStateChange
-      .where((event) => event.event == AuthChangeEvent.passwordRecovery)
-      .map((_) => true);
+  Stream<bool> get recoveryEvents => passwordRecoveryStates.map(
+    (state) => state == PasswordRecoveryState.ready,
+  );
 }

@@ -30,6 +30,8 @@ import 'app_entry_coordinator.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../core/auth/auth_providers.dart';
+import '../../core/auth/password_recovery.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
 
 /// Global key for the root navigator.
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
@@ -43,9 +45,7 @@ GoRouter createAppRouter({
 }) {
   final authRefresh = ValueNotifier<int>(0);
   ref.listen(authSessionProvider, (_, _) => authRefresh.value++);
-  ref.listen(passwordRecoveryEventProvider, (_, next) {
-    if (next.value == true) authRefresh.value++;
-  });
+  ref.listen(passwordRecoveryStateProvider, (_, _) => authRefresh.value++);
   ref.onDispose(authRefresh.dispose);
 
   return GoRouter(
@@ -83,7 +83,13 @@ GoRouter createAppRouter({
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
-        path: '/reset-password',
+        path: AppRoutes.forgotPassword,
+        builder: (_, state) => ForgotPasswordScreen(
+          initialEmail: state.extra is String ? state.extra! as String : '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
         builder: (_, _) => const ResetPasswordScreen(),
       ),
       GoRoute(
@@ -255,6 +261,14 @@ FutureOr<String?> _authRedirect(Ref ref, GoRouterState state) {
   if (authRepository == null) return null;
 
   final location = state.uri.path;
+  final recovery =
+      ref.read(passwordRecoveryStateProvider).value ??
+      PasswordRecoveryState.idle;
+  if (recovery.blocksApp &&
+      location != AppRoutes.resetPassword &&
+      location != AppRoutes.forgotPassword) {
+    return AppRoutes.resetPassword;
+  }
   final sessionState = ref.read(authSessionProvider);
 
   // Keep a protected deep link behind Splash until restoration has settled.
@@ -271,11 +285,6 @@ FutureOr<String?> _authRedirect(Ref ref, GoRouterState state) {
 
   if (sessionState.value == null) {
     return _isProtectedLocation(location) ? AppRoutes.login : null;
-  }
-
-  if (ref.read(passwordRecoveryEventProvider).value == true &&
-      location != '/reset-password') {
-    return '/reset-password';
   }
 
   if (location == AppRoutes.login) {

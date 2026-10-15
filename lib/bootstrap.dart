@@ -26,12 +26,28 @@ typedef SupabaseInitializer =
 /// Typedef for running the application widget tree.
 typedef AppRunner = void Function(Widget app);
 
+// The auth repository owns callback handling so validation and error state are
+// observed before a recovery session can trigger ordinary app navigation.
+Future<void> _initializeSupabase({
+  required String url,
+  required String publishableKey,
+}) async {
+  await Supabase.initialize(
+    url: url,
+    publishableKey: publishableKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+      detectSessionInUri: false,
+    ),
+  );
+}
+
 Zone? _bindingZone;
 
 /// Bootstraps the application with injected dependencies for testability.
 Future<void> bootstrap({
   AppConfigLoader configLoader = AppConfig.fromEnvironment,
-  SupabaseInitializer supabaseInitializer = Supabase.initialize,
+  SupabaseInitializer supabaseInitializer = _initializeSupabase,
   AppRunner appRunner = runApp,
 }) async {
   // A retry is invoked from the startup-failure widget's zone. Reusing that
@@ -117,7 +133,9 @@ Future<void> _bootstrapInCurrentZone({
     ProviderScope(
       overrides: [
         appConfigProvider.overrideWithValue(config),
-        observabilityProvider.overrideWithValue(await initializeObservability()),
+        observabilityProvider.overrideWithValue(
+          await initializeObservability(),
+        ),
       ],
       child: const MitzoneApp(),
     ),

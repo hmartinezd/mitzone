@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../app/router/app_routes.dart';
 import '../../../app/router/app_entry_resolver_provider.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../core/auth/auth_models.dart';
@@ -180,17 +182,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Future<void> _requestReset() async {
-    final email = _emailController.text.trim();
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      setState(() => _errorMessage = 'Enter a valid email address.');
-      return;
-    }
-    setState(() { _isSubmitting = true; _errorMessage = null; });
-    try {
-      await ref.read(authRepositoryProvider)!.requestPasswordReset(email);
-      if (mounted) setState(() { _isSubmitting = false; _errorMessage = 'If an account exists for this email, we\'ve sent password reset instructions.'; });
-    } catch (_) { if (mounted) setState(() { _isSubmitting = false; _errorMessage = 'We could not send reset instructions. Please try again.'; }); }
+  void _requestReset() {
+    context.push(AppRoutes.forgotPassword, extra: _emailController.text.trim());
   }
 
   Widget _buildModeSelector() {

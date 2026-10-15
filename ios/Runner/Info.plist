@@ -22,6 +22,8 @@
 	<string>Mitzone uses your location only while you choose “I’m here” to find people you were near.</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

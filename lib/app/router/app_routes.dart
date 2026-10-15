@@ -5,6 +5,8 @@ class AppRoutes {
   /// The product onboarding sequence.
   static const String onboarding = '/onboarding';
   static const String login = '/login';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
 
   /// Development-only visual system showcase.
   static const String showcase = '/showcase';

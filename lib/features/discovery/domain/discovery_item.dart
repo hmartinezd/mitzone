@@ -8,6 +8,7 @@ class DiscoveryItem {
     required this.title,
     required this.category,
     this.imageReference,
+    this.imageAttribution,
     this.context,
     this.distanceKm,
     this.startsAt,
@@ -21,6 +22,7 @@ class DiscoveryItem {
   final String title;
   final List<String> category;
   final String? imageReference;
+  final String? imageAttribution;
   final String? context;
   final double? distanceKm;
   final DateTime? startsAt;

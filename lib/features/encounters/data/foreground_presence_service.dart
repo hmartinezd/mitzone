@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../domain/foreground_presence_controller.dart';
 import '../domain/location_observation.dart';
 import 'foreground_location_sources.dart';
@@ -29,10 +31,20 @@ class ForegroundPresenceService {
   DateTime? expiresAt;
   ForegroundLocationFailure? lastLocationFailure;
 
-  Future<ForegroundPresenceStatus> record({required bool consent}) async {
+  Future<ForegroundPresenceStatus> record({
+    required bool consent,
+    void Function()? onLocationResolved,
+  }) async {
     if (!consent) return ForegroundPresenceStatus.denied;
+    lastLocationFailure = null;
     try {
-      final observation = await location.observeForeground();
+      final observation = await location.observeForeground().timeout(
+        const Duration(seconds: 20),
+        onTimeout: () => throw const ForegroundLocationException(
+          ForegroundLocationFailure.temporarilyUnavailable,
+        ),
+      );
+      onLocationResolved?.call();
       expiresAt = await presence.recordForegroundPresence(
         latitude: observation.latitude,
         longitude: observation.longitude,

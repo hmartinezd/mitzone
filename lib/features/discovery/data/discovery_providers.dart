@@ -5,7 +5,7 @@ import 'demo_discovery_repository.dart';
 import 'google_discovery_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/auth/auth_providers.dart';
-import '../../encounters/data/presence_providers.dart';
+import 'discovery_location_provider.dart';
 
 final discoveryRepositoryProvider = Provider<DiscoveryRepository>(
   (ref) => ref.watch(productionModeProvider)
@@ -13,19 +13,18 @@ final discoveryRepositoryProvider = Provider<DiscoveryRepository>(
       : const DemoDiscoveryRepository(),
 );
 
-final nearbyDiscoveryProvider = FutureProvider.family<List<DiscoveryItem>, Set<String>>(
-  (ref, interests) async {
-    final repository = ref.watch(discoveryRepositoryProvider);
-    if (!ref.watch(productionModeProvider)) {
-      return repository.getNearby(interests: interests);
-    }
-    final location = await ref
-        .read(locationObservationSourceProvider)
-        .observeForeground();
-    return repository.getNearby(
-      interests: interests,
-      latitude: location.latitude,
-      longitude: location.longitude,
-    );
-  },
-);
+final nearbyDiscoveryProvider = FutureProvider.autoDispose
+    .family<List<DiscoveryItem>, Set<String>>((ref, interests) async {
+      final repository = ref.watch(discoveryRepositoryProvider);
+      if (!ref.watch(productionModeProvider)) {
+        return repository.getNearby(interests: interests);
+      }
+      final location = await ref.watch(discoveryLocationProvider.future);
+      return repository
+          .getNearby(
+            interests: interests,
+            latitude: location.latitude,
+            longitude: location.longitude,
+          )
+          .timeout(discoveryRequestTimeout);
+    }, retry: (_, _) => null);

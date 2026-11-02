@@ -17,9 +17,11 @@ class MitzonePageBody extends StatelessWidget {
     this.horizontalPadding = AppSpacing.mobilePagePadding,
     this.centered = false,
     this.onBack,
+    this.backgroundDecoration,
   });
 
   final Widget child;
+  final Decoration? backgroundDecoration;
   final String? title;
   final bool useSafeArea;
   final bool scrollable;
@@ -106,9 +108,9 @@ class MitzonePageBody extends StatelessWidget {
     return Container(
       width: double.infinity,
       height: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: AppGradients.backgroundAtmospheric,
-      ),
+      decoration:
+          backgroundDecoration ??
+          const BoxDecoration(gradient: AppGradients.backgroundAtmospheric),
       child: content,
     );
   }

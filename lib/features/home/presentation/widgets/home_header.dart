@@ -1,42 +1,39 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/mitzone_brand.dart';
-import '../../../../app/theme/app_spacing.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({required this.displayName, super.key});
-
   final String? displayName;
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final greeting = displayName != null ? 'Hi, $displayName' : 'Welcome back';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Row(
+  Widget build(BuildContext context) => Row(
+    children: [
+      const MitzoneBrand(size: 36, showText: false),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Flexible(child: MitzoneBrand(size: 24, showTagline: false)),
+            Text(
+              'Mitzone',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -.5,
+                height: 1.1,
+              ),
+            ),
+            Text(
+              displayName == null ? 'Welcome back' : 'Hi, $displayName',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: const Color(0xFFA6B3C4),
+                height: 1.2,
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
-        Text(
-          greeting,
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          'Ready to see where real-world connections can lead?',
-          style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }

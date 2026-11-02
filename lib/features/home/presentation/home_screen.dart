@@ -13,11 +13,10 @@ import '../../encounters/data/encounter_providers.dart';
 import '../../profile/data/profile_providers.dart';
 import '../../events/data/event_providers.dart';
 import 'widgets/home_header.dart';
-import 'widgets/discovery_section.dart';
+import 'widgets/home_discovery.dart';
 import 'widgets/home_social_summary.dart';
 import '../../encounters/presentation/foreground_presence_card.dart';
 import 'home_activity_priority.dart';
-import '../../discovery/data/discovery_providers.dart';
 
 // Keep the family key stable while discovery itself changes async state.
 // A fresh Set in build would subscribe to a new request on every completion.
@@ -36,7 +35,6 @@ class HomeScreen extends ConsumerWidget {
     final profileAsync = ref.watch(currentProfileProvider);
     final catalog = ref.watch(eventCatalogProvider);
     final interests = ref.watch(homeDiscoveryInterestsProvider);
-    final discovery = ref.watch(nearbyDiscoveryProvider(interests));
     final production = ref.watch(productionModeProvider);
     final identity = production
         ? null
@@ -51,115 +49,107 @@ class HomeScreen extends ConsumerWidget {
       connections: connections.value?.length ?? 0,
       conversations: conversations.value?.length ?? 0,
     );
-    return MitzonePageBody(
-      title: null, // We use custom header instead of default title
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: AppSpacing.lg),
-          profileAsync.when(
-            data: (profile) {
-              if (profile == null) {
-                return Column(
-                  children: [
-                    const HomeHeader(displayName: null),
-                    const SizedBox(height: AppSpacing.md),
-                    _HomeMissingProfile(
-                      onFinish: () => ref.invalidate(currentProfileProvider),
-                    ),
-                  ],
-                );
-              }
-              return HomeHeader(displayName: profile.displayName);
-            },
-            loading: () => const HomeHeader(displayName: null),
-            error: (err, stack) => Column(
-              children: [
-                const HomeHeader(displayName: null),
-                const SizedBox(height: AppSpacing.md),
-                _HomeProfileError(
-                  onRetry: () => ref.invalidate(currentProfileProvider),
-                ),
-              ],
-            ),
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        cardTheme: theme.cardTheme.copyWith(color: const Color(0xFF101B2B)),
+        textButtonTheme: TextButtonThemeData(
+          style: theme.textButtonTheme.style?.copyWith(
+            minimumSize: const WidgetStatePropertyAll(Size(0, 48)),
           ),
-          const SizedBox(height: AppSpacing.xl),
-          if (priority != HomeActivityPriority.lowActivity) ...[
-            HomeSocialSummary(
-              encounters: encounters,
-              incomingRequests: incomingRequests,
-              connections: connections,
-              conversations: conversations,
-              currentUserId: production
-                  ? (ref.watch(currentUserIdProvider).value ?? '')
-                  : identity!.currentUser.id,
-              users: production ? const [] : identity!.users,
-              eventCatalog: catalog,
-              onExploreEvents: () => context.go(AppRoutes.events),
-              onViewMatches: () => context.go(AppRoutes.matches),
-              onOpenChat: () => context.go(AppRoutes.chat),
-              onOpenConversation: (id) => context.go('${AppRoutes.chat}/$id'),
-              onRetryEncounters: () =>
-                  ref.invalidate(encountersForCurrentUserProvider),
+        ),
+      ),
+      child: MitzonePageBody(
+        backgroundDecoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF070D15), Color(0xFF0B1423)],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: AppSpacing.lg),
+            profileAsync.when(
+              data: (profile) {
+                if (profile == null) {
+                  return Column(
+                    children: [
+                      const HomeHeader(displayName: null),
+                      const SizedBox(height: AppSpacing.md),
+                      _HomeMissingProfile(
+                        onFinish: () => ref.invalidate(currentProfileProvider),
+                      ),
+                    ],
+                  );
+                }
+                return HomeHeader(displayName: profile.displayName);
+              },
+              loading: () => const HomeHeader(displayName: null),
+              error: (err, stack) => Column(
+                children: [
+                  const HomeHeader(displayName: null),
+                  const SizedBox(height: AppSpacing.md),
+                  _HomeProfileError(
+                    onRetry: () => ref.invalidate(currentProfileProvider),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: AppSpacing.xxl),
-          ],
-          if (priority == HomeActivityPriority.lowActivity) ...[
-            Text(
-              'Where will you be?',
-              style: Theme.of(context).textTheme.headlineSmall,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 230),
+              child: Text(
+                'Where will you be?',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                  fontSize: 42,
+                  fontWeight: FontWeight.w700,
+                  height: 1.06,
+                  letterSpacing: -1.35,
+                  color: Colors.white,
+                ),
+              ),
             ),
-            const SizedBox(height: AppSpacing.xs),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               'Go somewhere. Be present. Mitzone does the rest.',
-              style: Theme.of(context).textTheme.bodyLarge,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: const Color(0xFFA6B3C4),
+                height: 1.45,
+              ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.lg),
+            HomeDiscovery(interests: interests),
+            const SizedBox(height: AppSpacing.xxl),
+            const ForegroundPresenceCard(),
+            const SizedBox(height: AppSpacing.xxl),
+            if (priority != HomeActivityPriority.lowActivity) ...[
+              HomeSocialSummary(
+                encounters: encounters,
+                incomingRequests: incomingRequests,
+                connections: connections,
+                conversations: conversations,
+                currentUserId: production
+                    ? (ref.watch(currentUserIdProvider).value ?? '')
+                    : identity!.currentUser.id,
+                users: production ? const [] : identity!.users,
+                eventCatalog: catalog,
+                onExploreEvents: () => context.go(AppRoutes.events),
+                onViewMatches: () => context.go(AppRoutes.matches),
+                onOpenChat: () => context.go(AppRoutes.chat),
+                onOpenConversation: (id) => context.go('${AppRoutes.chat}/$id'),
+                onRetryEncounters: () =>
+                    ref.invalidate(encountersForCurrentUserProvider),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+            ],
+            const SizedBox(height: AppSpacing.xxl),
           ],
-          const ForegroundPresenceCard(),
-          const SizedBox(height: AppSpacing.xxl),
-          discovery.when(
-            data: (items) => items.isEmpty
-                ? const _DiscoveryUnavailable(
-                    message: 'Nothing nearby was found yet.',
-                  )
-                : DiscoverySection(
-                    items: items,
-                    showDemoBadge: !production,
-                    onSeeAll: () => context.go(AppRoutes.events),
-                    onItemTap: (_) {},
-                  ),
-            loading: () => const SizedBox(
-              height: 220,
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (_, _) => _DiscoveryUnavailable(
-              message: 'We couldn’t load nearby discovery right now.',
-              onRetry: () => ref.invalidate(nearbyDiscoveryProvider(interests)),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-        ],
+        ),
       ),
     );
   }
-}
-
-class _DiscoveryUnavailable extends StatelessWidget {
-  const _DiscoveryUnavailable({required this.message, this.onRetry});
-  final String message;
-  final VoidCallback? onRetry;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-    child: Row(
-      children: [
-        Expanded(child: Text(message)),
-        if (onRetry != null)
-          TextButton(onPressed: onRetry, child: const Text('Try again')),
-      ],
-    ),
-  );
 }
 
 class _HomeProfileError extends StatelessWidget {

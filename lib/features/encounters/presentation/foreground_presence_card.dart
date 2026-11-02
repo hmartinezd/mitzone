@@ -73,7 +73,14 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
     try {
       if (ref.read(productionModeProvider)) {
         final service = ref.read(foregroundPresenceServiceProvider);
-        final result = await service.record(consent: consent);
+        final result = await service.record(
+          consent: consent,
+          onLocationResolved: () {
+            if (mounted) {
+              setState(() => status = ForegroundPresenceStatus.recording);
+            }
+          },
+        );
         if (mounted) {
           failure = service.lastLocationFailure;
           setState(() => status = result);
@@ -110,10 +117,11 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
         }
       }
     } catch (_) {
-      _inFlight = false;
       if (mounted) {
         setState(() => status = ForegroundPresenceStatus.unavailable);
       }
+    } finally {
+      _inFlight = false;
     }
   }
 
@@ -128,67 +136,104 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
   }
 
   @override
-  Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(switch (status) {
-              ForegroundPresenceStatus.locating => 'Finding your location…',
-              ForegroundPresenceStatus.recorded ||
-              ForegroundPresenceStatus.active =>
-                'You’re discoverable here for a limited time.',
-              ForegroundPresenceStatus.unavailable =>
-                'We couldn’t confirm your location.',
-              _ => 'Discover people you may have shared a place and time with.',
-            }),
-          ),
-          const SizedBox(width: 12),
-          if (failure == ForegroundLocationFailure.permissionPermanentlyDenied)
-            TextButton(
-              onPressed: () => Geolocator.openAppSettings(),
-              child: const Text('Settings'),
-            )
-          else if (failure == ForegroundLocationFailure.servicesDisabled)
-            TextButton(
-              onPressed: () => Geolocator.openLocationSettings(),
-              child: const Text('Settings'),
-            )
-          else if (status == ForegroundPresenceStatus.unavailable)
-            TextButton(onPressed: _activate, child: const Text('Try again')),
-          if (status == ForegroundPresenceStatus.recorded ||
-              status == ForegroundPresenceStatus.active)
-            TextButton(
-              onPressed: () async {
-                try {
-                  if (ref.read(productionModeProvider)) {
-                    await ref
-                        .read(foregroundPresenceGatewayProvider)
-                        .stopForegroundPresence();
-                  }
-                  if (mounted) {
-                    setState(() {
-                      stopped = true;
-                      status = ForegroundPresenceStatus.inactive;
-                    });
-                  }
-                } catch (_) {}
-              },
-              child: const Text('Stop'),
-            )
-          else if (!stopped)
-            SizedBox(
-              width: 104,
-              child: FilledButton(
-                onPressed: status == ForegroundPresenceStatus.locating
-                    ? null
-                    : _activate,
-                child: const Text('I’m here'),
-              ),
-            ),
-        ],
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final copy = Text(
+      switch (status) {
+        ForegroundPresenceStatus.locating => 'Finding your location…',
+        ForegroundPresenceStatus.recording => 'Confirming your presence…',
+        ForegroundPresenceStatus.recorded || ForegroundPresenceStatus.active =>
+          'You’re discoverable here for a limited time.',
+        ForegroundPresenceStatus.unavailable =>
+          'We couldn’t confirm your location.',
+        _ => 'Discover people you may have shared a place and time with.',
+      },
+      style: theme.textTheme.bodySmall?.copyWith(
+        color: const Color(0xFFA6B3C4),
+        height: 1.35,
       ),
-    ),
-  );
+    );
+    final actions = Wrap(
+      alignment: WrapAlignment.end,
+      spacing: 4,
+      children: [
+        if (failure == ForegroundLocationFailure.permissionPermanentlyDenied)
+          TextButton(
+            onPressed: () => Geolocator.openAppSettings(),
+            child: const Text('Settings'),
+          )
+        else if (failure == ForegroundLocationFailure.servicesDisabled)
+          TextButton(
+            onPressed: () => Geolocator.openLocationSettings(),
+            child: const Text('Settings'),
+          )
+        else if (status == ForegroundPresenceStatus.unavailable)
+          TextButton(onPressed: _activate, child: const Text('Try again')),
+        if (status == ForegroundPresenceStatus.recorded ||
+            status == ForegroundPresenceStatus.active)
+          TextButton(
+            onPressed: () async {
+              try {
+                if (ref.read(productionModeProvider)) {
+                  await ref
+                      .read(foregroundPresenceGatewayProvider)
+                      .stopForegroundPresence();
+                }
+                if (mounted) {
+                  setState(() {
+                    stopped = true;
+                    status = ForegroundPresenceStatus.inactive;
+                  });
+                }
+              } catch (_) {}
+            },
+            child: const Text('Stop'),
+          )
+        else if (!stopped)
+          SizedBox(
+            width: 104,
+            child: FilledButton(
+              onPressed:
+                  status == ForegroundPresenceStatus.locating ||
+                      status == ForegroundPresenceStatus.recording
+                  ? null
+                  : _activate,
+              child: const Text('I’m here'),
+            ),
+          ),
+      ],
+    );
+
+    return Card(
+      color: const Color(0xFF0D1724),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Color(0xFF1E2C3B)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final canShowInline =
+                constraints.maxWidth /
+                    MediaQuery.textScalerOf(context).scale(1) >=
+                300;
+            if (canShowInline) {
+              return Row(
+                children: [
+                  Expanded(child: copy),
+                  const SizedBox(width: 8),
+                  actions,
+                ],
+              );
+            }
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [copy, const SizedBox(height: 4), actions],
+            );
+          },
+        ),
+      ),
+    );
+  }
 }

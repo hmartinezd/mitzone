@@ -24,6 +24,7 @@ import 'package:mitzone/features/auth/presentation/login_screen.dart';
 import 'package:mitzone/features/splash/presentation/splash_screen.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
+import 'package:mitzone/features/events/data/event_providers.dart';
 import 'package:mitzone/core/storage/storage_providers.dart';
 import 'package:mitzone/features/chat/data/chat_providers.dart';
 import 'package:mitzone/features/connections/data/connection_providers.dart';
@@ -55,6 +56,7 @@ void main() {
       return ProviderScope(
         overrides: [
           localStorageProvider.overrideWithValue(MemoryLocalStorage()),
+          nearbyEventsProvider.overrideWithValue(const AsyncValue.data([])),
           homeDiscoveryInterestsProvider.overrideWithValue(const <String>{}),
           nearbyDiscoveryProvider(
             const <String>{},

@@ -16,6 +16,7 @@ import 'local_event_participation_repository.dart';
 import 'mock_event_attendees.dart';
 import 'event_repository.dart';
 import '../../encounters/data/presence_providers.dart';
+import '../../discovery/data/discovery_location_provider.dart';
 import 'supabase_event_participation_repository.dart';
 
 typedef DemoPresenceRequest = ({String eventId, DateTime referenceTime});
@@ -31,24 +32,27 @@ final mockEventAttendeesProvider =
     );
 
 final eventCatalogProvider = Provider<EventCatalog>(
-  (ref) => ref.watch(productionModeProvider) ? RuntimeEventCatalog() : const DemoEventCatalog(),
+  (ref) => ref.watch(productionModeProvider)
+      ? RuntimeEventCatalog()
+      : const DemoEventCatalog(),
 );
 
-final nearbyEventsProvider = FutureProvider<List<Event>>((ref) async {
+final eventRepositoryProvider = Provider<EventRepository>(
+  (ref) => SupabaseEventRepository(Supabase.instance.client),
+);
+
+final nearbyEventsProvider = FutureProvider.autoDispose<List<Event>>((
+  ref,
+) async {
   if (!ref.watch(productionModeProvider)) return demoEvents;
-  final location = await ref
-      .read(locationObservationSourceProvider)
-      .observeForeground()
-      .timeout(_nearbyEventsTimeout);
-  final events = await SupabaseEventRepository(Supabase.instance.client)
-      .getNearby(
-        latitude: location.latitude,
-        longitude: location.longitude,
-      )
+  final location = await ref.watch(discoveryLocationProvider.future);
+  final events = await ref
+      .read(eventRepositoryProvider)
+      .getNearby(latitude: location.latitude, longitude: location.longitude)
       .timeout(_nearbyEventsTimeout);
   ref.read(eventCatalogProvider).replace(events);
   return events;
-});
+}, retry: (_, _) => null);
 
 final eventParticipationRepositoryProvider =
     Provider<EventParticipationRepository>((ref) {

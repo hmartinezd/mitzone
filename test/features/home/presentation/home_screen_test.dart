@@ -20,6 +20,11 @@ import 'package:mitzone/features/connections/domain/connection_request.dart';
 import 'package:mitzone/features/encounters/data/encounter_providers.dart';
 import 'package:mitzone/features/encounters/domain/encounter.dart';
 import 'package:mitzone/features/events/data/event_providers.dart';
+import 'package:mitzone/features/events/domain/event.dart';
+import 'package:mitzone/features/encounters/data/foreground_location_sources.dart';
+import 'package:mitzone/features/home/presentation/widgets/discovery_section.dart';
+import 'package:mitzone/features/events/presentation/event_details_screen.dart';
+import 'package:mitzone/app/theme/app_theme.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
 import 'package:mitzone/features/discovery/data/discovery_providers.dart';
 import 'package:mitzone/features/discovery/domain/discovery_item.dart';
@@ -49,7 +54,9 @@ void main() {
       discoveryItem,
     ]),
     DiscoveryRepository? discoveryRepository,
+    AsyncValue<List<Event>> eventState = const AsyncValue.data([]),
     double textScale = 1,
+    bool darkTheme = false,
     bool production = false,
   }) {
     return ProviderScope(
@@ -76,7 +83,7 @@ void main() {
           ).overrideWithValue(discoveryState),
         ] else
           discoveryRepositoryProvider.overrideWithValue(discoveryRepository),
-        nearbyEventsProvider.overrideWithValue(AsyncValue.data(demoEvents)),
+        nearbyEventsProvider.overrideWithValue(eventState),
         chatMessagesProvider(
           'conversation',
         ).overrideWithValue(const AsyncValue.data([])),
@@ -92,6 +99,7 @@ void main() {
         builder: (context, ref, _) {
           final router = ref.watch(routerProvider);
           return MaterialApp.router(
+            theme: darkTheme ? AppTheme.darkTheme : null,
             routerConfig: router,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(
@@ -135,7 +143,7 @@ void main() {
 
       expect(findHomeText('Hi, Hector'), findsOneWidget);
       expect(
-        findHomeText('Ready to see where real-world connections can lead?'),
+        findHomeText('Go somewhere. Be present. Mitzone does the rest.'),
         findsOneWidget,
       );
     });
@@ -282,6 +290,204 @@ void main() {
         expect(find.byType(CircularProgressIndicator), findsNothing);
       },
     );
+  });
+
+  group('Home restoration', () {
+    testWidgets(
+      'Home controls have accessible labels and Android touch targets',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(
+            createHomeScreen(
+              profileState: const AsyncData(
+                UserProfile(id: '1', displayName: 'Hector'),
+              ),
+              darkTheme: true,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+          await expectLater(tester, meetsGuideline(textContrastGuideline));
+        } finally {
+          semantics.dispose();
+        }
+      },
+    );
+
+    testWidgets('headline remains primary when there is social activity', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(
+            UserProfile(id: '1', displayName: 'Hector'),
+          ),
+          connectionState: AsyncData([
+            Connection(
+              id: 'c',
+              userAId: MockUsers.joseId,
+              userBId: MockUsers.sofiaId,
+              encounterId: 'e',
+              connectedAt: DateTime.utc(2026),
+            ),
+          ]),
+          darkTheme: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(findHomeText('Where will you be?'), findsOneWidget);
+      expect(
+        tester.getTopLeft(findHomeText('Where will you be?')).dy,
+        lessThan(tester.getTopLeft(findHomeText('Happening around you')).dy),
+      );
+      expect(
+        tester.getTopLeft(findHomeText('Happening around you')).dy,
+        lessThan(
+          tester.getTopLeft(findHomeText("1 person you've connected with")).dy,
+        ),
+      );
+    });
+
+    testWidgets('places remain informational without tap controls', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(profileState: const AsyncData(null), darkTheme: true),
+      );
+      await tester.pumpAndSettle();
+      final card = find
+          .ancestor(
+            of: findHomeText(discoveryItem.title),
+            matching: find.byType(Card),
+          )
+          .first;
+      expect(
+        find.descendant(of: card, matching: find.byType(InkWell)),
+        findsNothing,
+      );
+      expect(findHomeText('Photo unavailable'), findsOneWidget);
+      expect(findHomeText('Google Maps'), findsOneWidget);
+    });
+
+    testWidgets('event metadata opens existing details and returns to Home', (
+      tester,
+    ) async {
+      final event = demoEvents.first;
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(null),
+          eventState: AsyncData([event]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final title = findHomeText(event.title);
+      await tester.ensureVisible(title);
+      await tester.tap(title);
+      await tester.pumpAndSettle();
+      final details = tester.widget<EventDetailsScreen>(
+        find.byType(EventDetailsScreen),
+      );
+      expect(details.eventId, event.id);
+      expect(details.origin, EventDetailsOrigin.home);
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomeScreen), findsOneWidget);
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        0,
+      );
+    });
+
+    testWidgets(
+      'provider photography leads the carousel and preserves credits on image failure',
+      (tester) async {
+        const photo = 'https://images.example.test/provider-photo.jpg';
+        final source = demoEvents.first;
+        final event = Event(
+          id: source.id,
+          title: source.title,
+          venue: source.venue,
+          timeLabel: source.timeLabel,
+          category: source.category,
+          description: source.description,
+          imageKey: photo,
+          imageAttribution: 'Provider photo credit',
+          source: 'ticketmaster',
+        );
+        await tester.pumpWidget(
+          createHomeScreen(
+            profileState: const AsyncData(null),
+            eventState: AsyncData([event]),
+            darkTheme: true,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final carousel = tester.widget<DiscoverySection>(
+          find.byType(DiscoverySection),
+        );
+        expect(carousel.items.first.id, event.id);
+        expect(carousel.items.first.imageReference, photo);
+        expect(findHomeText('Provider photo credit'), findsOneWidget);
+        expect(findHomeText(event.title), findsOneWidget);
+        // The widget harness rejects external HTTP. A failed image remains an
+        // honest placeholder while retaining the real source metadata/destination.
+        expect(findHomeText('Photo unavailable'), findsWidgets);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'partial event failure preserves places and retries without fake data',
+      (tester) async {
+        await tester.pumpWidget(
+          createHomeScreen(
+            profileState: const AsyncData(null),
+            eventState: AsyncError(
+              StateError('private provider details'),
+              StackTrace.empty,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(findHomeText(discoveryItem.title), findsOneWidget);
+        expect(
+          findHomeText('We couldn’t load nearby discovery right now.'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('private provider'), findsNothing);
+        expect(findHomeText('Nothing nearby was found yet.'), findsNothing);
+      },
+    );
+
+    for (final failure in ForegroundLocationFailure.values) {
+      testWidgets('discovery explains $failure independently of presence', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          createHomeScreen(
+            profileState: const AsyncData(null),
+            discoveryState: AsyncError(
+              ForegroundLocationException(failure),
+              StackTrace.empty,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(findHomeText('Try again'), findsOneWidget);
+        expect(findHomeText('I’m here'), findsOneWidget);
+        expect(
+          findHomeText('You’re discoverable here for a limited time.'),
+          findsNothing,
+        );
+        if (failure == ForegroundLocationFailure.permissionPermanentlyDenied ||
+            failure == ForegroundLocationFailure.servicesDisabled) {
+          expect(findHomeText('Settings'), findsOneWidget);
+        }
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 
   group('HomeScreen - Router Actions', () {
@@ -615,6 +821,7 @@ void main() {
             createHomeScreen(
               profileState: const AsyncValue.data(null),
               textScale: scale,
+              darkTheme: true,
               discoveryState: const AsyncValue.data([
                 discoveryItem,
                 discoveryItem,
@@ -644,8 +851,10 @@ void main() {
             expect(findHomeText(label), findsWidgets);
             expect(tester.takeException(), isNull);
           }
-          await tester.drag(
-            find.byType(SingleChildScrollView).last,
+          final cardTitle = findHomeText(discoveryItem.title).first;
+          await tester.ensureVisible(cardTitle);
+          await tester.dragFrom(
+            tester.getCenter(cardTitle),
             const Offset(-280, 0),
           );
           await tester.pumpAndSettle();

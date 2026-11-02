@@ -18,6 +18,8 @@ import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/data/profile_repository.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
+import 'package:mitzone/features/discovery/data/discovery_providers.dart';
+import 'package:mitzone/features/events/data/event_providers.dart';
 
 void main() {
   test('stream provider exposes its restored session through future', () async {
@@ -31,9 +33,9 @@ void main() {
     container.listen(authSessionProvider, (_, _) {}, fireImmediately: true);
 
     expect(
-      await container.read(authSessionProvider.future).timeout(
-        const Duration(seconds: 1),
-      ),
+      await container
+          .read(authSessionProvider.future)
+          .timeout(const Duration(seconds: 1)),
       isNotNull,
     );
   });
@@ -47,6 +49,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // This test exercises auth routing, not live location or discovery.
+          homeDiscoveryInterestsProvider.overrideWithValue(const <String>{}),
+          nearbyDiscoveryProvider(
+            const <String>{},
+          ).overrideWithValue(const AsyncData([])),
+          nearbyEventsProvider.overrideWithValue(const AsyncData([])),
           appConfigProvider.overrideWithValue(
             AppConfig.validated(
               env: AppEnvironment.development,
@@ -58,9 +66,7 @@ void main() {
           onboardingStatusStoreProvider.overrideWithValue(
             _CompletedOnboardingStore(),
           ),
-          profileRepositoryProvider.overrideWithValue(
-            _ProfileRepository(),
-          ),
+          profileRepositoryProvider.overrideWithValue(_ProfileRepository()),
           routerInitialLocationProvider.overrideWithValue(AppRoutes.login),
         ],
         child: Consumer(
@@ -72,7 +78,10 @@ void main() {
       ),
     );
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'user@example.com');
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'user@example.com',
+    );
     await tester.enterText(find.byType(TextFormField).at(1), 'password');
     await tester.tap(find.text('Sign In').last);
     await tester.pump();
@@ -96,7 +105,9 @@ class _FakeAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    session = AuthSession(user: AuthUser(id: 'user-1', email: email));
+    session = AuthSession(
+      user: AuthUser(id: 'user-1', email: email),
+    );
     _changes.add(session);
     return session!;
   }

@@ -9,6 +9,7 @@ import 'package:mitzone/core/config/app_config.dart';
 import 'package:mitzone/core/config/app_environment.dart';
 import 'package:mitzone/core/providers/core_providers.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
+import 'package:mitzone/features/events/data/event_providers.dart';
 import 'package:mitzone/features/chat/data/chat_providers.dart';
 import 'package:mitzone/features/connections/data/connection_providers.dart';
 import 'package:mitzone/features/encounters/data/encounter_providers.dart';
@@ -46,6 +47,7 @@ void main() {
             AppConfig.validated(env: AppEnvironment.local),
           ),
           routerInitialLocationProvider.overrideWithValue(AppRoutes.login),
+          nearbyEventsProvider.overrideWithValue(const AsyncValue.data([])),
           homeDiscoveryInterestsProvider.overrideWithValue(const <String>{}),
           nearbyDiscoveryProvider(
             const <String>{},

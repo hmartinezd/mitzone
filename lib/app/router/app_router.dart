@@ -1,0 +1,351 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/identity/identity_providers.dart';
+import '../../features/foundation/presentation/entry_failure_screen.dart';
+import '../../features/foundation/presentation/route_error_screen.dart';
+import '../../features/foundation/presentation/visual_system_showcase_screen.dart';
+import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/splash/presentation/splash_screen.dart';
+import '../../features/home/presentation/home_screen.dart';
+import '../../features/events/presentation/events_screen.dart';
+import '../../features/events/presentation/event_details_screen.dart';
+import '../../features/explore/presentation/explore_screen.dart';
+import '../../features/nearby/presentation/nearby_screen.dart';
+import '../../features/groups/presentation/groups_screen.dart';
+import '../../features/chat/presentation/chat_screen.dart';
+import '../../features/chat/presentation/conversation_screen.dart';
+import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/profile/presentation/edit_profile_screen.dart';
+import '../../features/profile/presentation/profile_details_screen.dart';
+import '../../features/personality/presentation/personality_screen.dart';
+import '../../features/profile/presentation/other_user_profile_screen.dart';
+import '../../features/profile/presentation/settings_screen.dart';
+import '../../features/profile/presentation/settings_placeholders.dart';
+import '../../features/navigation/presentation/main_navigation_shell.dart';
+import '../../features/notifications/presentation/notification_center_screen.dart';
+import 'app_entry_resolver_provider.dart';
+import 'app_routes.dart';
+import 'app_entry_coordinator.dart';
+import '../../features/auth/presentation/login_screen.dart';
+import '../../features/auth/presentation/reset_password_screen.dart';
+import '../../core/auth/auth_providers.dart';
+import '../../core/auth/password_recovery.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
+
+/// Global key for the root navigator.
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'root',
+);
+
+/// Factory function to create a [GoRouter] instance.
+GoRouter createAppRouter({
+  String initialLocation = AppRoutes.splash,
+  required Ref ref,
+}) {
+  final authRefresh = ValueNotifier<int>(0);
+  ref.listen(authSessionProvider, (_, _) => authRefresh.value++);
+  ref.listen(passwordRecoveryStateProvider, (_, _) => authRefresh.value++);
+  ref.onDispose(authRefresh.dispose);
+
+  return GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: initialLocation,
+    refreshListenable: authRefresh,
+    redirect: (context, state) => _authRedirect(ref, state),
+    errorBuilder: (context, state) => RouteErrorScreen(error: state.error),
+    routes: [
+      GoRoute(
+        path: '/app/notifications',
+        builder: (context, state) => const NotificationCenterScreen(),
+      ),
+      // Messages remain addressable at their original protected URLs, but are
+      // pushed above the tab shell rather than occupying a bottom destination.
+      GoRoute(
+        path: AppRoutes.chat,
+        builder: (context, state) => const ChatScreen(),
+        routes: [
+          GoRoute(
+            path: ':conversationId',
+            builder: (context, state) => ConversationScreen(
+              conversationId: state.pathParameters['conversationId']!,
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.splash,
+        builder: (context, state) {
+          return SplashScreen(
+            onCompleted: () async {
+              final target = await ref.read(appEntryResolverProvider).resolve();
+
+              if (!context.mounted) return;
+
+              final location = AppEntryCoordinator.locationForTarget(target);
+              context.go(location);
+            },
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        builder: (_, state) => ForgotPasswordScreen(
+          initialEmail: state.extra is String ? state.extra! as String : '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        builder: (_, _) => const ResetPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.entryFailure,
+        builder: (context, state) => const EntryFailureScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.showcase,
+        builder: (context, state) => const VisualSystemShowcaseScreen(),
+      ),
+
+      // Main Navigation Shell
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return MainNavigationShell(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.home,
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.explore,
+                builder: (context, state) => const ExploreScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'activities',
+                    builder: (context, state) => const EventsScreen(),
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: AppRoutes.events,
+                builder: (context, state) => const EventsScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':eventId',
+                    builder: (context, state) => EventDetailsScreen(
+                      eventId: state.pathParameters['eventId']!,
+                      origin: state.uri.queryParameters['origin'] == 'home'
+                          ? EventDetailsOrigin.home
+                          : EventDetailsOrigin.direct,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.nearby,
+                builder: (context, state) => const NearbyScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'connections',
+                    builder: (context, state) =>
+                        const NearbyScreen(showConnections: true),
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: AppRoutes.matches,
+                builder: (context, state) => const NearbyScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'profile/:userId/:encounterId',
+                    builder: (context, state) {
+                      final userId = state.pathParameters['userId'];
+                      final encounterId = state.pathParameters['encounterId'];
+                      if (!matchProfileRouteParametersAreValid(
+                        userId: userId,
+                        encounterId: encounterId,
+                        production: ref.read(productionModeProvider),
+                        localUserIds: ref.read(productionModeProvider)
+                            ? const <String>[]
+                            : ref
+                                  .read(mockIdentityRepositoryProvider)
+                                  .users
+                                  .map((u) => u.id),
+                      )) {
+                        return const RouteErrorScreen(error: null);
+                      }
+                      return OtherUserProfileScreen(
+                        userId: userId!,
+                        encounterId: encounterId!,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.groups,
+                builder: (context, state) => const GroupsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.profile,
+                builder: (context, state) => const ProfileScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    builder: (context, state) => const EditProfileScreen(),
+                  ),
+                  GoRoute(
+                    path: 'details',
+                    builder: (context, state) => const ProfileDetailsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'personality',
+                    builder: (context, state) => const PersonalityScreen(),
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    builder: (context, state) => const SettingsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'account',
+                        builder: (context, state) =>
+                            const AccountSettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'privacy',
+                        builder: (context, state) =>
+                            const PrivacySettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'notifications',
+                        builder: (context, state) =>
+                            const NotificationsSettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'terms',
+                        builder: (context, state) =>
+                            const TermsSettingsScreen(),
+                      ),
+                      GoRoute(
+                        path: 'privacy-policy',
+                        builder: (context, state) =>
+                            const PrivacyPolicySettingsScreen(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+bool matchProfileRouteParametersAreValid({
+  required String? userId,
+  required String? encounterId,
+  required bool production,
+  required Iterable<String> localUserIds,
+}) {
+  final structurallyValid =
+      userId != null &&
+      encounterId != null &&
+      userId.trim().isNotEmpty &&
+      encounterId.trim().isNotEmpty;
+  if (!structurallyValid || production) return structurallyValid;
+  return localUserIds.contains(userId);
+}
+
+FutureOr<String?> _authRedirect(Ref ref, GoRouterState state) {
+  final authRepository = ref.read(authRepositoryProvider);
+  if (authRepository == null) return null;
+
+  final location = state.uri.path;
+  final recovery =
+      ref.read(passwordRecoveryStateProvider).value ??
+      PasswordRecoveryState.idle;
+  if (recovery.blocksApp &&
+      location != AppRoutes.resetPassword &&
+      location != AppRoutes.forgotPassword) {
+    return AppRoutes.resetPassword;
+  }
+  final sessionState = ref.read(authSessionProvider);
+
+  // Keep a protected deep link behind Splash until restoration has settled.
+  // AsyncLoading is not equivalent to an unauthenticated session.
+  if (sessionState.isLoading) {
+    return _isProtectedLocation(location) ? AppRoutes.splash : null;
+  }
+
+  // A session error cannot authorize protected content. Login provides a
+  // deterministic recovery path while public routes remain reachable.
+  if (sessionState.hasError) {
+    return _isProtectedLocation(location) ? AppRoutes.login : null;
+  }
+
+  if (sessionState.value == null) {
+    return _isProtectedLocation(location) ? AppRoutes.login : null;
+  }
+
+  if (location == AppRoutes.login) {
+    return _authenticatedLoginRedirect(ref, location);
+  }
+
+  return null;
+}
+
+Future<String?> _authenticatedLoginRedirect(Ref ref, String location) async {
+  final target = await ref.read(appEntryResolverProvider).resolve();
+  final destination = AppEntryCoordinator.locationForTarget(target);
+  return destination == location ? null : destination;
+}
+
+bool _isProtectedLocation(String location) {
+  return location.startsWith('/app/');
+}
+
+/// Provider for the initial location of the router.
+/// This can be overridden in tests to start at a specific route.
+final routerInitialLocationProvider = Provider<String>(
+  (ref) => AppRoutes.splash,
+);
+
+/// Provider for the application router.
+final routerProvider = Provider<GoRouter>((ref) {
+  final initialLocation = ref.watch(routerInitialLocationProvider);
+  final router = createAppRouter(initialLocation: initialLocation, ref: ref);
+  ref.onDispose(router.dispose);
+  return router;
+});

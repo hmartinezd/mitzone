@@ -1,0 +1,6 @@
+create table if not exists public.conversations(id uuid primary key default gen_random_uuid(),connection_id uuid unique not null references public.connections(id),user_a_id uuid not null references auth.users(id),user_b_id uuid not null references auth.users(id),created_at timestamptz not null default now(),last_message_at timestamptz);
+create table if not exists public.messages(id uuid primary key default gen_random_uuid(),conversation_id uuid not null references public.conversations(id),sender_user_id uuid not null references auth.users(id),body text not null check(char_length(trim(body)) between 1 and 2000),client_message_id text not null,created_at timestamptz not null default now(),unique(sender_user_id,client_message_id));
+alter table public.conversations enable row level security; alter table public.messages enable row level security;
+create policy "conversation participants read" on public.conversations for select to authenticated using(auth.uid()=user_a_id or auth.uid()=user_b_id);
+create policy "message participants read" on public.messages for select to authenticated using(exists(select 1 from conversations c where c.id=conversation_id and (auth.uid()=c.user_a_id or auth.uid()=c.user_b_id)));
+revoke insert,update,delete on public.conversations,public.messages from authenticated;

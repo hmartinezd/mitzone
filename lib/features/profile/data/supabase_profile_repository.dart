@@ -1,0 +1,124 @@
+import 'dart:developer' as developer;
+
+import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../domain/user_profile.dart';
+import '../domain/public_profile.dart';
+import 'profile_repository.dart';
+import '../../../core/errors/domain_error.dart';
+
+class SupabaseProfileRepository
+    implements ProfileRepository, PublicProfileRepository {
+  SupabaseProfileRepository(this.client);
+  final SupabaseClient client;
+  Map<String, dynamic> _row(UserProfile p) => {
+    'id': p.id,
+    'display_name': p.displayName,
+    'avatar_uri': p.avatarUri,
+    'bio': p.bio,
+    'city': p.city,
+    'languages': p.languages,
+    'interests': p.interests,
+    'connection_goal': p.connectionGoal?.name,
+  };
+  UserProfile _profile(Map<String, dynamic> r) => UserProfile(
+    id: r['id'] as String,
+    displayName: r['display_name'] as String,
+    avatarUri: r['avatar_uri'] as String?,
+    bio: r['bio'] as String?,
+    city: r['city'] as String?,
+    languages: (r['languages'] as List? ?? []).whereType<String>().toList(),
+    interests: (r['interests'] as List? ?? []).whereType<String>().toList(),
+    connectionGoal: ConnectionGoal.fromJson(r['connection_goal'] as String?),
+  );
+  @override
+  Future<UserProfile?> getProfile(String id) async {
+    final row = await client
+        .from('profiles')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
+    return row == null ? null : _profile(row);
+  }
+
+  @override
+  Future<PublicProfile?> getPublicProfile(String userId) async {
+    final rows = await getPublicProfilesByIds({userId});
+    return rows[userId];
+  }
+
+  @override
+  Future<Map<String, PublicProfile>> getPublicProfilesByIds(
+    Set<String> ids,
+  ) async {
+    if (ids.isEmpty) return {};
+    final rows =
+        await client.rpc(
+              'get_public_profiles',
+              params: {'p_user_ids': ids.toList()},
+            )
+            as List;
+    return {
+      for (final row in rows)
+        (row['id'] as String): PublicProfile.fromJson(row),
+    };
+  }
+
+  Future<Map<String, UserProfile>> getProfilesByIds(Set<String> ids) async {
+    if (ids.isEmpty) return {};
+    final rows = await client
+        .from('profiles')
+        .select()
+        .inFilter('id', ids.toList());
+    return {for (final row in rows) row['id'] as String: _profile(row)};
+  }
+
+  void _requireOwner(String id) {
+    if (client.auth.currentUser?.id != id) {
+      throw const DomainError(
+        DomainErrorCode.unauthorized,
+        'Profile ownership mismatch',
+      );
+    }
+  }
+
+  @override
+  Future<UserProfile> saveMinimumProfile({
+    required String identityId,
+    required String displayName,
+    String? avatarUri,
+  }) async {
+    _requireOwner(identityId);
+    return saveProfile(
+      UserProfile(
+        id: identityId,
+        displayName: displayName,
+        avatarUri: avatarUri,
+      ),
+    );
+  }
+
+  @override
+  Future<UserProfile> saveProfile(UserProfile profile) async {
+    _requireOwner(profile.id);
+    final startedAt = DateTime.now();
+    void debugLog(String message) {
+      if (kDebugMode) {
+        developer.log(
+          '$message; elapsedMs=${DateTime.now().difference(startedAt).inMilliseconds}; '
+          'at=${DateTime.now().toIso8601String()}',
+          name: 'mitzone.supabase_profile_repository',
+        );
+      }
+    }
+
+    debugLog('profiles upsert select single start');
+    final row = await client
+        .from('profiles')
+        .upsert(_row(profile))
+        .select()
+        .single();
+    debugLog('profiles upsert select single end');
+    return _profile(row);
+  }
+}

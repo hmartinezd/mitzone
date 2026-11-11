@@ -1,0 +1,110 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mitzone/features/blocking/domain/block_repository.dart';
+import 'package:mitzone/features/encounters/domain/encounter.dart';
+import 'package:mitzone/features/encounters/domain/encounter_eligibility.dart';
+
+class FakeBlocks implements BlockRepository {
+  FakeBlocks(this.blocked);
+  final bool blocked;
+  @override
+  Future<bool> isBlocked(String a, String b) async => blocked && a == 'a';
+  @override
+  Future<bool> isPairBlocked(String a, String b) async =>
+      await isBlocked(a, b) || await isBlocked(b, a);
+  @override
+  Future<void> block({
+    required String blockerUserId,
+    required String blockedUserId,
+  }) async {}
+  @override
+  Future<void> unblock({
+    required String blockerUserId,
+    required String blockedUserId,
+  }) async {}
+  @override
+  Future<List<String>> getBlocked(String blockerUserId) async => const [];
+}
+
+Encounter encounter() => Encounter(
+  id: 'e',
+  currentUserId: 'a',
+  otherUserId: 'b',
+  eventId: 'event',
+  overlapStart: DateTime.utc(2026, 1, 1),
+  overlapEnd: DateTime.utc(2026, 1, 1, 1),
+);
+
+void main() {
+  test(
+    'blocked pair is unavailable and unblocked pair is actionable',
+    () async {
+      expect(
+        await EncounterEligibilityPolicy(
+          FakeBlocks(true),
+          now: () => DateTime.utc(2026, 1, 2),
+        ).evaluate(encounter()),
+        EncounterEligibility.unavailable,
+      );
+      expect(
+        await EncounterEligibilityPolicy(
+          FakeBlocks(false),
+          now: () => DateTime.utc(2026, 1, 2),
+        ).evaluate(encounter()),
+        EncounterEligibility.actionable,
+      );
+    },
+  );
+
+  test(
+    'overlap older than seven days remains unavailable after unblocking',
+    () async {
+      expect(
+        await EncounterEligibilityPolicy(
+          FakeBlocks(false),
+          now: () => DateTime.utc(2026, 1, 9),
+        ).evaluate(encounter()),
+        EncounterEligibility.unavailable,
+      );
+    },
+  );
+
+  test('six-day-old shared observation remains actionable', () async {
+    expect(
+      await EncounterEligibilityPolicy(
+        FakeBlocks(false),
+        now: () => DateTime.utc(2026, 1, 7, 1),
+      ).evaluate(encounter()),
+      EncounterEligibility.actionable,
+    );
+  });
+
+  test('exactly seven days after observation is unavailable', () async {
+    expect(
+      await EncounterEligibilityPolicy(
+        FakeBlocks(false),
+        now: () => DateTime.utc(2026, 1, 8, 1),
+      ).evaluate(encounter()),
+      EncounterEligibility.unavailable,
+    );
+  });
+
+  test('future observation cannot establish actionability', () async {
+    expect(
+      await EncounterEligibilityPolicy(
+        FakeBlocks(false),
+        now: () => DateTime.utc(2026, 1, 1),
+      ).evaluate(encounter()),
+      EncounterEligibility.unavailable,
+    );
+  });
+
+  test('unavailable eligibility rejects sensitive actions', () async {
+    expect(
+      () => EncounterEligibilityPolicy(
+        FakeBlocks(true),
+        now: () => DateTime.utc(2026, 1, 1),
+      ).requireActionable(encounter()),
+      throwsA(isA<Exception>()),
+    );
+  });
+}

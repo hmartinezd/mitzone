@@ -1,0 +1,171 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/identity/identity_providers.dart';
+import '../../../core/storage/storage_providers.dart';
+import '../domain/connection.dart';
+import '../domain/connection_repository.dart';
+import '../domain/connection_request.dart';
+import 'local_connection_repository.dart';
+import '../../encounters/data/encounter_providers.dart';
+import '../../encounters/domain/encounter.dart';
+import '../../notifications/data/notification_providers.dart';
+import '../../notifications/domain/local_notification.dart';
+import '../../blocking/data/block_providers.dart';
+import '../../../core/auth/auth_providers.dart';
+import 'supabase_connection_repository.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/identity/current_user_provider.dart';
+import '../../../core/observability/observability.dart';
+import '../../../core/observability/observability_provider.dart';
+
+final connectionRepositoryProvider = Provider<ConnectionRepository>(
+  (ref) => ref.watch(productionModeProvider)
+      ? SupabaseConnectionRepository(Supabase.instance.client)
+      : LocalConnectionRepository(
+          ref.watch(localStorageProvider),
+          blocks: ref.watch(blockRepositoryProvider),
+        ),
+);
+final incomingConnectionRequestsProvider =
+    FutureProvider<List<ConnectionRequest>>((ref) async {
+      ref.watch(blockedUsersProvider);
+      final id = ref.watch(productionModeProvider)
+          ? await ref.watch(currentUserIdProvider.future)
+          : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      return ref.watch(connectionRepositoryProvider).getIncomingRequests(id);
+    });
+final outgoingConnectionRequestsProvider =
+    FutureProvider<List<ConnectionRequest>>((ref) async {
+      ref.watch(blockedUsersProvider);
+      final id = ref.watch(productionModeProvider)
+          ? await ref.watch(currentUserIdProvider.future)
+          : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      return ref.watch(connectionRepositoryProvider).getOutgoingRequests(id);
+    });
+final connectionsProvider = FutureProvider<List<Connection>>((ref) async {
+  ref.watch(blockedUsersProvider);
+  final id = ref.watch(productionModeProvider)
+      ? await ref.watch(currentUserIdProvider.future)
+      : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+  return ref.watch(connectionRepositoryProvider).getConnections(id);
+});
+final relationshipProvider =
+    FutureProvider.family<RelationshipState, Encounter>((ref, encounter) async {
+      ref.watch(blockedUsersProvider);
+      final current = ref.watch(productionModeProvider)
+          ? await ref.watch(currentUserIdProvider.future)
+          : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      final pair = [current, encounter.otherUserId]..sort();
+      return ref
+          .watch(connectionRepositoryProvider)
+          .getRelationshipState(
+            userAId: current,
+            userBId: encounter.otherUserId,
+            encounterId: encounter.id,
+            contextId: '${encounter.eventId}:${pair.join(':')}',
+          );
+    });
+final connectionControllerProvider = Provider(
+  (ref) => ConnectionController(ref),
+);
+
+class ConnectionController {
+  ConnectionController(this.ref);
+  final Ref ref;
+  Future<ConnectionRequest> send(String recipient, String encounter) async {
+    final sender = await ref.read(currentUserIdProvider.future);
+    final valid = (await ref.read(encountersForCurrentUserProvider.future)).any(
+      (item) =>
+          item.id == encounter &&
+          item.currentUserId == sender &&
+          item.otherUserId == recipient,
+    );
+    if (!valid) throw StateError('Connection requires a valid encounter');
+    final encounterData = (await ref.read(
+      encountersForCurrentUserProvider.future,
+    )).firstWhere((item) => item.id == encounter);
+    final pair = [sender, recipient]..sort();
+    final request = await ref
+        .read(connectionRepositoryProvider)
+        .sendRequest(
+          senderUserId: sender,
+          recipientUserId: recipient,
+          encounterId: encounter,
+          contextId: '${encounterData.eventId}:${pair.join(':')}',
+        );
+    if (!ref.read(productionModeProvider)) {
+      await ref
+          .read(notificationRepositoryProvider)
+          .add(
+            LocalNotification(
+              id: 'request_${request.id}',
+              type: LocalNotificationType.connectionRequest,
+              userId: recipient,
+              timestamp: request.createdAt,
+              entityId: request.id,
+              destination: '/app/matches',
+            ),
+          );
+    }
+    ref.read(observabilityProvider).log(MitzoneEvents.connectionRequestSent);
+    return _refresh(request);
+  }
+
+  Future<ConnectionRequest> accept(String id) async {
+    final result = await ref
+        .read(connectionRepositoryProvider)
+        .acceptRequest(
+          requestId: id,
+          recipientUserId: await ref.read(currentUserIdProvider.future),
+        );
+    if (!ref.read(productionModeProvider)) {
+      await ref
+          .read(notificationRepositoryProvider)
+          .add(
+            LocalNotification(
+              id: 'accepted_$id',
+              type: LocalNotificationType.connectionAccepted,
+              userId: result.senderUserId,
+              timestamp: result.createdAt,
+              entityId: id,
+              destination: '/app/chat',
+            ),
+          );
+    }
+    ref
+        .read(observabilityProvider)
+        .log(MitzoneEvents.connectionRequestAccepted);
+    return _refresh(result);
+  }
+
+  Future<ConnectionRequest> decline(String id) async {
+    final result = await ref
+        .read(connectionRepositoryProvider)
+        .declineRequest(
+          requestId: id,
+          recipientUserId: await ref.read(currentUserIdProvider.future),
+        );
+    ref
+        .read(observabilityProvider)
+        .log(MitzoneEvents.connectionRequestDeclined);
+    return _refresh(result);
+  }
+
+  Future<void> remove(String connectionId) async {
+    await ref
+        .read(connectionRepositoryProvider)
+        .removeConnection(
+          connectionId: connectionId,
+          userId: await ref.read(currentUserIdProvider.future),
+        );
+    ref.invalidate(connectionsProvider);
+    ref.invalidate(relationshipProvider);
+  }
+
+  Future<ConnectionRequest> _refresh(ConnectionRequest value) async {
+    ref.invalidate(incomingConnectionRequestsProvider);
+    ref.invalidate(outgoingConnectionRequestsProvider);
+    ref.invalidate(connectionsProvider);
+    ref.invalidate(relationshipProvider);
+    return value;
+  }
+}

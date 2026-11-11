@@ -1,0 +1,161 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mitzone/app/startup_failure_app.dart';
+import 'package:mitzone/bootstrap.dart';
+import 'package:mitzone/core/config/app_config.dart';
+import 'package:mitzone/core/config/app_environment.dart';
+import 'package:mitzone/core/errors/app_exception.dart';
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  var firebaseInitializationCalls = 0;
+  const firebaseCoreChannel =
+      'dev.flutter.pigeon.firebase_core_platform_interface.FirebaseCoreHostApi.initializeCore';
+
+  setUp(() {
+    firebaseInitializationCalls = 0;
+    // No native Firebase plugin runs in widget tests. Complete its platform
+    // reply in the test zone instead of waiting for the host callback while
+    // bootstrap is awaited inside the fake async widget-test environment.
+    // A null reply models Firebase being unavailable, exercising bootstrap's
+    // non-fatal Firebase error handling without initializing real services.
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler(firebaseCoreChannel, (_) async {
+          firebaseInitializationCalls++;
+          return null;
+        });
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMessageHandler(firebaseCoreChannel, null);
+  });
+  group('Bootstrap', () {
+    testWidgets('missing Supabase configuration shows startup failure', (
+      tester,
+    ) async {
+      bool supabaseCalled = false;
+      Widget? capturedApp;
+
+      await bootstrap(
+        configLoader: () =>
+            AppConfig.validated(env: AppEnvironment.development),
+        supabaseInitializer: ({required url, required publishableKey}) async {
+          supabaseCalled = true;
+        },
+        appRunner: (app) => capturedApp = app,
+      );
+
+      expect(supabaseCalled, isFalse);
+      expect(firebaseInitializationCalls, 0);
+      expect(capturedApp, isA<StartupFailureApp>());
+
+      await tester.pumpWidget(capturedApp!);
+      expect(find.textContaining('requires SUPABASE_URL'), findsOneWidget);
+    });
+
+    test('Test 2: Configured mode tolerates unavailable Firebase', () async {
+      bool supabaseCalled = false;
+      String? capturedUrl;
+      String? capturedKey;
+      Widget? capturedApp;
+
+      await bootstrap(
+        configLoader: () => AppConfig.validated(
+          env: AppEnvironment.development,
+          supabaseUrl: 'https://test.supabase.co',
+          supabasePublishableKey: 'test-key',
+        ),
+        supabaseInitializer: ({required url, required publishableKey}) async {
+          supabaseCalled = true;
+          capturedUrl = url;
+          capturedKey = publishableKey;
+        },
+        appRunner: (app) => capturedApp = app,
+      );
+
+      expect(supabaseCalled, isTrue);
+      expect(firebaseInitializationCalls, 1);
+      expect(capturedUrl, 'https://test.supabase.co');
+      expect(capturedKey, 'test-key');
+      expect(capturedApp, isA<ProviderScope>());
+    });
+
+    testWidgets('Test 3: Supabase initialization failure', (tester) async {
+      Widget? capturedApp;
+      bool supabaseCalled = false;
+
+      await bootstrap(
+        configLoader: () => AppConfig.validated(
+          env: AppEnvironment.development,
+          supabaseUrl: 'https://test.supabase.co',
+          supabasePublishableKey: 'test-key',
+        ),
+        supabaseInitializer: ({required url, required publishableKey}) async {
+          supabaseCalled = true;
+          throw Exception('Network error');
+        },
+        appRunner: (app) => capturedApp = app,
+      );
+
+      expect(firebaseInitializationCalls, 1);
+      expect(supabaseCalled, isTrue);
+      expect(capturedApp, isA<StartupFailureApp>());
+
+      await tester.pumpWidget(capturedApp!);
+
+      expect(find.text('Startup Failed'), findsOneWidget);
+      expect(find.textContaining('Initialization failure'), findsOneWidget);
+      expect(find.textContaining('Network error'), findsNothing);
+      expect(find.textContaining('test-key'), findsNothing);
+    });
+
+    testWidgets('Test 4: Configuration loader failure', (tester) async {
+      Widget? capturedApp;
+
+      await bootstrap(
+        configLoader: () => throw const ConfigException('Invalid env'),
+        appRunner: (app) => capturedApp = app,
+      );
+
+      expect(capturedApp, isA<StartupFailureApp>());
+
+      await tester.pumpWidget(capturedApp!);
+      expect(find.textContaining('Invalid env'), findsOneWidget);
+    });
+
+    testWidgets('Test 6: Retry behavior - callback present', (tester) async {
+      bool retryCalled = false;
+
+      final failureApp = StartupFailureApp(
+        message: 'Fail',
+        onRetry: () => retryCalled = true,
+      );
+
+      await tester.pumpWidget(failureApp);
+
+      final retryButton = find.byType(FilledButton);
+      expect(retryButton, findsOneWidget);
+
+      await tester.tap(retryButton);
+      expect(retryCalled, isTrue);
+    });
+
+    testWidgets('Test 6: Retry behavior - callback absent', (tester) async {
+      final failureApp = const StartupFailureApp(
+        message: 'Fail',
+        onRetry: null,
+      );
+
+      await tester.pumpWidget(failureApp);
+
+      expect(find.byType(FilledButton), findsNothing);
+      expect(
+        find.textContaining('Please check your network connection'),
+        findsOneWidget,
+      );
+    });
+  });
+}

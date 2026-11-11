@@ -1,0 +1,503 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../app/theme/app_spacing.dart';
+import '../../connections/data/connection_providers.dart';
+import '../../connections/domain/connection_repository.dart';
+import '../../chat/data/chat_providers.dart';
+import '../../encounters/data/encounter_resolvers.dart';
+import '../../encounters/data/encounter_providers.dart';
+import '../../encounters/domain/encounter.dart';
+import '../../encounters/domain/profile_affinity.dart';
+import '../../profile/domain/user_profile.dart';
+import 'widgets/profile_avatar.dart';
+import '../../blocking/data/block_providers.dart';
+import '../../../core/identity/current_user_provider.dart';
+import '../../reporting/data/report_providers.dart';
+import '../../reporting/domain/report.dart';
+
+class OtherUserProfileScreen extends ConsumerWidget {
+  const OtherUserProfileScreen({
+    required this.userId,
+    required this.encounterId,
+    super.key,
+  });
+  final String userId;
+  final String encounterId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final encounterState = ref.watch(encountersForCurrentUserProvider);
+    return encounterState.when(
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, _) => const Scaffold(
+        body: Center(child: Text('This encounter is no longer available.')),
+      ),
+      data: (encounters) {
+        final encounter = encounters
+            .where((e) => e.id == encounterId && e.otherUserId == userId)
+            .firstOrNull;
+        if (encounter == null) {
+          return const Scaffold(
+            body: Center(child: Text('This encounter is no longer available.')),
+          );
+        }
+        final profileState = ref.watch(encounterProfileProvider(userId));
+        final profile = profileState.value;
+        if (profileState.isLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (profile == null) {
+          return const Scaffold(
+            body: Center(child: Text('This profile is no longer available.')),
+          );
+        }
+        return _content(context, ref, profile.toUserProfile(), encounter);
+      },
+    );
+  }
+
+  Widget _content(
+    BuildContext context,
+    WidgetRef ref,
+    UserProfile profile,
+    Encounter encounter,
+  ) {
+    final currentState = ref.watch(
+      encounterProfileProvider(encounter.currentUserId),
+    );
+    final current = currentState.value?.toUserProfile();
+    if (current == null) {
+      return const Scaffold(
+        body: Center(child: Text('Your profile is unavailable.')),
+      );
+    }
+    final event = ref.watch(encounterEventProvider(encounter.eventId));
+    final relationship = ref.watch(relationshipProvider(encounter));
+    final sharedInterests = ProfileAffinity.sharedInterests(current, profile);
+    final sharedLanguages = ProfileAffinity.sharedLanguages(current, profile);
+    return Scaffold(
+      appBar: AppBar(title: Text(profile.displayName)),
+      body: ListView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        children: [
+          Center(
+            child: ProfileAvatar(
+              displayName: profile.displayName,
+              avatarUri: profile.avatarUri,
+              radius: 50,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Center(
+            child: Text(
+              profile.displayName,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+          ),
+          if (_value(profile.city) != null)
+            Center(child: Text(profile.city!.trim())),
+          if (profile.connectionGoal != null)
+            _InfoSection(
+              title: 'Connection goal',
+              child: Text(_goal(profile.connectionGoal!)),
+            ),
+          if (_value(profile.bio) != null)
+            _InfoSection(title: 'About', child: Text(profile.bio!.trim())),
+          if (profile.interests.isNotEmpty)
+            _Chips(title: 'Interests', values: profile.interests),
+          if (profile.languages.isNotEmpty)
+            _Chips(title: 'Languages', values: profile.languages),
+          _InfoSection(
+            title: 'Why you crossed paths',
+            child: Text(
+              event == null
+                  ? 'You shared a local Mitzone moment.'
+                  : 'You were both at ${event.title}.',
+            ),
+          ),
+          if (sharedInterests.isNotEmpty)
+            _Chips(title: 'Shared interests', values: sharedInterests),
+          if (sharedLanguages.isNotEmpty)
+            _Chips(title: 'Shared languages', values: sharedLanguages),
+          if (ProfileAffinity.sharedGoal(current, profile))
+            _InfoSection(
+              title: 'Shared connection goal',
+              child: Text(_goal(profile.connectionGoal!)),
+            ),
+          const SizedBox(height: AppSpacing.lg),
+          relationship.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, _) => const Text('Relationship unavailable'),
+            data: (state) =>
+                _Action(state: state, encounter: encounter, profile: profile),
+          ),
+          _BlockAction(userId: profile.id),
+          _ReportAction(userId: profile.id),
+        ],
+      ),
+    );
+  }
+
+  static String? _value(String? value) =>
+      value?.trim().isEmpty ?? true ? null : value;
+  static String _goal(ConnectionGoal goal) => switch (goal) {
+    ConnectionGoal.social => 'Social',
+    ConnectionGoal.professional => 'Professional',
+    ConnectionGoal.both => 'Social + Professional',
+  };
+}
+
+class _ReportAction extends ConsumerStatefulWidget {
+  const _ReportAction({required this.userId});
+  final String userId;
+  @override
+  ConsumerState<_ReportAction> createState() => _ReportActionState();
+}
+
+class _ReportActionState extends ConsumerState<_ReportAction> {
+  bool busy = false;
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: busy ? null : _report,
+    child: const Text('Report user'),
+  );
+
+  Future<void> _report() async {
+    var reason = ReportReason.harassment;
+    final details = TextEditingController();
+    final submit = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Report user'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButton<ReportReason>(
+                value: reason,
+                isExpanded: true,
+                items: [
+                  for (final item in ReportReason.values)
+                    DropdownMenuItem(value: item, child: Text(item.label)),
+                ],
+                onChanged: (value) => setDialogState(() => reason = value!),
+              ),
+              TextField(
+                controller: details,
+                maxLength: 500,
+                decoration: const InputDecoration(
+                  labelText: 'Details (optional)',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Submit report'),
+            ),
+          ],
+        ),
+      ),
+    );
+    final detailText = details.text;
+    details.dispose();
+    if (submit != true || !mounted) return;
+    setState(() => busy = true);
+    try {
+      await ref
+          .read(reportRepositoryProvider)
+          .submit(
+            reportedUserId: widget.userId,
+            reason: reason,
+            details: detailText,
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Report submitted.')));
+      final blockToo = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Block this user too?'),
+          content: const Text(
+            'Blocking prevents future interaction with this person.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Block user'),
+            ),
+          ],
+        ),
+      );
+      if (blockToo == true) {
+        try {
+          final blocker = await ref.read(currentUserIdProvider.future);
+          await ref
+              .read(blockRepositoryProvider)
+              .block(blockerUserId: blocker, blockedUserId: widget.userId);
+          ref.invalidate(blockedUsersProvider);
+          ref.invalidate(encountersForCurrentUserProvider);
+          ref.invalidate(connectionsProvider);
+          ref.invalidate(relationshipProvider);
+          if (mounted) Navigator.of(context).pop();
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Report submitted, but blocking failed.'),
+              ),
+            );
+          }
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This report could not be submitted.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+}
+
+class _BlockAction extends ConsumerStatefulWidget {
+  const _BlockAction({required this.userId});
+  final String userId;
+  @override
+  ConsumerState<_BlockAction> createState() => _BlockActionState();
+}
+
+class _BlockActionState extends ConsumerState<_BlockAction> {
+  bool busy = false;
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: busy ? null : _block,
+    child: const Text('Block user'),
+  );
+  Future<void> _block() async {
+    final ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (c) => AlertDialog(
+            title: const Text('Block user?'),
+            content: const Text(
+              'Blocking prevents future interaction with this person.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(c, true),
+                child: const Text('Block'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok || !mounted) return;
+    setState(() => busy = true);
+    try {
+      final blockerUserId = await ref.read(currentUserIdProvider.future);
+      await ref
+          .read(blockRepositoryProvider)
+          .block(blockerUserId: blockerUserId, blockedUserId: widget.userId);
+      ref.invalidate(blockedUsersProvider);
+      ref.invalidate(encountersForCurrentUserProvider);
+      ref.invalidate(connectionsProvider);
+      ref.invalidate(relationshipProvider);
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This user could not be blocked.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+}
+
+class _Action extends ConsumerStatefulWidget {
+  const _Action({
+    required this.state,
+    required this.encounter,
+    required this.profile,
+  });
+  final RelationshipState state;
+  final Encounter encounter;
+  final UserProfile profile;
+  @override
+  ConsumerState<_Action> createState() => _ActionState();
+}
+
+class _ActionState extends ConsumerState<_Action> {
+  bool busy = false;
+  @override
+  Widget build(BuildContext context) => switch (widget.state) {
+    RelationshipState.blocked => const Center(
+      child: Text('Interaction unavailable'),
+    ),
+    RelationshipState.none => FilledButton(
+      onPressed: busy ? null : _sayHi,
+      child: busy
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(),
+            )
+          : const Text('Say Hi'),
+    ),
+    RelationshipState.outgoingPending => const Center(
+      child: Text('Request sent'),
+    ),
+    RelationshipState.incomingPending => const Center(
+      child: Text('Review this request in Matches'),
+    ),
+    RelationshipState.declined => const Center(child: Text('Not now')),
+    RelationshipState.connected => Column(
+      children: [
+        FilledButton(
+          onPressed: () async {
+            final cs = await ref.read(connectionsProvider.future);
+            final c = cs.firstWhere(
+              (c) =>
+                  c.userAId == widget.profile.id ||
+                  c.userBId == widget.profile.id,
+            );
+            final chat = await ref
+                .read(chatRepositoryProvider)
+                .getOrCreateConversation(
+                  connectionId: c.id,
+                  userId: widget.encounter.currentUserId,
+                );
+            if (context.mounted) context.push('/app/chat/${chat.id}');
+          },
+          child: const Text('Message'),
+        ),
+        TextButton(
+          onPressed: busy ? null : _remove,
+          child: const Text('Remove connection'),
+        ),
+      ],
+    ),
+  };
+
+  Future<void> _remove() async {
+    final confirmed =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Remove connection?'),
+            content: const Text(
+              'This will end the connection for both people.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Remove'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) return;
+    setState(() => busy = true);
+    try {
+      final cs = await ref.read(connectionsProvider.future);
+      final c = cs.firstWhere(
+        (c) => c.userAId == widget.profile.id || c.userBId == widget.profile.id,
+      );
+      await ref.read(connectionControllerProvider).remove(c.id);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Connection removed.')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('This connection is no longer available.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _sayHi() async {
+    setState(() => busy = true);
+    try {
+      await ref
+          .read(connectionControllerProvider)
+          .send(widget.profile.id, widget.encounter.id);
+      ref.invalidate(relationshipProvider(widget.encounter));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('We could not send your request.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+}
+
+class _InfoSection extends StatelessWidget {
+  const _InfoSection({required this.title, required this.child});
+  final String title;
+  final Widget child;
+  @override
+  Widget build(BuildContext c) => Padding(
+    padding: const EdgeInsets.only(top: AppSpacing.xl),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(c).textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.sm),
+        child,
+      ],
+    ),
+  );
+}
+
+class _Chips extends StatelessWidget {
+  const _Chips({required this.title, required this.values});
+  final String title;
+  final List<String> values;
+  @override
+  Widget build(BuildContext c) => _InfoSection(
+    title: title,
+    child: Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: values.map((v) => Chip(label: Text(v))).toList(),
+    ),
+  );
+}

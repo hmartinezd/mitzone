@@ -1,0 +1,66 @@
+name: mitzone
+description: "Mitzone transforms real-world encounters into meaningful digital connections."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.4.2
+  go_router: ^17.4.0
+  image_picker: ^1.2.3
+  path: ^1.9.1
+  path_provider: ^2.1.6
+  shared_preferences: ^2.5.5
+  supabase_flutter: ^2.17.1
+  app_links: ^7.2.1
+  uuid: ^4.6.0
+  geolocator: ^13.0.2
+  firebase_core: ^4.1.0
+  firebase_messaging: ^16.0.0
+  firebase_analytics: ^12.0.0
+  firebase_crashlytics: ^5.0.0
+
+dev_dependencies:
+  fake_async: ^1.3.3
+  http: ^1.6.0
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  shared_preferences_platform_interface: ^2.4.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/fonts/SpaceGrotesk-OFL.txt
+    - assets/fonts/PlusJakartaSans-OFL.txt
+    - assets/branding/mitzone_app_icon.png
+    - assets/branding/mitzone_logo.jpg
+    - assets/branding/mitzone_logo_square.png
+
+  fonts:
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-400.ttf
+          weight: 400
+        - asset: assets/fonts/SpaceGrotesk-500.ttf
+          weight: 500
+        - asset: assets/fonts/SpaceGrotesk-600.ttf
+          weight: 600
+        - asset: assets/fonts/SpaceGrotesk-700.ttf
+          weight: 700
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-400.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-500.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-600.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-700.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-800.ttf
+          weight: 800

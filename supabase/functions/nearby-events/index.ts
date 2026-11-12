@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { nearbyCoordinates, nearbyProviderTimeoutMs } from "../_shared/nearby_request.ts";
 
 const cors={"Access-Control-Allow-Origin":"*","Access-Control-Allow-Headers":"authorization, x-client-info, apikey, content-type"};
 Deno.serve(async req=>{
@@ -8,8 +9,9 @@ Deno.serve(async req=>{
     if(!auth?.startsWith('Bearer ')) return json({error:'Unauthorized'},401);
     const supabase=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_ANON_KEY')!,{global:{headers:{Authorization:auth}}});
     if(!(await supabase.auth.getUser()).data.user) return json({error:'Unauthorized'},401);
-    const b=await req.json(), lat=Number(b.latitude), lon=Number(b.longitude);
-    if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180) return json({error:'Invalid location'},400);
+    const coordinates=nearbyCoordinates(await req.json());
+    if(!coordinates) return json({error:'Invalid location'},400);
+    const {latitude:lat,longitude:lon}=coordinates;
     const ticketmasterApiKey=Deno.env.get('TICKETMASTER_API_KEY')?.trim();
     if(!ticketmasterApiKey){
       console.error('TICKETMASTER_API_KEY is not configured');
@@ -18,7 +20,7 @@ Deno.serve(async req=>{
     const startDateTime=formatProviderDate(new Date());
     const endDateTime=formatProviderDate(new Date(Date.now()+14*86400000));
     const p=new URLSearchParams({apikey:ticketmasterApiKey,latlong:`${lat},${lon}`,radius:'25',unit:'km',size:'20',sort:'date,asc',startDateTime,endDateTime});
-    const response=await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${p}`);
+    const response=await fetch(`https://app.ticketmaster.com/discovery/v2/events.json?${p}`, {signal:AbortSignal.timeout(nearbyProviderTimeoutMs)});
     if(!response.ok){
       console.error('Ticketmaster request failed', {status:response.status});
       return json({error:'Event provider unavailable',providerStatus:response.status},502);

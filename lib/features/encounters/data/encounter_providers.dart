@@ -62,11 +62,20 @@ final encountersForCurrentUserProvider = FutureProvider<List<Encounter>>((
   final userId = ref.watch(productionModeProvider)
       ? await ref.watch(currentUserIdProvider.future)
       : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
-  final encounters = await ref
-      .watch(encounterRepositoryProvider)
-      .getEncountersForUser(userId);
+  final repository = ref.watch(encounterRepositoryProvider);
+  final encounters = await repository.getEncountersForUser(userId);
   final result = <Encounter>[];
-  final policy = EncounterEligibilityPolicy(ref.read(blockRepositoryProvider));
+  // Explicit local-demo repositories simulate elapsed time. Evaluate their
+  // fixtures against that same clock; configured runtime always uses real UTC.
+  final demoClock =
+      !ref.read(productionModeProvider) &&
+          repository is LocalEncounterRepository
+      ? repository.referenceTime
+      : null;
+  final policy = EncounterEligibilityPolicy(
+    ref.read(blockRepositoryProvider),
+    now: demoClock == null ? () => DateTime.now().toUtc() : () => demoClock,
+  );
   for (final encounter in encounters) {
     if (await policy.evaluate(encounter) != EncounterEligibility.unavailable) {
       result.add(encounter);

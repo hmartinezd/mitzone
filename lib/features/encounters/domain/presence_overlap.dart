@@ -15,7 +15,8 @@ class PresenceOverlap {
     PresenceEvidence b, {
     Duration minimum = initialMeaningfulPresenceOverlap,
   }) {
-    if (a.subjectUserId == b.subjectUserId || !contextsCompatible(a.contextId, b.contextId)) {
+    if (a.subjectUserId == b.subjectUserId ||
+        !contextsCompatible(a.contextId, b.contextId)) {
       return null;
     }
     final start = a.observedStart.isAfter(b.observedStart)
@@ -37,7 +38,11 @@ class PresenceOverlap {
     if (pa.length != 2 || pb.length != 2) return false;
     final ax = int.tryParse(pa[0]), ay = int.tryParse(pa[1]);
     final bx = int.tryParse(pb[0]), by = int.tryParse(pb[1]);
-    return ax != null && ay != null && bx != null && by != null &&
-        (ax - bx).abs() <= 1 && (ay - by).abs() <= 1;
+    return ax != null &&
+        ay != null &&
+        bx != null &&
+        by != null &&
+        (ax - bx).abs() <= 1 &&
+        (ay - by).abs() <= 1;
   }
 }

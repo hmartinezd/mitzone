@@ -1,136 +1,380 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+
+import '../../../core/auth/auth_providers.dart';
+import '../../../core/identity/current_user_provider.dart';
+import '../../../core/storage/storage_providers.dart';
+import '../data/encounter_providers.dart';
+import '../data/foreground_location_sources.dart';
+import '../data/foreground_presence_preferences.dart';
+import '../data/foreground_presence_refresher.dart';
 import '../data/presence_providers.dart';
 import '../domain/foreground_presence_controller.dart';
-import '../../../core/auth/auth_providers.dart';
-import '../../../core/storage/storage_providers.dart';
-import 'dart:async';
-import 'package:geolocator/geolocator.dart';
-import '../data/foreground_location_sources.dart';
-import '../data/encounter_providers.dart';
 
-class ForegroundPresenceCard extends ConsumerStatefulWidget {
+/// Account-keyed state prevents consent or an in-flight UI from crossing users.
+class ForegroundPresenceCard extends ConsumerWidget {
   const ForegroundPresenceCard({super.key});
+
   @override
-  ConsumerState<ForegroundPresenceCard> createState() =>
-      _ForegroundPresenceCardState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ref
+        .watch(currentUserIdProvider)
+        .when(
+          data: (id) => _AccountPresenceCard(key: ValueKey(id), userId: id),
+          loading: () => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Loading presence controls…'),
+            ),
+          ),
+          error: (_, _) => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Sign in to manage voluntary presence.'),
+            ),
+          ),
+        );
+  }
 }
 
-class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
+class _AccountPresenceCard extends ConsumerStatefulWidget {
+  const _AccountPresenceCard({super.key, required this.userId});
+  final String userId;
+  @override
+  ConsumerState<_AccountPresenceCard> createState() =>
+      _AccountPresenceCardState();
+}
+
+class _AccountPresenceCardState extends ConsumerState<_AccountPresenceCard>
     with WidgetsBindingObserver {
   ForegroundPresenceStatus status = ForegroundPresenceStatus.inactive;
   bool consent = false;
-  bool stopped = false;
+  bool restoring = true;
+  bool busy = false;
+  bool stopping = false;
+  bool stopFailed = false;
+  bool stopConfirmed = false;
+  DateTime? expiresAt;
   Timer? expiryTimer;
-  bool _inFlight = false;
+  String? feedback;
   ForegroundLocationFailure? failure;
+  late final ForegroundPresenceRefresher refresher;
+  bool _visible = false;
+  bool _refreshAuthorized = false;
+  AppLifecycleState? _lifecycle;
+
+  ForegroundPresencePreferences get preferences =>
+      ForegroundPresencePreferences(
+        ref.read(localStorageProvider),
+        widget.userId,
+      );
+  bool get stillThisAccount =>
+      mounted && ref.read(currentUserIdProvider).value == widget.userId;
+  bool get recorded =>
+      status == ForegroundPresenceStatus.recorded ||
+      status == ForegroundPresenceStatus.active;
+  bool get canObserve =>
+      stillThisAccount &&
+      _visible &&
+      (_lifecycle == null || _lifecycle == AppLifecycleState.resumed);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    Future<void>(() async {
-      final value = await ref
-          .read(localStorageProvider)
-          .getBool('foreground_presence_consent.v1');
-      if (mounted && value == true) setState(() => consent = true);
-    });
+    _lifecycle = WidgetsBinding.instance.lifecycleState;
+    refresher = ForegroundPresenceRefresher(
+      mayObserve: () => canObserve && _refreshAuthorized && !busy,
+      refresh: _refresh,
+    );
+    unawaited(_restore());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _visible = TickerMode.valuesOf(context).enabled;
+    _syncRefresher();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lifecycle = state;
+    _syncRefresher();
+  }
+
+  void _syncRefresher() {
+    final expiry = expiresAt;
+    if (_refreshAuthorized && canObserve && !busy && expiry != null) {
+      refresher.start(expiry);
+    } else {
+      refresher.pause();
+      if (_refreshAuthorized && !canObserve && mounted) {
+        ref.read(foregroundPresenceServiceProvider).cancelPendingObservation();
+      }
+    }
+  }
+
+  Future<void> _refresh() async {
+    if (!canObserve || !_refreshAuthorized || busy) return;
+    final service = ref.read(foregroundPresenceServiceProvider);
+    final result = await service.refresh(
+      consent: consent,
+      isStillAuthorized: () =>
+          canObserve &&
+          _refreshAuthorized &&
+          !busy &&
+          expiresAt != null &&
+          DateTime.now().toUtc().isBefore(expiresAt!),
+    );
+    if (!canObserve || !_refreshAuthorized || busy) return;
+    if (result == ForegroundPresenceStatus.recorded) {
+      // The secured RPC preserves the original deadline on refresh. Never
+      // extend the client session, even if a stale server returns a later one.
+      ref.invalidate(encountersForCurrentUserProvider);
+    } else {
+      refresher.pause();
+      setState(() {
+        _refreshAuthorized = false;
+        failure = service.lastLocationFailure;
+        feedback =
+            'Presence updates paused. Your last record still expires automatically. Resume or use Stop.';
+      });
+    }
+  }
+
+  Future<void> _restore() async {
+    try {
+      final savedConsent = await preferences.hasConsent();
+      final savedExpiry = await preferences.lastExpiry();
+      if (!stillThisAccount) return;
+      setState(() {
+        consent = savedConsent;
+        restoring = false;
+        if (savedExpiry != null &&
+            savedExpiry.isAfter(DateTime.now().toUtc())) {
+          expiresAt = savedExpiry;
+          status = ForegroundPresenceStatus.recorded;
+          feedback =
+              'Your last recorded presence has not reached its expiry. You can stop it below.';
+        }
+      });
+      _scheduleExpiry();
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          restoring = false;
+          feedback =
+              'Couldn’t restore presence controls. Consent will be requested again. Stop is still available.';
+        });
+      }
+    }
+  }
+
+  void _scheduleExpiry() {
+    expiryTimer?.cancel();
+    final expiry = expiresAt;
+    if (expiry == null) return;
+    final remaining = expiry.difference(DateTime.now().toUtc());
+    void expire() {
+      if (!mounted) return;
+      refresher.pause();
+      setState(() {
+        _refreshAuthorized = false;
+        status = ForegroundPresenceStatus.inactive;
+        expiresAt = null;
+        stopFailed = false;
+        feedback =
+            'Your last recorded presence has expired. Activate again only when you choose.';
+      });
+    }
+
+    if (remaining <= Duration.zero) {
+      expire();
+    } else {
+      expiryTimer = Timer(remaining, expire);
+    }
   }
 
   Future<void> _activate() async {
-    if (_inFlight) return;
-    if (!consent) {
-      final accepted = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Discover people nearby'),
-          content: const Text(
-            'When you choose “I’m here”, Mitzone may use your current location while this feature is active to help discover people associated with nearby real-world activity. It uses coarse place context, not your exact location, and does not track you in the background. You can stop at any time.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Not now'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
-      if (accepted != true || !mounted) return;
-      consent = true;
-      await ref
-          .read(localStorageProvider)
-          .setBool('foreground_presence_consent.v1', true);
+    if (busy || restoring || (recorded && _refreshAuthorized) || !canObserve) {
+      return;
     }
+    final resuming = recorded && expiresAt != null;
     setState(() {
-      status = ForegroundPresenceStatus.locating;
-      _inFlight = true;
-      failure = null;
+      busy = true;
+      feedback = null;
+      stopConfirmed = false;
     });
     try {
+      if (!consent) {
+        final accepted = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Choose to be discoverable'),
+            content: const SingleChildScrollView(
+              child: Text(
+                'Discovery location permission is separate from presence. When you choose “I’m here”, your current location is sent to Mitzone to create a short-lived, coarse shared-place record. While this screen is visible and the app is in the foreground, it refreshes about once a minute, for at most 30 minutes. Other people do not see your exact coordinates. This makes you eligible for shared-context encounters. Mitzone does not collect presence in the background. The record expires automatically, or you can use Stop to remove your active presence record.',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Not now'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Continue'),
+              ),
+            ],
+          ),
+        );
+        if (accepted != true || !stillThisAccount) return;
+        await preferences.saveConsent();
+        if (!stillThisAccount) return;
+        consent = true;
+      }
+      if (!stillThisAccount) return;
+      setState(() {
+        status = ForegroundPresenceStatus.locating;
+        failure = null;
+      });
       if (ref.read(productionModeProvider)) {
         final service = ref.read(foregroundPresenceServiceProvider);
-        final result = await service.record(
-          consent: consent,
-          onLocationResolved: () {
-            if (mounted) {
-              setState(() => status = ForegroundPresenceStatus.recording);
-            }
-          },
-        );
-        if (mounted) {
+        final result = resuming
+            ? await service.refresh(
+                consent: consent,
+                isStillAuthorized: () =>
+                    canObserve &&
+                    expiresAt != null &&
+                    DateTime.now().toUtc().isBefore(expiresAt!),
+              )
+            : await service.record(
+                consent: consent,
+                isStillAuthorized: () => canObserve,
+                onLocationResolved: () {
+                  if (stillThisAccount) {
+                    setState(() => status = ForegroundPresenceStatus.recording);
+                  }
+                },
+              );
+        if (!stillThisAccount) return;
+        setState(() {
           failure = service.lastLocationFailure;
-          setState(() => status = result);
-          _inFlight = false;
-          if (result == ForegroundPresenceStatus.recorded) {
-            ref.invalidate(encountersForCurrentUserProvider);
+          status = resuming && result != ForegroundPresenceStatus.recorded
+              ? ForegroundPresenceStatus.recorded
+              : result;
+          if (resuming && result != ForegroundPresenceStatus.recorded) {
+            feedback =
+                'Couldn’t resume the existing session. Use Stop, then choose “I’m here” to start a new session.';
           }
-          expiryTimer?.cancel();
-          final expiry = service.expiresAt;
-          if (result == ForegroundPresenceStatus.recorded && expiry != null) {
-            expiryTimer = Timer(expiry.difference(DateTime.now().toUtc()), () {
-              if (mounted) {
-                setState(() {
-                  status = ForegroundPresenceStatus.inactive;
-                  stopped = false;
-                });
-              }
-            });
+          if (result == ForegroundPresenceStatus.recorded) {
+            expiresAt = service.expiresAt;
+            stopFailed = false;
+            _refreshAuthorized = true;
+          }
+        });
+        if (result == ForegroundPresenceStatus.recorded) {
+          ref.invalidate(encountersForCurrentUserProvider);
+          _scheduleExpiry();
+          try {
+            await preferences.saveExpiry(expiresAt);
+          } catch (_) {
+            if (mounted) {
+              setState(
+                () => feedback =
+                    'Presence was recorded, but its local status could not be saved. Stop remains available.',
+              );
+            }
           }
         }
       } else {
+        // Explicit local/test mode only: this never calls the server gateway.
         final evidence = await ref
             .read(locationObservationSourceProvider)
             .observeForeground();
-        if (mounted) {
-          setState(
-            () => status = evidence.observedAt.isUtc
-                ? ForegroundPresenceStatus.recorded
-                : ForegroundPresenceStatus.unavailable,
-          );
-          if (evidence.observedAt.isUtc) {
-            ref.invalidate(encountersForCurrentUserProvider);
-          }
+        if (!stillThisAccount) return;
+        setState(
+          () => status = evidence.observedAt.isUtc
+              ? ForegroundPresenceStatus.recorded
+              : ForegroundPresenceStatus.unavailable,
+        );
+        if (evidence.observedAt.isUtc) {
+          ref.invalidate(encountersForCurrentUserProvider);
         }
       }
     } catch (_) {
       if (mounted) {
-        setState(() => status = ForegroundPresenceStatus.unavailable);
+        setState(() {
+          status = ForegroundPresenceStatus.unavailable;
+          feedback = 'Couldn’t activate presence. Please try again.';
+        });
       }
     } finally {
-      _inFlight = false;
+      if (mounted) setState(() => busy = false);
+      if (mounted) _syncRefresher();
+    }
+  }
+
+  Future<void> _stop() async {
+    if (busy || restoring) return;
+    _refreshAuthorized = false;
+    refresher.pause();
+    setState(() {
+      busy = true;
+      stopping = true;
+      feedback = null;
+    });
+    try {
+      if (ref.read(productionModeProvider)) {
+        await ref.read(foregroundPresenceServiceProvider).stop();
+      }
+      if (!stillThisAccount) return;
+      expiryTimer?.cancel();
+      setState(() {
+        status = ForegroundPresenceStatus.inactive;
+        expiresAt = null;
+        stopFailed = false;
+        stopConfirmed = true;
+        feedback =
+            'Your active presence record was stopped. This does not remove previous encounters or connections.';
+      });
+      ref.invalidate(encountersForCurrentUserProvider);
+      try {
+        await preferences.saveExpiry(null);
+      } catch (_) {
+        if (mounted) {
+          setState(
+            () => feedback =
+                'Stop was confirmed, but local status could not be updated. No new presence is being recorded.',
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          stopFailed = true;
+          feedback =
+              'Couldn’t confirm Stop. Your previous presence may remain discoverable until its expiry. Retry Stop.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          busy = false;
+          stopping = false;
+        });
+      }
     }
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {}
-
-  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    refresher.pause();
     expiryTimer?.cancel();
     super.dispose();
   }
@@ -138,100 +382,97 @@ class _ForegroundPresenceCardState extends ConsumerState<ForegroundPresenceCard>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final copy = Text(
-      switch (status) {
-        ForegroundPresenceStatus.locating => 'Finding your location…',
-        ForegroundPresenceStatus.recording => 'Confirming your presence…',
-        ForegroundPresenceStatus.recorded || ForegroundPresenceStatus.active =>
-          'You’re discoverable here for a limited time.',
-        ForegroundPresenceStatus.unavailable =>
-          'We couldn’t confirm your location.',
-        _ => 'Discover people you may have shared a place and time with.',
-      },
-      style: theme.textTheme.bodySmall?.copyWith(
-        color: const Color(0xFFA6B3C4),
-        height: 1.35,
-      ),
-    );
-    final actions = Wrap(
-      alignment: WrapAlignment.end,
-      spacing: 4,
-      children: [
-        if (failure == ForegroundLocationFailure.permissionPermanentlyDenied)
-          TextButton(
-            onPressed: () => Geolocator.openAppSettings(),
-            child: const Text('Settings'),
-          )
-        else if (failure == ForegroundLocationFailure.servicesDisabled)
-          TextButton(
-            onPressed: () => Geolocator.openLocationSettings(),
-            child: const Text('Settings'),
-          )
-        else if (status == ForegroundPresenceStatus.unavailable)
-          TextButton(onPressed: _activate, child: const Text('Try again')),
-        if (status == ForegroundPresenceStatus.recorded ||
-            status == ForegroundPresenceStatus.active)
-          TextButton(
-            onPressed: () async {
-              try {
-                if (ref.read(productionModeProvider)) {
-                  await ref
-                      .read(foregroundPresenceGatewayProvider)
-                      .stopForegroundPresence();
-                }
-                if (mounted) {
-                  setState(() {
-                    stopped = true;
-                    status = ForegroundPresenceStatus.inactive;
-                  });
-                }
-              } catch (_) {}
-            },
-            child: const Text('Stop'),
-          )
-        else if (!stopped)
-          SizedBox(
-            width: 104,
-            child: FilledButton(
-              onPressed:
-                  status == ForegroundPresenceStatus.locating ||
-                      status == ForegroundPresenceStatus.recording
-                  ? null
-                  : _activate,
-              child: const Text('I’m here'),
-            ),
-          ),
-      ],
-    );
-
+    final text = restoring
+        ? 'Loading presence controls…'
+        : switch (status) {
+            ForegroundPresenceStatus.locating => 'Finding your location…',
+            ForegroundPresenceStatus.recording => 'Confirming your presence…',
+            ForegroundPresenceStatus.recorded ||
+            ForegroundPresenceStatus.active =>
+              'Your last presence record is valid for a limited time.',
+            ForegroundPresenceStatus.unavailable =>
+              'We couldn’t confirm your location.',
+            _ =>
+              stopConfirmed
+                  ? 'Presence stopped.'
+                  : 'Discover people you may have shared a place and time with.',
+          };
     return Card(
-      color: const Color(0xFF0D1724),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: Color(0xFF1E2C3B)),
-      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final canShowInline =
-                constraints.maxWidth /
-                    MediaQuery.textScalerOf(context).scale(1) >=
-                300;
-            if (canShowInline) {
-              return Row(
-                children: [
-                  Expanded(child: copy),
-                  const SizedBox(width: 8),
-                  actions,
-                ],
-              );
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [copy, const SizedBox(height: 4), actions],
-            );
-          },
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(text, style: theme.textTheme.bodyMedium),
+            if (expiresAt != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Record expires at ${TimeOfDay.fromDateTime(expiresAt!.toLocal()).format(context)}.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            if (feedback != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    feedback!,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: stopFailed
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                if (failure ==
+                    ForegroundLocationFailure.permissionPermanentlyDenied)
+                  TextButton(
+                    onPressed: busy ? null : () => Geolocator.openAppSettings(),
+                    child: const Text('Settings'),
+                  )
+                else if (failure == ForegroundLocationFailure.servicesDisabled)
+                  TextButton(
+                    onPressed: busy
+                        ? null
+                        : () => Geolocator.openLocationSettings(),
+                    child: const Text('Settings'),
+                  ),
+                if (!recorded || !_refreshAuthorized)
+                  FilledButton(
+                    onPressed: busy || restoring ? null : _activate,
+                    child: Text(
+                      recorded
+                          ? 'Resume presence'
+                          : status == ForegroundPresenceStatus.unavailable
+                          ? 'Try again'
+                          : 'I’m here',
+                    ),
+                  ),
+                // Absence of device-local state cannot prove the server is inactive.
+                // Keep Stop reachable after reinstall, restart or another device.
+                if (recorded || ref.watch(productionModeProvider) || stopFailed)
+                  TextButton(
+                    onPressed: busy || restoring ? null : _stop,
+                    child: Text(
+                      stopping
+                          ? 'Stopping…'
+                          : stopFailed
+                          ? 'Retry Stop'
+                          : 'Stop',
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );

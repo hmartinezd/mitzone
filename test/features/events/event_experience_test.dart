@@ -18,6 +18,7 @@ import 'package:mitzone/features/home/presentation/home_screen.dart';
 import 'package:mitzone/core/storage/storage_providers.dart';
 import 'package:mitzone/features/encounters/data/presence_providers.dart';
 import 'package:mitzone/features/encounters/domain/location_observation.dart';
+
 import '../../support/memory_local_storage.dart';
 
 class TestIdentityGateway implements IdentityGateway {
@@ -528,7 +529,10 @@ void main() {
         expect(find.text('✓ Checked in locally'), findsNothing);
       }
 
-      await selectTab('Events');
+      await selectTab('Explore');
+      await tester.ensureVisible(find.text('Search all activities'));
+      await tester.tap(find.text('Search all activities'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Tech Mixer 2026'));
       await tester.pumpAndSettle();
       await revealAndTap(tester, 'Join event');
@@ -537,10 +541,13 @@ void main() {
       expectNoPresence();
       await selectTab('Home');
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.text('Where will you be?'), findsOneWidget);
+      expect(
+        find.text('Real moments, voluntary digital connection.'),
+        findsOneWidget,
+      );
       expect(find.text('Upcoming activities'), findsNothing);
       expectNoPresence();
-      await selectTab('Events');
+      await selectTab('Explore');
       expect(find.byType(EventDetailsScreen), findsOneWidget);
       expect(find.text("You're participating"), findsOneWidget);
       await revealAndTap(tester, 'Leave event');
@@ -549,12 +556,18 @@ void main() {
       expectNoPresence();
       await selectTab('Home');
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(find.text('Where will you be?'), findsOneWidget);
+      expect(
+        find.text('Real moments, voluntary digital connection.'),
+        findsOneWidget,
+      );
       expectNoPresence();
-      await selectTab('Events');
+      await selectTab('Explore');
       expect(find.text('Join event'), findsOneWidget);
-      // Selecting the active Events tab resets its retained detail stack.
-      await selectTab('Events');
+      // Selecting the active Explore tab returns to its discovery root.
+      await selectTab('Explore');
+      await tester.ensureVisible(find.text('Search all activities'));
+      await tester.tap(find.text('Search all activities'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Joined'));
       await tester.pumpAndSettle();
       expect(find.text('No joined events match your filters.'), findsOneWidget);
@@ -681,6 +694,8 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Tech Mixer 2026'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Tech Mixer 2026'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);

@@ -3,25 +3,41 @@ import '../domain/presence_evidence.dart';
 import '../domain/presence_repository.dart';
 import 'foreground_presence_service.dart';
 
-class SupabasePresenceRepository implements PresenceRepository, ForegroundPresenceGateway {
+class SupabasePresenceRepository
+    implements
+        PresenceRepository,
+        ForegroundPresenceGateway,
+        ForegroundPresenceRefreshGateway {
   SupabasePresenceRepository(this.client);
   final SupabaseClient client;
+  String? _foregroundEvidenceId;
+  String? _foregroundOwnerId;
 
   @override
   Future<void> stopForegroundPresence() async {
     await client.rpc('stop_foreground_presence');
+    _foregroundEvidenceId = null;
+    _foregroundOwnerId = null;
   }
 
   @override
-  Future<DateTime> recordForegroundPresence({required double latitude, required double longitude}) async {
-    final rows = await client.rpc('record_foreground_presence', params: {
-      'p_latitude': latitude, 'p_longitude': longitude,
-    }) as List;
+  Future<DateTime> recordForegroundPresence({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final subject = client.auth.currentUser?.id;
+    if (subject == null) throw StateError('Authentication required');
+    final rows =
+        await client.rpc(
+              'record_foreground_presence',
+              params: {'p_latitude': latitude, 'p_longitude': longitude},
+            )
+            as List;
     if (rows.isEmpty) throw StateError('Presence unavailable');
     final row = rows.first as Map<String, dynamic>;
     final evidence = PresenceEvidence(
       id: row['evidence_id'] as String,
-      subjectUserId: client.auth.currentUser!.id,
+      subjectUserId: subject,
       contextId: row['context_id'] as String,
       observedStart: DateTime.parse(row['observed_start'] as String).toUtc(),
       observedEnd: DateTime.parse(row['observed_end'] as String).toUtc(),
@@ -29,8 +45,46 @@ class SupabasePresenceRepository implements PresenceRepository, ForegroundPresen
       consentScope: 'foreground-explicit',
       expiresAt: DateTime.parse(row['expires_at'] as String).toUtc(),
     );
+    if (client.auth.currentUser?.id != subject) {
+      throw StateError('Presence account changed');
+    }
+    _foregroundEvidenceId = evidence.id;
+    _foregroundOwnerId = subject;
     return evidence.expiresAt!;
   }
+
+  @override
+  Future<DateTime> refreshForegroundPresence({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final subject = client.auth.currentUser?.id;
+    final evidenceId = _foregroundEvidenceId;
+    if (subject == null ||
+        subject != _foregroundOwnerId ||
+        evidenceId == null) {
+      throw StateError('No active presence lease for this account');
+    }
+    final rows =
+        await client.rpc(
+              'refresh_foreground_presence',
+              params: {
+                'p_evidence_id': evidenceId,
+                'p_latitude': latitude,
+                'p_longitude': longitude,
+              },
+            )
+            as List;
+    if (rows.isEmpty || client.auth.currentUser?.id != subject) {
+      throw StateError('Presence unavailable');
+    }
+    final row = rows.first as Map<String, dynamic>;
+    if (row['evidence_id'] != evidenceId) {
+      throw StateError('Presence lease changed');
+    }
+    return DateTime.parse(row['expires_at'] as String).toUtc();
+  }
+
   Map<String, dynamic> row(PresenceEvidence e) => {
     'id': e.id,
     'subject_user_id': e.subjectUserId,

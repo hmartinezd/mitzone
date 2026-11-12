@@ -4,23 +4,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/auth/auth_providers.dart';
 import '../../../discovery/data/discovery_location_provider.dart';
 import '../../../discovery/data/discovery_providers.dart';
 import '../../../discovery/domain/discovery_item.dart';
+import '../../../discovery/domain/nearby_provider_exception.dart';
 import '../../../encounters/data/foreground_location_sources.dart';
 import '../../../events/data/event_providers.dart';
+import '../../../events/domain/event.dart';
 import 'discovery_section.dart';
 
 class HomeDiscovery extends ConsumerWidget {
-  const HomeDiscovery({super.key, required this.interests});
+  const HomeDiscovery({
+    super.key,
+    required this.interests,
+    this.filter,
+    this.onSeeAll,
+    this.seeAllLabel = 'See Explore',
+  });
   final Set<String> interests;
-
+  final DiscoveryItemType? filter;
+  final VoidCallback? onSeeAll;
+  final String seeAllLabel;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final places = ref.watch(nearbyDiscoveryProvider(interests));
-    final events = ref.watch(nearbyEventsProvider);
+    final places = filter == DiscoveryItemType.activity
+        ? const AsyncData<List<DiscoveryItem>>([])
+        : ref.watch(nearbyDiscoveryProvider(interests));
+    final events = filter == DiscoveryItemType.place
+        ? const AsyncData<List<Event>>([])
+        : ref.watch(nearbyEventsProvider);
     final production = ref.watch(productionModeProvider);
     final eventItems = [
       for (final event in events.value ?? [])
@@ -49,6 +64,10 @@ class HomeDiscovery extends ConsumerWidget {
     ];
     final loading = places.isLoading || events.isLoading;
     final error = places.error ?? events.error;
+    final locationError = [
+      places.error,
+      events.error,
+    ].whereType<ForegroundLocationException>().firstOrNull;
     final locating =
         production && loading && ref.watch(discoveryLocationProvider).isLoading;
     void retry() {
@@ -67,7 +86,8 @@ class HomeDiscovery extends ConsumerWidget {
           DiscoverySection(
             items: items,
             showDemoBadge: !production,
-            onSeeAll: () => context.go(AppRoutes.events),
+            onSeeAll: onSeeAll ?? () => context.go(AppRoutes.explore),
+            seeAllLabel: seeAllLabel,
             actionForItem: (item) =>
                 item.type == DiscoveryItemType.activity &&
                     eventItems.any((event) => event.id == item.id)
@@ -94,13 +114,28 @@ class HomeDiscovery extends ConsumerWidget {
                   child: Text(
                     locating
                         ? 'Finding nearby location…'
-                        : 'Loading nearby places and events…',
+                        : 'Loading nearby places and activities…',
                   ),
                 ),
               ],
             ),
           ),
-        if (error != null) _DiscoveryFeedback(error: error, onRetry: retry),
+        if (locationError != null)
+          _DiscoveryFeedback(error: locationError, onRetry: retry)
+        else ...[
+          if (places.hasError)
+            _DiscoveryFeedback(
+              error: places.error!,
+              providerLabel: 'Places',
+              onRetry: () => ref.invalidate(nearbyDiscoveryProvider(interests)),
+            ),
+          if (events.hasError)
+            _DiscoveryFeedback(
+              error: events.error!,
+              providerLabel: 'Activities',
+              onRetry: () => ref.invalidate(nearbyEventsProvider),
+            ),
+        ],
         if (!loading && error == null && items.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
@@ -112,14 +147,21 @@ class HomeDiscovery extends ConsumerWidget {
 }
 
 class _DiscoveryFeedback extends StatelessWidget {
-  const _DiscoveryFeedback({required this.error, required this.onRetry});
+  const _DiscoveryFeedback({
+    required this.error,
+    required this.onRetry,
+    this.providerLabel,
+  });
   final Object error;
   final VoidCallback onRetry;
-
+  final String? providerLabel;
   @override
   Widget build(BuildContext context) {
     final failure = error is ForegroundLocationException
         ? (error as ForegroundLocationException).failure
+        : null;
+    final providerFailure = error is NearbyProviderException
+        ? (error as NearbyProviderException).failure
         : null;
     final message = switch (failure) {
       ForegroundLocationFailure.permissionDenied =>
@@ -131,7 +173,11 @@ class _DiscoveryFeedback extends StatelessWidget {
       ForegroundLocationFailure.temporarilyUnavailable =>
         'Your location is unavailable right now. Please try again.',
       null =>
-        error is TimeoutException
+        providerFailure == NearbyProviderFailure.authentication
+            ? 'Sign in again to load nearby discovery.'
+            : providerFailure == NearbyProviderFailure.notConfigured
+            ? 'Nearby discovery isn’t available yet. Please try again later.'
+            : error is TimeoutException
             ? 'Nearby discovery is taking too long. Please try again.'
             : 'We couldn’t load nearby discovery right now.',
     };
@@ -141,6 +187,14 @@ class _DiscoveryFeedback extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(message),
+          if (providerLabel != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '$providerLabel unavailable',
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ),
           Wrap(
             spacing: 8,
             children: [

@@ -1,11 +1,155 @@
 import 'package:flutter/material.dart';
+
 import 'app_colors.dart';
 import 'app_typography.dart';
 import 'app_radii.dart';
 import 'app_spacing.dart';
 import 'mitzone_theme_colors.dart';
+import 'kinetic_colors.dart';
 
 class AppTheme {
+  /// Kinetic Teal & Muted Sage: owner-approved beta visual direction.
+  /// The dark theme remains available for legacy review and regression tests.
+  static ThemeData get lightTheme {
+    const scheme = ColorScheme.light(
+      primary: KineticColors.primary,
+      onPrimary: Colors.white,
+      primaryContainer: KineticColors.cyan,
+      onPrimaryContainer: Color(0xff00504c),
+      secondary: KineticColors.teal,
+      onSecondary: Colors.white,
+      secondaryContainer: KineticColors.mint,
+      onSecondaryContainer: Color(0xff124f4b),
+      tertiary: Color(0xff795900),
+      onTertiary: Colors.white,
+      tertiaryContainer: KineticColors.amber,
+      onTertiaryContainer: Color(0xff5b4300),
+      surface: KineticColors.canvas,
+      onSurface: KineticColors.ink,
+      surfaceContainer: KineticColors.surface,
+      surfaceContainerLow: KineticColors.surfaceLow,
+      onSurfaceVariant: KineticColors.inkMuted,
+      outline: KineticColors.outline,
+      outlineVariant: KineticColors.outlineVariant,
+      error: Color(0xffba1a1a),
+      onError: Colors.white,
+      errorContainer: Color(0xffffdad6),
+      onErrorContainer: Color(0xff93000a),
+    );
+    final text = AppTypography.kineticTextTheme;
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: KineticColors.canvas,
+      fontFamily: 'PlusJakartaSans',
+      textTheme: text,
+      appBarTheme: AppBarTheme(
+        backgroundColor: KineticColors.canvas,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: text.titleLarge,
+        iconTheme: const IconThemeData(color: KineticColors.inkMuted),
+      ),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0x40bacac7)),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: KineticColors.cyan,
+          foregroundColor: const Color(0xff00504c),
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: const StadiumBorder(),
+          textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: KineticColors.teal,
+          minimumSize: const Size(48, 48),
+          shape: const StadiumBorder(),
+          side: const BorderSide(color: KineticColors.teal, width: 1.5),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: KineticColors.primary,
+          minimumSize: const Size(48, 48),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.all(16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: KineticColors.outlineVariant),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: KineticColors.outlineVariant),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: KineticColors.primary, width: 2),
+        ),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white,
+        indicatorColor: KineticColors.mint,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => text.labelSmall?.copyWith(
+            color: states.contains(WidgetState.selected)
+                ? KineticColors.teal
+                : KineticColors.inkMuted,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        iconTheme: WidgetStatePropertyAll(
+          const IconThemeData(color: KineticColors.inkMuted),
+        ),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: KineticColors.outlineVariant,
+        thickness: .5,
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        backgroundColor: Color(0xff2a3231),
+        contentTextStyle: TextStyle(color: Colors.white),
+        behavior: SnackBarBehavior.floating,
+      ),
+      extensions: const [
+        MitzoneThemeColors(
+          brandCyan: KineticColors.cyan,
+          brandBlue: KineticColors.teal,
+          brandPurple: KineticColors.amber,
+          surfaceSubtle: KineticColors.surfaceLow,
+          surfaceStrong: Colors.white,
+          success: Color(0xff216753),
+          successContainer: Color(0xffabf1d6),
+          onSuccess: Colors.white,
+          onSuccessContainer: Color(0xff002117),
+          warning: Color(0xff795900),
+          warningContainer: Color(0xffffdf9e),
+          onWarning: Colors.white,
+          onWarningContainer: Color(0xff261a00),
+          info: KineticColors.primary,
+          infoContainer: KineticColors.mint,
+          onInfo: Colors.white,
+          onInfoContainer: Color(0xff00201e),
+          focusIndicator: KineticColors.primary,
+        ),
+      ],
+    );
+  }
+
   static ThemeData get darkTheme {
     final colorScheme = ColorScheme.dark(
       surface: AppColors.background,
@@ -71,7 +215,7 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.primary,
-          minimumSize: const Size.fromHeight(AppSpacing.vhu),
+          minimumSize: const Size(48, AppSpacing.vhu),
           shape: RoundedRectangleBorder(borderRadius: AppRadii.radiusMd),
           textStyle: AppTypography.textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.bold,

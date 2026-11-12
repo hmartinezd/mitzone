@@ -17,7 +17,11 @@ class AppRoutes {
   /// Main navigation branch: Home
   static const String home = '/app/home';
 
-  /// Main navigation branch: Events
+  /// Main navigation branch: Explore (live places and activities).
+  static const String explore = '/app/explore';
+  static const String exploreActivities = '/app/explore/activities';
+
+  /// Legacy activity-catalog links retained inside the Explore branch.
   static const String events = '/app/events';
 
   static String eventDetails(
@@ -28,11 +32,17 @@ class AppRoutes {
     return origin == EventDetailsOrigin.home ? '$path?origin=home' : path;
   }
 
-  /// Main navigation branch: Matches
+  /// Main navigation branch: Nearby (encounters, requests and connections).
+  static const String nearby = '/app/nearby';
+  static const String nearbyConnections = '/app/nearby/connections';
+
+  /// Legacy encounter links retained inside the Nearby branch.
   static const String matches = '/app/matches';
 
-  /// Main navigation branch: Chat
+  /// Messages are a protected root destination, outside the bottom tabs.
   static const String chat = '/app/chat';
+
+  static const String groups = '/app/groups';
 
   /// Main navigation branch: Profile
   static const String profile = '/app/profile';

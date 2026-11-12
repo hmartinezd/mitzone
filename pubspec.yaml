@@ -35,6 +35,32 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/fonts/SpaceGrotesk-OFL.txt
+    - assets/fonts/PlusJakartaSans-OFL.txt
     - assets/branding/mitzone_app_icon.png
     - assets/branding/mitzone_logo.jpg
     - assets/branding/mitzone_logo_square.png
+
+  fonts:
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-400.ttf
+          weight: 400
+        - asset: assets/fonts/SpaceGrotesk-500.ttf
+          weight: 500
+        - asset: assets/fonts/SpaceGrotesk-600.ttf
+          weight: 600
+        - asset: assets/fonts/SpaceGrotesk-700.ttf
+          weight: 700
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-400.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-500.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-600.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-700.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-800.ttf
+          weight: 800

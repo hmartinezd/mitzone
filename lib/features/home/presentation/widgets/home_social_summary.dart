@@ -176,7 +176,7 @@ class _ConnectionState extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: onViewMatches,
-                child: const Text('View matches'),
+                child: const Text('View nearby connections'),
               ),
             ),
           ],
@@ -310,7 +310,7 @@ class _EncounterState extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               FilledButton(
                 onPressed: onExploreEvents,
-                child: const Text('Explore events'),
+                child: const Text('Explore places and activities'),
               ),
             ],
           ),
@@ -345,7 +345,7 @@ class _EncounterState extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: onViewMatches,
-                child: const Text('View matches'),
+                child: const Text('View nearby connections'),
               ),
             ),
           ],

@@ -1,13 +1,15 @@
 # Legal and privacy readiness
 
-## Code complete
+## Implemented paths — release readiness still requires verification
 
 The MVP now provides in-app Terms and Privacy Policy access from Settings,
 explicit foreground-presence disclosure, account deletion access, and current
 data-practice documentation. The actual active providers are Supabase
 (authentication, profile and configured backend records) and Firebase
-(Analytics, Crashlytics and Cloud Messaging). Google Places and Ticketmaster
-are not current app data recipients.
+(Analytics, Crashlytics and Cloud Messaging). Checked-in discovery functions
+also send location-based requests to Google Places and Ticketmaster. Disclosures
+must include these intended provider paths; deployed configuration and actual
+data processing have not been verified by source inspection.
 
 The MVP may process authentication email, user-supplied profile data, local or
 backend presence/discovery records, connections, conversations/messages,

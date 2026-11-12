@@ -23,7 +23,10 @@ class SupabaseEventParticipationRepository
   }
 
   @override
-  Future<bool> isJoined({required String identityId, required String eventId}) async {
+  Future<bool> isJoined({
+    required String identityId,
+    required String eventId,
+  }) async {
     final rows = await _client
         .from(_table)
         .select('event_id')
@@ -34,7 +37,10 @@ class SupabaseEventParticipationRepository
   }
 
   @override
-  Future<void> join({required String identityId, required String eventId}) async {
+  Future<void> join({
+    required String identityId,
+    required String eventId,
+  }) async {
     final id = eventId.trim();
     if (id.isEmpty) return;
     await _client.from(_table).upsert({
@@ -45,9 +51,16 @@ class SupabaseEventParticipationRepository
   }
 
   @override
-  Future<void> leave({required String identityId, required String eventId}) async {
+  Future<void> leave({
+    required String identityId,
+    required String eventId,
+  }) async {
     final id = eventId.trim();
     if (id.isEmpty) return;
-    await _client.from(_table).delete().eq('user_id', identityId).eq('event_id', id);
+    await _client
+        .from(_table)
+        .delete()
+        .eq('user_id', identityId)
+        .eq('event_id', id);
   }
 }

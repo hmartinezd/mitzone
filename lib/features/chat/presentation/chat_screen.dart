@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/identity/identity_providers.dart';
+import '../../../app/router/app_routes.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
 import '../../connections/data/connection_providers.dart';
@@ -19,12 +20,18 @@ class ChatScreen extends ConsumerWidget {
     final conversations = ref.watch(chatConversationsProvider);
     final connections = ref.watch(connectionsProvider);
     final production = ref.watch(productionModeProvider);
-    final identity = production ? null : ref.watch(mockIdentityRepositoryProvider);
+    final identity = production
+        ? null
+        : ref.watch(mockIdentityRepositoryProvider);
     final currentUserId = production
         ? (ref.watch(currentUserIdProvider).value ?? '')
         : identity!.currentUser.id;
     return Scaffold(
       appBar: AppBar(
+        leading: BackButton(
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(AppRoutes.home),
+        ),
         title: const Text('Chat'),
         actions: [
           IconButton(

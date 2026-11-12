@@ -46,8 +46,16 @@ class OtherUserProfileScreen extends ConsumerWidget {
         }
         final profileState = ref.watch(encounterProfileProvider(userId));
         final profile = profileState.value;
-        if (profileState.isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        if (profile == null) return const Scaffold(body: Center(child: Text('This profile is no longer available.')));
+        if (profileState.isLoading) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (profile == null) {
+          return const Scaffold(
+            body: Center(child: Text('This profile is no longer available.')),
+          );
+        }
         return _content(context, ref, profile.toUserProfile(), encounter);
       },
     );
@@ -63,7 +71,11 @@ class OtherUserProfileScreen extends ConsumerWidget {
       encounterProfileProvider(encounter.currentUserId),
     );
     final current = currentState.value?.toUserProfile();
-    if (current == null) return const Scaffold(body: Center(child: Text('Your profile is unavailable.')));
+    if (current == null) {
+      return const Scaffold(
+        body: Center(child: Text('Your profile is unavailable.')),
+      );
+    }
     final event = ref.watch(encounterEventProvider(encounter.eventId));
     final relationship = ref.watch(relationshipProvider(encounter));
     final sharedInterests = ProfileAffinity.sharedInterests(current, profile);
@@ -143,7 +155,8 @@ class OtherUserProfileScreen extends ConsumerWidget {
 class _ReportAction extends ConsumerStatefulWidget {
   const _ReportAction({required this.userId});
   final String userId;
-  @override ConsumerState<_ReportAction> createState() => _ReportActionState();
+  @override
+  ConsumerState<_ReportAction> createState() => _ReportActionState();
 }
 
 class _ReportActionState extends ConsumerState<_ReportAction> {
@@ -157,39 +170,110 @@ class _ReportActionState extends ConsumerState<_ReportAction> {
   Future<void> _report() async {
     var reason = ReportReason.harassment;
     final details = TextEditingController();
-    final submit = await showDialog<bool>(context: context, builder: (context) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        title: const Text('Report user'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          DropdownButton<ReportReason>(value: reason, isExpanded: true, items: [for (final item in ReportReason.values) DropdownMenuItem(value: item, child: Text(item.label))], onChanged: (value) => setDialogState(() => reason = value!)),
-          TextField(controller: details, maxLength: 500, decoration: const InputDecoration(labelText: 'Details (optional)')),
-        ]),
-        actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit report'))],
+    final submit = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Report user'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButton<ReportReason>(
+                value: reason,
+                isExpanded: true,
+                items: [
+                  for (final item in ReportReason.values)
+                    DropdownMenuItem(value: item, child: Text(item.label)),
+                ],
+                onChanged: (value) => setDialogState(() => reason = value!),
+              ),
+              TextField(
+                controller: details,
+                maxLength: 500,
+                decoration: const InputDecoration(
+                  labelText: 'Details (optional)',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Submit report'),
+            ),
+          ],
+        ),
       ),
-    ));
+    );
     final detailText = details.text;
     details.dispose();
     if (submit != true || !mounted) return;
     setState(() => busy = true);
     try {
-      await ref.read(reportRepositoryProvider).submit(reportedUserId: widget.userId, reason: reason, details: detailText);
+      await ref
+          .read(reportRepositoryProvider)
+          .submit(
+            reportedUserId: widget.userId,
+            reason: reason,
+            details: detailText,
+          );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted.')));
-      final blockToo = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
-        title: const Text('Block this user too?'),
-        content: const Text('Blocking prevents future interaction with this person.'),
-        actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Block user'))],
-      ));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Report submitted.')));
+      final blockToo = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Block this user too?'),
+          content: const Text(
+            'Blocking prevents future interaction with this person.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Not now'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Block user'),
+            ),
+          ],
+        ),
+      );
       if (blockToo == true) {
         try {
           final blocker = await ref.read(currentUserIdProvider.future);
-          await ref.read(blockRepositoryProvider).block(blockerUserId: blocker, blockedUserId: widget.userId);
-          ref.invalidate(blockedUsersProvider); ref.invalidate(encountersForCurrentUserProvider); ref.invalidate(connectionsProvider); ref.invalidate(relationshipProvider);
+          await ref
+              .read(blockRepositoryProvider)
+              .block(blockerUserId: blocker, blockedUserId: widget.userId);
+          ref.invalidate(blockedUsersProvider);
+          ref.invalidate(encountersForCurrentUserProvider);
+          ref.invalidate(connectionsProvider);
+          ref.invalidate(relationshipProvider);
           if (mounted) Navigator.of(context).pop();
-        } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Report submitted, but blocking failed.'))); }
+        } catch (_) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Report submitted, but blocking failed.'),
+              ),
+            );
+          }
+        }
       }
-    } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('This report could not be submitted.'))); }
-    finally { if (mounted) setState(() => busy = false); }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('This report could not be submitted.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 }
 
@@ -235,10 +319,7 @@ class _BlockActionState extends ConsumerState<_BlockAction> {
       final blockerUserId = await ref.read(currentUserIdProvider.future);
       await ref
           .read(blockRepositoryProvider)
-          .block(
-            blockerUserId: blockerUserId,
-            blockedUserId: widget.userId,
-          );
+          .block(blockerUserId: blockerUserId, blockedUserId: widget.userId);
       ref.invalidate(blockedUsersProvider);
       ref.invalidate(encountersForCurrentUserProvider);
       ref.invalidate(connectionsProvider);
@@ -273,7 +354,9 @@ class _ActionState extends ConsumerState<_Action> {
   bool busy = false;
   @override
   Widget build(BuildContext context) => switch (widget.state) {
-    RelationshipState.blocked => const Center(child: Text('Interaction unavailable')),
+    RelationshipState.blocked => const Center(
+      child: Text('Interaction unavailable'),
+    ),
     RelationshipState.none => FilledButton(
       onPressed: busy ? null : _sayHi,
       child: busy

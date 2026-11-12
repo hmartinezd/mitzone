@@ -40,7 +40,9 @@ class FirebaseAnalyticsReporter implements AnalyticsReporter {
       await _analytics.logEvent(name: name, parameters: parameters);
     } catch (error, stack) {
       if (kDebugMode) debugPrint('Analytics unavailable: ${error.runtimeType}');
-      unawaited(FirebaseCrashlytics.instance.recordError(error, stack, fatal: false));
+      unawaited(
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: false),
+      );
     }
   }
 }
@@ -48,17 +50,23 @@ class FirebaseAnalyticsReporter implements AnalyticsReporter {
 /// Installs Crashlytics handlers without making startup or user actions fail.
 Future<AnalyticsReporter> initializeObservability() async {
   try {
-    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
+    await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(
+      !kDebugMode,
+    );
     FlutterError.onError = (details) {
       unawaited(FirebaseCrashlytics.instance.recordFlutterFatalError(details));
     };
     PlatformDispatcher.instance.onError = (error, stack) {
-      unawaited(FirebaseCrashlytics.instance.recordError(error, stack, fatal: true));
+      unawaited(
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true),
+      );
       return true;
     };
     return FirebaseAnalyticsReporter(FirebaseAnalytics.instance);
   } catch (error) {
-    if (kDebugMode) debugPrint('Observability unavailable: ${error.runtimeType}');
+    if (kDebugMode) {
+      debugPrint('Observability unavailable: ${error.runtimeType}');
+    }
     return const NoopAnalyticsReporter();
   }
 }

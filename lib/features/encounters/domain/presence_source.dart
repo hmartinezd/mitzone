@@ -12,10 +12,16 @@ class PresenceContext {
 class PresenceWindow {
   PresenceWindow({required this.from, required this.until}) {
     if (!from.isUtc || !until.isUtc || until.isBefore(from)) {
-      throw const DomainError(DomainErrorCode.validation, 'Invalid UTC presence window');
+      throw const DomainError(
+        DomainErrorCode.validation,
+        'Invalid UTC presence window',
+      );
     }
     if (until.difference(from) > const Duration(hours: 8)) {
-      throw const DomainError(DomainErrorCode.validation, 'Presence window is too long');
+      throw const DomainError(
+        DomainErrorCode.validation,
+        'Presence window is too long',
+      );
     }
   }
   final DateTime from;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../shared/widgets/mitzone_card.dart';
 import '../../../shared/widgets/mitzone_empty_state.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
@@ -38,7 +39,7 @@ class MatchesScreen extends ConsumerWidget {
               const MitzoneEmptyState(
                 title: 'No shared moments yet',
                 message:
-                    'Check in at events to discover people you actually crossed paths with.',
+                    'Choose voluntary presence from Home to discover shared experiences. Browsing or joining an event does not activate presence.',
                 icon: Icons.people_outline,
               )
             else
@@ -62,25 +63,37 @@ class _EncounterCard extends ConsumerWidget {
   final Encounter encounter;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final userState = ref.watch(encounterProfileProvider(encounter.otherUserId));
+    final userState = ref.watch(
+      encounterProfileProvider(encounter.otherUserId),
+    );
     final currentState = ref.watch(
       encounterProfileProvider(encounter.currentUserId),
     );
-    if (!userState.hasValue || !currentState.hasValue) return const SizedBox.shrink();
+    if (!userState.hasValue || !currentState.hasValue) {
+      return const SizedBox.shrink();
+    }
     final user = userState.value;
     final current = currentState.value;
     if (user == null || current == null) return const SizedBox.shrink();
     final event = ref.watch(encounterEventProvider(encounter.eventId));
     final relationship = ref.watch(relationshipProvider(encounter));
-    if (event == null) return const SizedBox.shrink();
-    final interests = ProfileAffinity.sharedInterests(current.toUserProfile(), user.toUserProfile());
+    final interests = ProfileAffinity.sharedInterests(
+      current.toUserProfile(),
+      user.toUserProfile(),
+    );
     return MitzoneCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(child: Text(user.displayName.substring(0, 1))),
+              CircleAvatar(
+                child: Text(
+                  user.displayName.isEmpty
+                      ? '?'
+                      : user.displayName.substring(0, 1),
+                ),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -91,12 +104,30 @@ class _EncounterCard extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const Text('You were both at'),
-          Text(event.title, style: Theme.of(context).textTheme.titleMedium),
+          if (event != null) ...[
+            const Text('Shared event context'),
+            Text(event.title, style: Theme.of(context).textTheme.titleMedium),
+          ] else if (encounter.eventId.startsWith('cell:')) ...[
+            Text(
+              'A shared area',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const Text(
+              'Coarse presence overlap. Exact locations are not shown.',
+            ),
+          ] else ...[
+            Text(
+              'Shared experience',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const Text('Details about this past context are unavailable.'),
+          ],
           Text('Shared for ${encounter.overlapDuration.inMinutes}m'),
           if (interests.isNotEmpty) Text(interests.take(3).join(' · ')),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               OutlinedButton(
                 onPressed: () => context.push(
@@ -104,7 +135,6 @@ class _EncounterCard extends ConsumerWidget {
                 ),
                 child: const Text('View profile'),
               ),
-              const SizedBox(width: 8),
               relationship.when(
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const Text('Unavailable'),
@@ -117,12 +147,7 @@ class _EncounterCard extends ConsumerWidget {
                     'Incoming request',
                   ),
                   RelationshipState.declined => const Text('Not now'),
-                  RelationshipState.none => TextButton(
-                    onPressed: () => ref
-                        .read(connectionControllerProvider)
-                        .send(encounter.otherUserId, encounter.id),
-                    child: const Text('Say Hi'),
-                  ),
+                  RelationshipState.none => _SayHiAction(encounter: encounter),
                   RelationshipState.connected => Wrap(
                     spacing: 8,
                     children: [
@@ -183,26 +208,119 @@ class _RequestsSection extends ConsumerWidget {
         child: Text('REQUESTS', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       for (final r in requests)
-        ListTile(
-          title: Text(
-            ref.watch(encounterProfileProvider(r.senderUserId)).value?.displayName ?? 'Someone',
-          ),
-          subtitle: const Text('You crossed paths. They said hi.'),
-          trailing: Wrap(
-            children: [
-              TextButton(
-                onPressed: () =>
-                    ref.read(connectionControllerProvider).decline(r.id),
-                child: const Text('Not now'),
-              ),
-              FilledButton(
-                onPressed: () =>
-                    ref.read(connectionControllerProvider).accept(r.id),
-                child: const Text('Accept'),
-              ),
-            ],
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: MitzoneCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  ref
+                          .watch(encounterProfileProvider(r.senderUserId))
+                          .value
+                          ?.displayName ??
+                      'Someone',
+                ),
+                const Text('You crossed paths. They said hi.'),
+                const SizedBox(height: 8),
+                _RequestDecisionActions(key: ValueKey(r.id), request: r),
+              ],
+            ),
           ),
         ),
+    ],
+  );
+}
+
+class _SayHiAction extends ConsumerStatefulWidget {
+  const _SayHiAction({required this.encounter});
+  final Encounter encounter;
+  @override
+  ConsumerState<_SayHiAction> createState() => _SayHiActionState();
+}
+
+class _SayHiActionState extends ConsumerState<_SayHiAction> {
+  bool busy = false;
+  Future<void> send() async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      await ref
+          .read(connectionControllerProvider)
+          .send(widget.encounter.otherUserId, widget.encounter.id);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('We could not send your request. Please try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => TextButton(
+    onPressed: busy ? null : send,
+    child: busy ? const Text('Sending…') : const Text('Say Hi'),
+  );
+}
+
+class _RequestDecisionActions extends ConsumerStatefulWidget {
+  const _RequestDecisionActions({required this.request, super.key});
+  final ConnectionRequest request;
+  @override
+  ConsumerState<_RequestDecisionActions> createState() =>
+      _RequestDecisionActionsState();
+}
+
+class _RequestDecisionActionsState
+    extends ConsumerState<_RequestDecisionActions> {
+  bool busy = false;
+  bool accepting = false;
+  Future<void> decide(bool accept) async {
+    if (busy) return;
+    setState(() {
+      busy = true;
+      accepting = accept;
+    });
+    try {
+      final controller = ref.read(connectionControllerProvider);
+      if (accept) {
+        await controller.accept(widget.request.id);
+      } else {
+        await controller.decline(widget.request.id);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'We could not update this request. Please try again.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      TextButton(
+        onPressed: busy ? null : () => decide(false),
+        child: Text(busy && !accepting ? 'Updating…' : 'Not now'),
+      ),
+      FilledButton(
+        onPressed: busy ? null : () => decide(true),
+        child: Text(busy && accepting ? 'Accepting…' : 'Accept'),
+      ),
     ],
   );
 }

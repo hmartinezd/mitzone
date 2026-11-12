@@ -9,12 +9,23 @@ begin
   begin execute statement; exception when raise_exception then denied:=true; end;
   if not denied then raise exception 'expected denial: %',statement; end if;
 end; $$;
+-- Chat history is available only through the secured RPC, never direct table reads.
+create function pg_temp.assert_table_denied(statement text) returns void language plpgsql as $$
+declare actual_state text;
+begin
+  begin execute statement;
+  exception when others then get stacked diagnostics actual_state=returned_sqlstate;
+  end;
+  if actual_state is distinct from '42501' then
+    raise exception 'expected table access denial, received %',coalesce(actual_state,'success');
+  end if;
+end; $$;
 insert into auth.users(id) values
  ('00000000-0000-0000-0000-000000000001'),
  ('00000000-0000-0000-0000-000000000002'),
  ('00000000-0000-0000-0000-000000000003');
 insert into public.encounters(id,user_a,user_b,context_id,overlap_start,overlap_end) values
- ('00000000-0000-0000-0000-000000000010','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','test:explicit-presence',now()-interval '5 minutes',now()+interval '30 minutes');
+ ('00000000-0000-0000-0000-000000000010','00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002','test:explicit-presence',now()-interval '6 minutes',now()-interval '1 second');
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
 select id as request_id from send_connection_request('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000010') \gset
@@ -26,14 +37,14 @@ select send_message(:'old_conversation','retained private history','old-message-
 insert into blocks(blocker_user_id,blocked_user_id) values ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001');
 select pg_temp.assert_true((select count(*)=0 from connections),'blocker connections hidden');
 select pg_temp.assert_true((select count(*)=0 from conversations),'blocker conversation denied');
-select pg_temp.assert_true((select count(*)=0 from messages),'blocker history denied');
+select pg_temp.assert_table_denied('select * from messages');
 select pg_temp.assert_denied(format('select get_conversation_messages(%L)', :'old_conversation'));
 select pg_temp.assert_denied(format('select get_or_create_conversation(%L)', :'old_connection'));
 select pg_temp.assert_denied(format('select send_message(%L,%L,%L)', :'old_conversation','denied','key-2'));
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
 select pg_temp.assert_true((select count(*)=0 from connections),'blocked user connections hidden');
 select pg_temp.assert_true((select count(*)=0 from conversations),'blocked user conversation denied');
-select pg_temp.assert_true((select count(*)=0 from messages),'blocked user history denied');
+select pg_temp.assert_table_denied('select * from messages');
 select pg_temp.assert_true(get_relationship_state('00000000-0000-0000-0000-000000000002')='blocked','symmetric blocked eligibility');
 select pg_temp.assert_denied('select send_connection_request(''00000000-0000-0000-0000-000000000002'',''00000000-0000-0000-0000-000000000010'')');
 select pg_temp.assert_denied(format('select get_conversation_messages(%L)', :'old_conversation'));
@@ -44,7 +55,7 @@ select pg_temp.assert_true((select count(*)=0 from connection_requests),'unblock
 select pg_temp.assert_denied(format('select accept_connection_request(%L)', :'request_id'));
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
 select pg_temp.assert_true(get_relationship_state('00000000-0000-0000-0000-000000000002')='none','fresh consent required');
-select pg_temp.assert_true((select count(*)=0 from messages),'unblock never restores history');
+select pg_temp.assert_table_denied('select * from messages');
 select id as new_request from send_connection_request('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000010') \gset
 select pg_temp.assert_true(:'new_request'<>:'request_id','fresh request identity');
 select pg_temp.assert_true((select count(*)=0 from connections),'request alone cannot reconnect');
@@ -54,7 +65,8 @@ select id as new_connection from connections \gset
 select pg_temp.assert_true(:'new_connection'<>:'old_connection','fresh connection identity');
 select id as new_conversation from get_or_create_conversation(:'new_connection') \gset
 select pg_temp.assert_true(:'new_conversation'<>:'old_conversation','fresh conversation identity');
-select pg_temp.assert_true((select count(*)=0 from messages),'new relationship cannot reveal old messages');
+select pg_temp.assert_true((select count(*)=0 from get_conversation_messages(:'new_conversation')),'fresh relationship cannot reveal old messages');
+select pg_temp.assert_table_denied('select * from messages');
 select pg_temp.assert_denied(format('select send_message(%L,%L,%L)', :'new_conversation','new content','old-message-key'));
 select pg_temp.assert_denied(format('select get_conversation_messages(%L)', :'old_conversation'));
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);

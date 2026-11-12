@@ -19,12 +19,18 @@ import 'package:mitzone/features/profile/data/profile_repository.dart';
 import 'package:mitzone/features/splash/presentation/splash_screen.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
 import 'package:mitzone/core/storage/storage_providers.dart';
+
 import '../../support/memory_local_storage.dart';
+
 import 'package:mitzone/features/events/presentation/events_screen.dart';
+import 'package:mitzone/features/explore/presentation/explore_screen.dart';
+import 'package:mitzone/features/nearby/presentation/nearby_screen.dart';
+import 'package:mitzone/features/groups/presentation/groups_screen.dart';
 import 'package:mitzone/features/matches/presentation/matches_screen.dart';
 import 'package:mitzone/features/chat/presentation/chat_screen.dart';
 import 'package:mitzone/features/profile/presentation/profile_screen.dart';
 import 'package:mitzone/features/navigation/presentation/main_navigation_shell.dart';
+import 'package:mitzone/features/connections/data/connection_providers.dart';
 
 class MockOnboardingStore implements OnboardingStatusStore {
   bool completed = false;
@@ -86,7 +92,10 @@ void main() {
     profileRepo = MockProfileRepository();
   });
 
-  Widget createTestWidget({String? initialLocation}) {
+  Widget createTestWidget({
+    String? initialLocation,
+    VoidCallback? onIncomingRequestRead,
+  }) {
     return ProviderScope(
       overrides: [
         localStorageProvider.overrideWithValue(MemoryLocalStorage()),
@@ -96,6 +105,11 @@ void main() {
         onboardingStatusStoreProvider.overrideWithValue(onboardingStore),
         identityGatewayProvider.overrideWithValue(identityGateway),
         profileRepositoryProvider.overrideWithValue(profileRepo),
+        if (onIncomingRequestRead != null)
+          incomingConnectionRequestsProvider.overrideWith((ref) async {
+            onIncomingRequestRead();
+            return [];
+          }),
         if (initialLocation != null)
           routerInitialLocationProvider.overrideWithValue(initialLocation),
       ],
@@ -109,6 +123,57 @@ void main() {
   }
 
   group('Navigation Integration', () {
+    testWidgets(
+      'returning to Nearby refreshes incoming requests without restarting',
+      (tester) async {
+        var reads = 0;
+        profileRepo.profile = const UserProfile(
+          id: 'test-id',
+          displayName: 'Test Owner',
+        );
+        await tester.pumpWidget(
+          createTestWidget(
+            initialLocation: AppRoutes.matches,
+            onIncomingRequestRead: () => reads++,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final initialReads = reads;
+        expect(initialReads, greaterThan(0));
+        await tester.tap(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text('Profile'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(reads, initialReads);
+        await tester.tap(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text('Nearby'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(reads, greaterThan(initialReads));
+        final refreshed = reads;
+        await tester.tap(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text('Nearby'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(reads, greaterThan(refreshed));
+        expect(
+          tester
+              .widget<NavigationBar>(find.byType(NavigationBar))
+              .selectedIndex,
+          2,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
     testWidgets('Splash -> Onboarding when not completed', (tester) async {
       onboardingStore.completed = false;
       await tester.pumpWidget(createTestWidget());
@@ -194,24 +259,24 @@ void main() {
 
       // Tap Events
       await tester.tap(
-        find.descendant(of: navBar, matching: find.text('Events')),
+        find.descendant(of: navBar, matching: find.text('Explore')),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(EventsScreen), findsOneWidget);
+      expect(find.byType(ExploreScreen), findsOneWidget);
 
       // Tap Matches
       await tester.tap(
-        find.descendant(of: navBar, matching: find.text('Matches')),
+        find.descendant(of: navBar, matching: find.text('Nearby')),
       );
       await tester.pumpAndSettle();
       expect(find.byType(MatchesScreen), findsOneWidget);
 
       // Tap Chat
       await tester.tap(
-        find.descendant(of: navBar, matching: find.text('Chat')),
+        find.descendant(of: navBar, matching: find.text('Groups')),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(ChatScreen), findsOneWidget);
+      expect(find.byType(GroupsScreen), findsOneWidget);
 
       // Tap Profile
       await tester.tap(
@@ -223,6 +288,47 @@ void main() {
     });
 
     group('Direct Route Tests', () {
+      for (final route in [
+        AppRoutes.explore,
+        AppRoutes.nearby,
+        AppRoutes.groups,
+      ]) {
+        testWidgets('Canonical destination $route opens the correct branch', (
+          tester,
+        ) async {
+          profileRepo.profile = const UserProfile(
+            id: 'test-id',
+            displayName: 'Test Owner',
+          );
+          await tester.pumpWidget(createTestWidget(initialLocation: route));
+          await tester.pumpAndSettle();
+          expect(
+            find.byType(
+              route == AppRoutes.explore
+                  ? ExploreScreen
+                  : route == AppRoutes.nearby
+                  ? NearbyScreen
+                  : GroupsScreen,
+            ),
+            findsOneWidget,
+          );
+          expect(
+            tester
+                .widget<NavigationBar>(find.byType(NavigationBar))
+                .selectedIndex,
+            route == AppRoutes.explore
+                ? 1
+                : route == AppRoutes.nearby
+                ? 2
+                : 3,
+          );
+          if (route == AppRoutes.groups) {
+            expect(find.text('Groups are not available yet'), findsOneWidget);
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
+
       testWidgets('Directly access /app/home', (tester) async {
         onboardingStore.completed = true;
         profileRepo.profile = const UserProfile(id: 'id', displayName: 'User');
@@ -277,10 +383,9 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(ChatScreen), findsOneWidget);
-        expect(find.byType(MainNavigationShell), findsOneWidget);
+        expect(find.byType(MainNavigationShell), findsNothing);
 
-        final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-        expect(navBar.selectedIndex, 3);
+        expect(find.byType(NavigationBar), findsNothing);
       });
 
       testWidgets('Directly access /app/profile', (tester) async {
@@ -328,15 +433,15 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Events')),
+          find.descendant(of: navBarFinder, matching: find.text('Explore')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Matches')),
+          find.descendant(of: navBarFinder, matching: find.text('Nearby')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Chat')),
+          find.descendant(of: navBarFinder, matching: find.text('Groups')),
           findsOneWidget,
         );
         expect(
@@ -366,15 +471,15 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Events')),
+          find.descendant(of: navBarFinder, matching: find.text('Explore')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Matches')),
+          find.descendant(of: navBarFinder, matching: find.text('Nearby')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Chat')),
+          find.descendant(of: navBarFinder, matching: find.text('Groups')),
           findsOneWidget,
         );
         expect(
@@ -404,15 +509,15 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Events')),
+          find.descendant(of: navBarFinder, matching: find.text('Explore')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Matches')),
+          find.descendant(of: navBarFinder, matching: find.text('Nearby')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Chat')),
+          find.descendant(of: navBarFinder, matching: find.text('Groups')),
           findsOneWidget,
         );
         expect(
@@ -442,15 +547,15 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Events')),
+          find.descendant(of: navBarFinder, matching: find.text('Explore')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Matches')),
+          find.descendant(of: navBarFinder, matching: find.text('Nearby')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Chat')),
+          find.descendant(of: navBarFinder, matching: find.text('Groups')),
           findsOneWidget,
         );
         expect(
@@ -484,15 +589,15 @@ void main() {
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Events')),
+          find.descendant(of: navBarFinder, matching: find.text('Explore')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Matches')),
+          find.descendant(of: navBarFinder, matching: find.text('Nearby')),
           findsOneWidget,
         );
         expect(
-          find.descendant(of: navBarFinder, matching: find.text('Chat')),
+          find.descendant(of: navBarFinder, matching: find.text('Groups')),
           findsOneWidget,
         );
         expect(
@@ -535,7 +640,7 @@ void main() {
       expect(find.byType(HomeScreen), findsOneWidget);
 
       // Return to Events
-      await tester.tap(find.text('Events'));
+      await tester.tap(find.text('Explore'));
       await tester.pumpAndSettle();
       expect(find.byType(EventsScreen), findsOneWidget);
 

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { nearbyCoordinates, nearbyProviderTimeoutMs } from "../_shared/nearby_request.ts";
 
 const radiusMeters = 2500;
 const maxResults = 10;
@@ -20,11 +21,12 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return json({ error: "Unauthorized" }, 401);
     const body = await req.json();
-    const latitude = Number(body.latitude), longitude = Number(body.longitude);
-    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return json({ error: "Invalid location" }, 400);
+    const coordinates = nearbyCoordinates(body);
+    if (!coordinates) return json({ error: "Invalid location" }, 400);
+    const { latitude, longitude } = coordinates;
     const radius = Math.min(Math.max(Number(body.radiusMeters) || radiusMeters, 100), radiusMeters);
     const count = Math.min(Math.max(Number(body.maxResults) || maxResults, 1), maxResults);
-    const google = await fetch("https://places.googleapis.com/v1/places:searchNearby", { method: "POST", headers: { "Content-Type": "application/json", "X-Goog-Api-Key": Deno.env.get("GOOGLE_PLACES_API_KEY")!, "X-Goog-FieldMask": fieldMask }, body: JSON.stringify({ includedTypes, maxResultCount: count, rankPreference: "DISTANCE", locationRestriction: { circle: { center: { latitude, longitude }, radius } } }) });
+    const google = await fetch("https://places.googleapis.com/v1/places:searchNearby", { method: "POST", signal: AbortSignal.timeout(nearbyProviderTimeoutMs), headers: { "Content-Type": "application/json", "X-Goog-Api-Key": Deno.env.get("GOOGLE_PLACES_API_KEY")!, "X-Goog-FieldMask": fieldMask }, body: JSON.stringify({ includedTypes, maxResultCount: count, rankPreference: "DISTANCE", locationRestriction: { circle: { center: { latitude, longitude }, radius } } }) });
     if (!google.ok) return json({ error: "Discovery provider unavailable" }, 502);
     const payload = await google.json();
     const items = (payload.places ?? []).flatMap((place: any) => normalize(place, latitude, longitude));

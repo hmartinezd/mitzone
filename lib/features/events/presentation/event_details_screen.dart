@@ -146,6 +146,23 @@ class _EventDetailsContent extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: SizedBox(
+              height: 208,
+              width: double.infinity,
+              child: Uri.tryParse(event.imageKey ?? '')?.scheme == 'https'
+                  ? Image.network(
+                      event.imageKey!,
+                      fit: BoxFit.cover,
+                      excludeFromSemantics: true,
+                      errorBuilder: (_, _, _) =>
+                          _EventPhotoFallback(category: event.category),
+                    )
+                  : _EventPhotoFallback(category: event.category),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
           Text(
             event.category.toUpperCase(),
             style: theme.textTheme.labelLarge?.copyWith(
@@ -170,24 +187,6 @@ class _EventDetailsContent extends ConsumerWidget {
             _DetailLine(icon: Icons.map_outlined, text: location),
           ],
           const SizedBox(height: AppSpacing.xl),
-          Container(
-            height: 150,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primaryContainer,
-                  theme.colorScheme.secondaryContainer,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(
-              eventCategoryIcon(event.category),
-              size: 64,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
-          ),
           const SizedBox(height: AppSpacing.xl),
           Text(
             'About this event',
@@ -335,11 +334,19 @@ class _EventDetailsContent extends ConsumerWidget {
   }
 
   void _showProviderUrl(BuildContext context, String url) {
-    showDialog<void>(context: context, builder: (context) => AlertDialog(
-      title: const Text('Event source'),
-      content: SelectableText(url),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-    ));
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Event source'),
+        content: SelectableText(url),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -542,6 +549,27 @@ class _EventNotFound extends StatelessWidget {
     child: FilledButton(
       onPressed: () => context.go(AppRoutes.events),
       child: const Text('Back to events'),
+    ),
+  );
+}
+
+class _EventPhotoFallback extends StatelessWidget {
+  const _EventPhotoFallback({required this.category});
+  final String category;
+  @override
+  Widget build(BuildContext context) => ColoredBox(
+    color: Theme.of(context).colorScheme.surfaceContainerLow,
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          eventCategoryIcon(category),
+          size: 48,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(height: 12),
+        const Text('Photo unavailable'),
+      ],
     ),
   );
 }

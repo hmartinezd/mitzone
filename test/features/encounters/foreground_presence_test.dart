@@ -121,6 +121,7 @@ void main() {
     final service = ForegroundPresenceService(
       location: location,
       presence: gateway,
+      now: () => DateTime.utc(2026),
     );
     expect(
       await service.record(consent: false),
@@ -140,6 +141,7 @@ void main() {
     final service = ForegroundPresenceService(
       location: _FailingLocation(),
       presence: gateway,
+      now: () => DateTime.utc(2026),
     );
     expect(
       await service.record(consent: true),
@@ -156,6 +158,7 @@ void main() {
       final service = ForegroundPresenceService(
         location: location,
         presence: gateway,
+        now: () => DateTime.utc(2026),
       );
       await service.record(consent: true);
       expect(location.observations, 1);

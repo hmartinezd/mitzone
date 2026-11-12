@@ -54,10 +54,20 @@ class PlatformForegroundLocationSource implements LocationObservationSource {
     _logLocationDiagnostic('Current-position request started');
     try {
       position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.medium,
-          timeLimit: Duration(seconds: 15),
-        ),
+        // Android's balanced-power request can wait for network/passive fixes
+        // even when GPS is available. This remains a bounded, one-shot request:
+        // the plugin stops updates after the first fix or at the timeout. Raw
+        // precision never changes the server's coarse shared-context boundary.
+        locationSettings: defaultTargetPlatform == TargetPlatform.android
+            ? AndroidSettings(
+                accuracy: LocationAccuracy.high,
+                intervalDuration: const Duration(seconds: 1),
+                timeLimit: const Duration(seconds: 15),
+              )
+            : const LocationSettings(
+                accuracy: LocationAccuracy.medium,
+                timeLimit: Duration(seconds: 15),
+              ),
       );
     } on TimeoutException {
       _logLocationDiagnostic(

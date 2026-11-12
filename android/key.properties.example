@@ -1,0 +1,4 @@
+storeFile=/absolute/path/to/owner-controlled-upload-key.jks
+storePassword=REPLACE_LOCALLY
+keyAlias=REPLACE_LOCALLY
+keyPassword=REPLACE_LOCALLY

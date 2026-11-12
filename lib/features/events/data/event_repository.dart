@@ -1,11 +1,22 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../core/errors/domain_error.dart';
 import '../domain/event.dart';
+import '../../discovery/domain/nearby_provider_exception.dart';
 
-abstract interface class EventRepository { Future<List<Event>> getNearby({required double latitude, required double longitude}); }
+abstract interface class EventRepository {
+  Future<List<Event>> getNearby({
+    required double latitude,
+    required double longitude,
+  });
+}
+
 class SupabaseEventRepository implements EventRepository {
-  const SupabaseEventRepository(this.client); final SupabaseClient client;
-  @override Future<List<Event>> getNearby({required double latitude, required double longitude}) async {
+  const SupabaseEventRepository(this.client);
+  final SupabaseClient client;
+  @override
+  Future<List<Event>> getNearby({
+    required double latitude,
+    required double longitude,
+  }) async {
     late final FunctionResponse response;
     try {
       response = await client.functions.invoke(
@@ -13,35 +24,61 @@ class SupabaseEventRepository implements EventRepository {
         body: {'latitude': latitude, 'longitude': longitude},
       );
     } on FunctionsHttpException catch (error) {
-      if (error.status == 502) {
-        throw const DomainError(
-          DomainErrorCode.unavailable,
-          'Nearby event provider is unavailable.',
-        );
-      }
-      if (error.status == 503) {
-        throw const DomainError(
-          DomainErrorCode.unavailable,
-          'Nearby event provider is not configured.',
-        );
-      }
-      rethrow;
+      throw NearbyProviderException.fromStatus('activities', error.status);
     }
     final data = response.data;
-    if (data is! Map || data['events'] is! List) return const [];
-    return (data['events'] as List).whereType<Map>().map(normalizeExternalEvent).whereType<Event>().toList();
+    if (data is! Map || data['events'] is! List) {
+      throw const NearbyProviderException(
+        'activities',
+        NearbyProviderFailure.invalidResponse,
+      );
+    }
+    final events = (data['events'] as List)
+        .whereType<Map>()
+        .map(normalizeExternalEvent)
+        .whereType<Event>()
+        .toList();
+    if ((data['events'] as List).isNotEmpty && events.isEmpty) {
+      throw const NearbyProviderException(
+        'activities',
+        NearbyProviderFailure.invalidResponse,
+      );
+    }
+    return events;
   }
 }
+
 Event? normalizeExternalEvent(Map v) {
-  final id=v['id'], title=v['title'], venue=v['venue'];
-  if (id is! String || title is! String || venue is! String || id.trim().isEmpty) return null;
-  final cats=(v['categories'] as List?)?.whereType<String>().toList() ?? const <String>[];
-  DateTime? dt(Object? x)=>x is String ? DateTime.tryParse(x) : null;
+  final id = v['id'], title = v['title'], venue = v['venue'];
+  if (id is! String ||
+      title is! String ||
+      venue is! String ||
+      id.trim().isEmpty) {
+    return null;
+  }
+  final cats =
+      (v['categories'] as List?)?.whereType<String>().toList() ??
+      const <String>[];
+  DateTime? dt(Object? x) => x is String ? DateTime.tryParse(x) : null;
   final startRaw = v['startsAt'];
   final endRaw = v['endsAt'];
   final startsAt = dt(startRaw);
   final endsAt = dt(endRaw);
-  return Event(id:id,title:title,venue:venue,timeLabel:formatProviderEventTime(startRaw, endRaw),category:cats.isEmpty?'Event':cats.first,description:v['description'] as String? ?? 'A public gathering nearby.',locationLabel:v['locationLabel'] as String?,imageKey:v['imageUrl'] as String?,source:v['source'] as String? ?? 'ticketmaster',sourceUrl:v['sourceUrl'] as String?,imageAttribution:v['imageAttribution'] as String?,startsAt:startsAt,endsAt:endsAt);
+  return Event(
+    id: id,
+    title: title,
+    venue: venue,
+    timeLabel: formatProviderEventTime(startRaw, endRaw),
+    category: cats.isEmpty ? 'Event' : cats.first,
+    description: v['description'] as String? ?? 'A public gathering nearby.',
+    locationLabel: v['locationLabel'] as String?,
+    imageKey: v['imageUrl'] as String?,
+    source: v['source'] as String? ?? 'ticketmaster',
+    sourceUrl: v['sourceUrl'] as String?,
+    imageAttribution: v['imageAttribution'] as String?,
+    startsAt: startsAt,
+    endsAt: endsAt,
+  );
 }
 
 String formatProviderEventTime(Object? startValue, Object? endValue) {
@@ -56,7 +93,10 @@ String formatProviderEventTime(Object? startValue, Object? endValue) {
     final suffix = value.hour >= 12 ? 'PM' : 'AM';
     return '$hour:${value.minute.toString().padLeft(2, '0')} $suffix';
   }
+
   final result = '$date at ${clock(start)}';
-  final end = endValue is String ? DateTime.tryParse(endValue)?.toLocal() : null;
+  final end = endValue is String
+      ? DateTime.tryParse(endValue)?.toLocal()
+      : null;
   return end == null ? result : '$result – ${clock(end)}';
 }

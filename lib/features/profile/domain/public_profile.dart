@@ -2,7 +2,13 @@ import 'user_profile.dart';
 
 /// The intentionally small profile projection safe for an authorized peer.
 class PublicProfile {
-  const PublicProfile({required this.id, required this.displayName, this.avatarUri, this.bio, this.city});
+  const PublicProfile({
+    required this.id,
+    required this.displayName,
+    this.avatarUri,
+    this.bio,
+    this.city,
+  });
   final String id;
   final String displayName;
   final String? avatarUri;
@@ -18,6 +24,10 @@ class PublicProfile {
   );
 
   UserProfile toUserProfile() => UserProfile(
-    id: id, displayName: displayName, avatarUri: avatarUri, bio: bio, city: city,
+    id: id,
+    displayName: displayName,
+    avatarUri: avatarUri,
+    bio: bio,
+    city: city,
   );
 }

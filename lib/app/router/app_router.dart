@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/identity/identity_providers.dart';
 import '../../features/foundation/presentation/entry_failure_screen.dart';
 import '../../features/foundation/presentation/route_error_screen.dart';
@@ -12,7 +13,9 @@ import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
 import '../../features/events/presentation/event_details_screen.dart';
-import '../../features/matches/presentation/matches_screen.dart';
+import '../../features/explore/presentation/explore_screen.dart';
+import '../../features/nearby/presentation/nearby_screen.dart';
+import '../../features/groups/presentation/groups_screen.dart';
 import '../../features/chat/presentation/chat_screen.dart';
 import '../../features/chat/presentation/conversation_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -58,6 +61,20 @@ GoRouter createAppRouter({
       GoRoute(
         path: '/app/notifications',
         builder: (context, state) => const NotificationCenterScreen(),
+      ),
+      // Messages remain addressable at their original protected URLs, but are
+      // pushed above the tab shell rather than occupying a bottom destination.
+      GoRoute(
+        path: AppRoutes.chat,
+        builder: (context, state) => const ChatScreen(),
+        routes: [
+          GoRoute(
+            path: ':conversationId',
+            builder: (context, state) => ConversationScreen(
+              conversationId: state.pathParameters['conversationId']!,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.splash,
@@ -118,6 +135,16 @@ GoRouter createAppRouter({
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: AppRoutes.explore,
+                builder: (context, state) => const ExploreScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'activities',
+                    builder: (context, state) => const EventsScreen(),
+                  ),
+                ],
+              ),
+              GoRoute(
                 path: AppRoutes.events,
                 builder: (context, state) => const EventsScreen(),
                 routes: [
@@ -137,8 +164,19 @@ GoRouter createAppRouter({
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: AppRoutes.nearby,
+                builder: (context, state) => const NearbyScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'connections',
+                    builder: (context, state) =>
+                        const NearbyScreen(showConnections: true),
+                  ),
+                ],
+              ),
+              GoRoute(
                 path: AppRoutes.matches,
-                builder: (context, state) => const MatchesScreen(),
+                builder: (context, state) => const NearbyScreen(),
                 routes: [
                   GoRoute(
                     path: 'profile/:userId/:encounterId',
@@ -149,10 +187,12 @@ GoRouter createAppRouter({
                         userId: userId,
                         encounterId: encounterId,
                         production: ref.read(productionModeProvider),
-                        localUserIds: ref
-                            .read(mockIdentityRepositoryProvider)
-                            .users
-                            .map((u) => u.id),
+                        localUserIds: ref.read(productionModeProvider)
+                            ? const <String>[]
+                            : ref
+                                  .read(mockIdentityRepositoryProvider)
+                                  .users
+                                  .map((u) => u.id),
                       )) {
                         return const RouteErrorScreen(error: null);
                       }
@@ -169,16 +209,8 @@ GoRouter createAppRouter({
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppRoutes.chat,
-                builder: (context, state) => const ChatScreen(),
-                routes: [
-                  GoRoute(
-                    path: ':conversationId',
-                    builder: (context, state) => ConversationScreen(
-                      conversationId: state.pathParameters['conversationId']!,
-                    ),
-                  ),
-                ],
+                path: AppRoutes.groups,
+                builder: (context, state) => const GroupsScreen(),
               ),
             ],
           ),

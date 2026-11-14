@@ -11,6 +11,7 @@ import '../../../core/errors/domain_error.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../data/event_providers.dart';
 import '../../encounters/data/foreground_location_sources.dart';
+import '../../discovery/domain/nearby_provider_exception.dart';
 import 'widgets/event_list_card.dart';
 
 class EventsScreen extends ConsumerStatefulWidget {
@@ -45,12 +46,12 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                   e.title.toLowerCase().contains(query) ||
                   e.venue.toLowerCase().contains(query)) &&
               (category == null || e.category == category) &&
-                  (!joinedOnly || (joined.value?.contains(e.id) ?? false)),
+              (!joinedOnly || (joined.value?.contains(e.id) ?? false)),
         )
         .toList();
 
     return MitzonePageBody(
-      title: 'Events',
+      title: 'Discover nearby activities',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -74,7 +75,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             controller: search,
             onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
-              labelText: 'Search events or venues',
+              labelText: 'Search activities or venues',
               prefixIcon: Icon(Icons.search),
             ),
           ),
@@ -150,7 +151,14 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             ),
           const SizedBox(height: AppSpacing.xxl),
           if (!ref.watch(productionModeProvider))
-            Center(child: Text('Showing deterministic demo events for local development.', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant.withAlpha(150)))),
+            Center(
+              child: Text(
+                'Showing deterministic demo events for local development.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant.withAlpha(150),
+                ),
+              ),
+            ),
           const SizedBox(height: AppSpacing.xxl),
         ],
       ),
@@ -170,6 +178,11 @@ String _eventsLoadErrorMessage(Object? error) {
       case ForegroundLocationFailure.temporarilyUnavailable:
         return 'Your location is temporarily unavailable. Try again.';
     }
+  }
+  if (error is NearbyProviderException) {
+    return error.failure == NearbyProviderFailure.notConfigured
+        ? 'Activities are unavailable in this environment. Try again later.'
+        : 'Activities could not be loaded. Try again.';
   }
   if (error is TimeoutException) {
     return 'Nearby events took too long to load. Check your connection and try again.';

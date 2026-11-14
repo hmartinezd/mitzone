@@ -21,26 +21,46 @@ class PushNotificationService {
     try {
       await Firebase.initializeApp();
       final messaging = FirebaseMessaging.instance;
-      _messageSubscriptions.add(FirebaseMessaging.onMessage.listen((_) => onForeground?.call()));
-      _messageSubscriptions.add(FirebaseMessaging.onMessageOpenedApp.listen((message) => onTap?.call(message.data)));
+      _messageSubscriptions.add(
+        FirebaseMessaging.onMessage.listen((_) => onForeground?.call()),
+      );
+      _messageSubscriptions.add(
+        FirebaseMessaging.onMessageOpenedApp.listen(
+          (message) => onTap?.call(message.data),
+        ),
+      );
       final initial = await messaging.getInitialMessage();
       if (initial != null) onTap?.call(initial.data);
       final settings = await messaging.requestPermission(provisional: true);
-      if (settings.authorizationStatus == AuthorizationStatus.denied || settings.authorizationStatus == AuthorizationStatus.notDetermined) return settings.authorizationStatus;
+      if (settings.authorizationStatus == AuthorizationStatus.denied ||
+          settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+        return settings.authorizationStatus;
+      }
       await _register(await messaging.getToken());
       _refresh = messaging.onTokenRefresh.listen(_register);
       return settings.authorizationStatus;
     } on Object catch (error) {
-      if (kDebugMode) debugPrint('Push setup unavailable: ${error.runtimeType}');
+      if (kDebugMode) {
+        debugPrint('Push setup unavailable: ${error.runtimeType}');
+      }
       return AuthorizationStatus.notDetermined;
     }
   }
 
-  static String? route(Map<String, dynamic> data) => PushRouteResolver.resolve(data);
+  static String? route(Map<String, dynamic> data) =>
+      PushRouteResolver.resolve(data);
 
   Future<void> _register(String? token) async {
     if (token == null || token.isEmpty) return;
-    await repository.register(userId, DeviceToken(token: token, platform: defaultTargetPlatform == TargetPlatform.iOS ? DevicePlatform.ios : DevicePlatform.android));
+    await repository.register(
+      userId,
+      DeviceToken(
+        token: token,
+        platform: defaultTargetPlatform == TargetPlatform.iOS
+            ? DevicePlatform.ios
+            : DevicePlatform.android,
+      ),
+    );
     _token = token;
   }
 

@@ -24,9 +24,7 @@ void main() {
             );
           }),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: EventsScreen()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: EventsScreen())),
       ),
     );
 

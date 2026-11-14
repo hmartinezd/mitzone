@@ -1,4 +1,11 @@
-enum ReportReason { harassment, inappropriateContent, fakeProfile, spam, safetyConcern, other }
+enum ReportReason {
+  harassment,
+  inappropriateContent,
+  fakeProfile,
+  spam,
+  safetyConcern,
+  other,
+}
 
 extension ReportReasonLabel on ReportReason {
   String get label => switch (this) {

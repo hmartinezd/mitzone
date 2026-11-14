@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../app/theme/app_gradients.dart';
 import '../../app/theme/app_spacing.dart';
 
@@ -110,8 +111,12 @@ class MitzonePageBody extends StatelessWidget {
       height: double.infinity,
       decoration:
           backgroundDecoration ??
-          const BoxDecoration(gradient: AppGradients.backgroundAtmospheric),
-      child: content,
+          (theme.brightness == Brightness.light
+              ? BoxDecoration(color: theme.colorScheme.surface)
+              : const BoxDecoration(
+                  gradient: AppGradients.backgroundAtmospheric,
+                )),
+      child: Material(type: MaterialType.transparency, child: content),
     );
   }
 }

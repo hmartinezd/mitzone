@@ -21,22 +21,47 @@ final presenceRepositoryProvider = Provider<PresenceRepository>(
       : LocalPresenceRepository(ref.watch(localStorageProvider)),
 );
 
-final foregroundPresenceGatewayProvider = Provider<ForegroundPresenceGateway>((ref) {
-  if (!ref.watch(productionModeProvider)) return const DemoForegroundPresenceGateway();
+final foregroundPresenceGatewayProvider = Provider<ForegroundPresenceGateway>((
+  ref,
+) {
+  if (!ref.watch(productionModeProvider)) {
+    return const DemoForegroundPresenceGateway();
+  }
   return _RepositoryForegroundGateway(ref.watch(presenceRepositoryProvider));
 });
-final foregroundPresenceServiceProvider = Provider<ForegroundPresenceService>((ref) {
+final foregroundPresenceServiceProvider = Provider<ForegroundPresenceService>((
+  ref,
+) {
   return ForegroundPresenceService(
     location: ref.watch(locationObservationSourceProvider),
     presence: ref.watch(foregroundPresenceGatewayProvider),
   );
 });
 
-class _RepositoryForegroundGateway implements ForegroundPresenceGateway {
+class _RepositoryForegroundGateway
+    implements ForegroundPresenceGateway, ForegroundPresenceRefreshGateway {
   const _RepositoryForegroundGateway(this.repository);
   final PresenceRepository repository;
   @override
-  Future<DateTime> recordForegroundPresence({required double latitude, required double longitude}) => repository.recordForegroundPresence(latitude: latitude, longitude: longitude);
+  Future<DateTime> recordForegroundPresence({
+    required double latitude,
+    required double longitude,
+  }) => repository.recordForegroundPresence(
+    latitude: latitude,
+    longitude: longitude,
+  );
   @override
   Future<void> stopForegroundPresence() => repository.stopForegroundPresence();
+  @override
+  Future<DateTime> refreshForegroundPresence({
+    required double latitude,
+    required double longitude,
+  }) {
+    final source = repository;
+    if (source is ForegroundPresenceRefreshGateway) {
+      return (source as ForegroundPresenceRefreshGateway)
+          .refreshForegroundPresence(latitude: latitude, longitude: longitude);
+    }
+    throw StateError('Foreground refresh unavailable');
+  }
 }

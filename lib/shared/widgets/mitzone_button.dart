@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../app/theme/app_spacing.dart';
 
 enum MitzoneButtonVariant { primary, secondary, tertiary, destructive }
@@ -112,7 +113,8 @@ class MitzoneButton extends StatelessWidget {
   Color _getForegroundColor(ThemeData theme) {
     switch (variant) {
       case MitzoneButtonVariant.primary:
-        return theme.colorScheme.onPrimary;
+        return theme.filledButtonTheme.style?.foregroundColor?.resolve({}) ??
+            theme.colorScheme.onPrimary;
       case MitzoneButtonVariant.destructive:
         return theme.colorScheme.onError;
       case MitzoneButtonVariant.secondary:

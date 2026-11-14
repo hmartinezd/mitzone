@@ -11,7 +11,10 @@ class AuthenticatedIdentityGateway implements IdentityGateway {
     final user = _session.value?.user;
     return user == null
         ? null
-        : AppIdentity(id: user.id as String, type: AppIdentityType.authenticated);
+        : AppIdentity(
+            id: user.id as String,
+            type: AppIdentityType.authenticated,
+          );
   }
 
   @override

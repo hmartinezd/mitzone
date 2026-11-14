@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
+
 import '../../app/theme/app_spacing.dart';
 
 class MitzoneEmptyState extends StatelessWidget {
@@ -33,7 +33,7 @@ class MitzoneEmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 64, color: AppColors.textDisabled),
+                Icon(icon, size: 64, color: theme.colorScheme.onSurfaceVariant),
                 const SizedBox(height: AppSpacing.xxl),
               ],
               Text(
@@ -47,7 +47,7 @@ class MitzoneEmptyState extends StatelessWidget {
               Text(
                 message,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),

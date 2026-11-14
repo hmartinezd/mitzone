@@ -1,7 +1,45 @@
 import 'package:flutter/material.dart';
+
 import 'app_colors.dart';
 
 class AppTypography {
+  static TextTheme get kineticTextTheme {
+    final base = textTheme.apply(
+      fontFamily: 'PlusJakartaSans',
+      bodyColor: const Color(0xff151d1c),
+      displayColor: const Color(0xff151d1c),
+    );
+    TextStyle heading(double size, double line, FontWeight weight) => TextStyle(
+      fontFamily: 'SpaceGrotesk',
+      fontSize: size,
+      height: line / size,
+      letterSpacing: -size * .01,
+      fontWeight: weight,
+      color: const Color(0xff151d1c),
+    );
+    return base.copyWith(
+      headlineLarge: heading(32, 40, FontWeight.w600),
+      headlineMedium: heading(26, 34, FontWeight.w600),
+      headlineSmall: heading(24, 32, FontWeight.w600),
+      titleLarge: heading(20, 28, FontWeight.w600),
+      bodyLarge: base.bodyLarge?.copyWith(
+        fontSize: 16,
+        height: 1.5,
+        letterSpacing: 0,
+      ),
+      bodyMedium: base.bodyMedium?.copyWith(
+        fontSize: 14,
+        height: 20 / 14,
+        letterSpacing: .07,
+      ),
+      bodySmall: base.bodySmall?.copyWith(
+        fontSize: 12,
+        height: 1.5,
+        color: const Color(0xff3b4a48),
+      ),
+    );
+  }
+
   static TextTheme get textTheme {
     return const TextTheme(
       displayLarge: TextStyle(

@@ -1,5 +1,11 @@
 /// OS permission and product consent are intentionally separate.
-enum LocationPermissionState { notRequested, denied, deniedForever, whileUsing, background }
+enum LocationPermissionState {
+  notRequested,
+  denied,
+  deniedForever,
+  whileUsing,
+  background,
+}
 
 enum PresenceState { inactive, active }
 

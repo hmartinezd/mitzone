@@ -31,6 +31,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/android/build/
 /coverage/
 
 # Symbolication related
@@ -51,6 +52,33 @@ config/*.json
 # Firebase platform configuration (generated locally; never commit)
 /android/app/google-services.json
 /ios/Runner/GoogleService-Info.plist
+/android/key.properties
+*.jks
+*.keystore
 
 # AI tool working artifacts
 .artifacts/
+
+# Private recovery evidence and local tools
+.recovery/
+
+# Local Supabase link/cache metadata and runtime credentials
+/supabase/.temp/
+/supabase/.branches/
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.mobileprovision
+*.apk
+*.aab
+
+# Historical local build/review transcripts
+/build-error.txt
+/chat-review.txt
+/chat12-review.txt
+
+# Generated Flutter widget preview artifacts
+.widget_preview/

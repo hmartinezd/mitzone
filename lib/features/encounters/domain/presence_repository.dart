@@ -1,7 +1,10 @@
 import 'presence_evidence.dart';
 
 abstract interface class PresenceRepository {
-  Future<DateTime> recordForegroundPresence({required double latitude, required double longitude}) async => throw UnimplementedError();
+  Future<DateTime> recordForegroundPresence({
+    required double latitude,
+    required double longitude,
+  }) async => throw UnimplementedError();
   Future<void> stopForegroundPresence() async {}
   Future<PresenceEvidence?> getEvidence({
     required String userId,

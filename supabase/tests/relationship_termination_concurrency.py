@@ -33,7 +33,7 @@ acceptance = blocking = None
 try:
     sql(f"insert into auth.users(id) values ('{a}'),('{b}'); "
         f"insert into encounters(id,user_a,user_b,context_id,overlap_start,overlap_end) "
-        f"values ('{encounter}','{a}','{b}','test:foreground',now(),now()+interval '30 minutes');")
+        f"values ('{encounter}','{a}','{b}','test:foreground',now()-interval '6 minutes',now()-interval '1 second');")
     request = sql(f"select id from send_connection_request('{b}','{encounter}');", a).stdout.strip()
     acceptance = subprocess.Popen(command, text=True, stdin=subprocess.PIPE,
                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)

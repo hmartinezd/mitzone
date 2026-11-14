@@ -76,14 +76,15 @@ class AppEntryResolver {
   }
 
   static String _safeDisplayName(AuthUser user) {
-    final metadataName = [
-      user.metadata['display_name'],
-      user.metadata['full_name'],
-      user.metadata['name'],
-    ].whereType<String>().map((value) => value.trim()).firstWhere(
-      ProfileValidation.hasMinimumProfile,
-      orElse: () => '',
-    );
+    final metadataName =
+        [
+              user.metadata['display_name'],
+              user.metadata['full_name'],
+              user.metadata['name'],
+            ]
+            .whereType<String>()
+            .map((value) => value.trim())
+            .firstWhere(ProfileValidation.hasMinimumProfile, orElse: () => '');
     if (metadataName.isNotEmpty) return metadataName;
 
     final localPart = user.email?.split('@').first.trim() ?? '';

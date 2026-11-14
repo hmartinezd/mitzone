@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
+
 import '../../app/theme/app_spacing.dart';
 import '../../app/theme/app_radii.dart';
 
@@ -55,7 +55,9 @@ class MitzoneCard extends StatelessWidget {
           borderRadius: AppRadii.radiusLg,
           side: (emphasized || selected)
               ? BorderSide(
-                  color: selected ? AppColors.primary : AppColors.outlineStrong,
+                  color: selected
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.outline,
                   width: selected ? 2 : 1,
                 )
               : BorderSide.none,

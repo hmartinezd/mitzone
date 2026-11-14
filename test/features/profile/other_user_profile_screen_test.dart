@@ -16,7 +16,7 @@ import 'package:mitzone/core/config/app_environment.dart';
 import 'package:mitzone/core/providers/core_providers.dart';
 
 void main() {
-  final testNow = DateTime.utc(2026, 8, 30, 10, 30);
+  final testNow = DateTime.utc(2026, 8, 30, 11, 30);
   final encounter = Encounter(
     id: 'jose-sofia-event-1',
     currentUserId: MockUsers.joseId,
@@ -99,7 +99,7 @@ void main() {
     'expired encounter cannot expose the profile or connection actions',
     (tester) async {
       await tester.pumpWidget(
-        buildScreen(now: testNow.add(const Duration(hours: 1))),
+        buildScreen(now: testNow.add(const Duration(days: 8))),
       );
       await tester.pumpAndSettle();
       expect(

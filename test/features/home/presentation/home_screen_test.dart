@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,6 +15,8 @@ import 'package:mitzone/core/identity/mock_identity_repository.dart';
 import 'package:mitzone/features/chat/data/chat_providers.dart';
 import 'package:mitzone/features/chat/domain/chat_models.dart';
 import 'package:mitzone/features/chat/presentation/conversation_screen.dart';
+import 'package:mitzone/features/chat/presentation/chat_screen.dart';
+import 'package:mitzone/features/explore/presentation/explore_screen.dart';
 import 'package:mitzone/features/connections/data/connection_providers.dart';
 import 'package:mitzone/features/connections/domain/connection.dart';
 import 'package:mitzone/features/connections/domain/connection_request.dart';
@@ -99,7 +102,7 @@ void main() {
         builder: (context, ref, _) {
           final router = ref.watch(routerProvider);
           return MaterialApp.router(
-            theme: darkTheme ? AppTheme.darkTheme : null,
+            theme: darkTheme ? AppTheme.darkTheme : AppTheme.lightTheme,
             routerConfig: router,
             builder: (context, child) => MediaQuery(
               data: MediaQuery.of(
@@ -143,7 +146,9 @@ void main() {
 
       expect(findHomeText('Hi, Hector'), findsOneWidget);
       expect(
-        findHomeText('Go somewhere. Be present. Mitzone does the rest.'),
+        findHomeText(
+          'Discover places and activities. Choose when to be discoverable, and connect only when you both agree.',
+        ),
         findsOneWidget,
       );
     });
@@ -191,7 +196,10 @@ void main() {
         createHomeScreen(profileState: const AsyncValue.data(null)),
       );
       await tester.pumpAndSettle();
-      expect(findHomeText('Where will you be?'), findsOneWidget);
+      expect(
+        findHomeText('Real moments, voluntary digital connection.'),
+        findsOneWidget,
+      );
       expect(findHomeText('I’m here'), findsOneWidget);
       expect(findHomeText('Happening around you'), findsOneWidget);
       expect(findHomeText('Upcoming activities'), findsNothing);
@@ -303,7 +311,7 @@ void main() {
               profileState: const AsyncData(
                 UserProfile(id: '1', displayName: 'Hector'),
               ),
-              darkTheme: true,
+              darkTheme: false,
             ),
           );
           await tester.pumpAndSettle();
@@ -333,13 +341,20 @@ void main() {
               connectedAt: DateTime.utc(2026),
             ),
           ]),
-          darkTheme: true,
+          darkTheme: false,
         ),
       );
       await tester.pumpAndSettle();
-      expect(findHomeText('Where will you be?'), findsOneWidget);
       expect(
-        tester.getTopLeft(findHomeText('Where will you be?')).dy,
+        findHomeText('Real moments, voluntary digital connection.'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .getTopLeft(
+              findHomeText('Real moments, voluntary digital connection.'),
+            )
+            .dy,
         lessThan(tester.getTopLeft(findHomeText('Happening around you')).dy),
       );
       expect(
@@ -420,7 +435,7 @@ void main() {
           createHomeScreen(
             profileState: const AsyncData(null),
             eventState: AsyncData([event]),
-            darkTheme: true,
+            darkTheme: false,
           ),
         );
         await tester.pumpAndSettle();
@@ -491,7 +506,9 @@ void main() {
   });
 
   group('HomeScreen - Router Actions', () {
-    testWidgets('See all -> Events (index 1)', (tester) async {
+    testWidgets('See Explore opens real discovery filters (index 1)', (
+      tester,
+    ) async {
       const profile = UserProfile(id: '1', displayName: 'Hector');
       await tester.pumpWidget(
         createHomeScreen(profileState: const AsyncValue.data(profile)),
@@ -499,10 +516,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap first "See all"
-      await tester.tap(findHomeText('See all').first);
+      await tester.ensureVisible(findHomeText('See Explore').first);
+      await tester.pumpAndSettle();
+      await tester.tap(findHomeText('See Explore').first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Discover what\'s happening.'), findsOneWidget);
+      expect(find.byType(ExploreScreen), findsOneWidget);
+      expect(find.text('Places'), findsOneWidget);
+      expect(find.text('Activities'), findsOneWidget);
       final nav = tester.widget<NavigationBar>(find.byType(NavigationBar));
       expect(nav.selectedIndex, 1);
     });
@@ -698,7 +719,7 @@ void main() {
       expect(find.byType(ConversationScreen), findsOneWidget);
     });
 
-    testWidgets('general conversation CTA opens the Chat branch', (
+    testWidgets('conversation CTA pushes messaging outside the bottom tabs', (
       tester,
     ) async {
       final conversation = Conversation(
@@ -724,9 +745,13 @@ void main() {
       await tester.tap(findHomeText('Open chat'));
       await tester.pumpAndSettle();
 
+      expect(find.byType(ChatScreen), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
       expect(
         tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
-        3,
+        0,
       );
     });
 
@@ -821,7 +846,7 @@ void main() {
             createHomeScreen(
               profileState: const AsyncValue.data(null),
               textScale: scale,
-              darkTheme: true,
+              darkTheme: false,
               discoveryState: const AsyncValue.data([
                 discoveryItem,
                 discoveryItem,
@@ -837,7 +862,7 @@ void main() {
           );
           for (final label in [
             'Welcome back',
-            'Where will you be?',
+            'Real moments, voluntary digital connection.',
             'I’m here',
             'Happening around you',
             'Google Maps',

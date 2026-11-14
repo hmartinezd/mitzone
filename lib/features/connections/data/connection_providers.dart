@@ -131,7 +131,9 @@ class ConnectionController {
             ),
           );
     }
-    ref.read(observabilityProvider).log(MitzoneEvents.connectionRequestAccepted);
+    ref
+        .read(observabilityProvider)
+        .log(MitzoneEvents.connectionRequestAccepted);
     return _refresh(result);
   }
 
@@ -142,9 +144,12 @@ class ConnectionController {
           requestId: id,
           recipientUserId: await ref.read(currentUserIdProvider.future),
         );
-    ref.read(observabilityProvider).log(MitzoneEvents.connectionRequestDeclined);
+    ref
+        .read(observabilityProvider)
+        .log(MitzoneEvents.connectionRequestDeclined);
     return _refresh(result);
   }
+
   Future<void> remove(String connectionId) async {
     await ref
         .read(connectionRepositoryProvider)

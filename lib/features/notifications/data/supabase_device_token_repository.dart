@@ -10,7 +10,10 @@ class SupabaseDeviceTokenRepository implements DeviceTokenRepository {
   String _owner(String userId) {
     final current = client.auth.currentUser?.id;
     if (current == null || current != userId) {
-      throw const DomainError(DomainErrorCode.unauthorized, 'Authentication required.');
+      throw const DomainError(
+        DomainErrorCode.unauthorized,
+        'Authentication required.',
+      );
     }
     return current;
   }
@@ -20,14 +23,21 @@ class SupabaseDeviceTokenRepository implements DeviceTokenRepository {
     final owner = _owner(userId);
     final now = DateTime.now().toUtc().toIso8601String();
     await client.from('device_tokens').upsert({
-      'user_id': owner, 'token': token.token,
-      'platform': token.platform.name, 'updated_at': now, 'last_seen_at': now,
+      'user_id': owner,
+      'token': token.token,
+      'platform': token.platform.name,
+      'updated_at': now,
+      'last_seen_at': now,
     }, onConflict: 'token');
   }
 
   @override
   Future<void> remove(String userId, String token) async {
     final owner = _owner(userId);
-    await client.from('device_tokens').delete().eq('user_id', owner).eq('token', token);
+    await client
+        .from('device_tokens')
+        .delete()
+        .eq('user_id', owner)
+        .eq('token', token);
   }
 }

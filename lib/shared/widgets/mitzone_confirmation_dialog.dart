@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../app/theme/app_colors.dart';
 
 class MitzoneConfirmationDialog extends StatelessWidget {
   const MitzoneConfirmationDialog({
@@ -43,10 +42,13 @@ class MitzoneConfirmationDialog extends StatelessWidget {
       title: Row(
         children: [
           if (isDestructive) ...[
-            const Icon(Icons.warning_amber_rounded, color: AppColors.error),
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Theme.of(context).colorScheme.error,
+            ),
             const SizedBox(width: 8),
           ],
-          Text(title),
+          Expanded(child: Text(title)),
         ],
       ),
       content: Text(message),
@@ -59,8 +61,8 @@ class MitzoneConfirmationDialog extends StatelessWidget {
           onPressed: () => Navigator.of(context).pop(true),
           style: isDestructive
               ? FilledButton.styleFrom(
-                  backgroundColor: AppColors.error,
-                  foregroundColor: Colors.black,
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Theme.of(context).colorScheme.onError,
                 )
               : null,
           child: Text(confirmLabel),

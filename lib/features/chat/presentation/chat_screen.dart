@@ -9,6 +9,7 @@ import '../../../core/identity/current_user_provider.dart';
 import '../../connections/data/connection_providers.dart';
 import '../../profile/presentation/widgets/profile_avatar.dart';
 import '../data/chat_providers.dart';
+import '../../profile/data/public_peer_profiles.dart';
 import '../domain/chat_models.dart';
 import '../../notifications/data/notification_providers.dart';
 
@@ -35,6 +36,7 @@ class ChatScreen extends ConsumerWidget {
         title: const Text('Chat'),
         actions: [
           IconButton(
+            tooltip: 'Notifications',
             onPressed: () => context.push('/app/notifications'),
             icon: Badge(
               isLabelVisible: ref.watch(unreadNotificationCountProvider) > 0,
@@ -46,13 +48,15 @@ class ChatScreen extends ConsumerWidget {
       ),
       body: conversations.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const Center(
-          child: Text('Your conversations are unavailable right now.'),
+        error: (_, _) => _RetryState(
+          message: 'Your conversations are unavailable right now.',
+          onRetry: () => ref.invalidate(chatConversationsProvider),
         ),
         data: (items) => connections.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, _) => const Center(
-            child: Text('Your connections are unavailable right now.'),
+          error: (_, _) => _RetryState(
+            message: 'Your connections are unavailable right now.',
+            onRetry: () => ref.invalidate(connectionsProvider),
           ),
           data: (activeConnections) {
             final ordered = [...activeConnections]
@@ -67,32 +71,37 @@ class ChatScreen extends ConsumerWidget {
                 return bTime.compareTo(aTime);
               });
             if (ordered.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Text(
+              return _RetryState(
+                message:
                     'Your conversations will appear here after you connect with someone you crossed paths with.',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+                actionLabel: 'View nearby connections',
+                onRetry: () => context.go(AppRoutes.nearby),
               );
             }
-            return ListView(
-              children: ordered.map((connection) {
+            final profiles = ref.watch(
+              publicPeerProfilesProvider(
+                publicPeerIdsKey(
+                  ordered.map(
+                    (c) => c.userAId == currentUserId ? c.userBId : c.userAId,
+                  ),
+                ),
+              ),
+            );
+            return ListView.builder(
+              itemCount: ordered.length,
+              itemBuilder: (context, index) {
+                final connection = ordered[index];
                 final conversation = _forConnection(items, connection.id);
                 final otherId = connection.userAId == currentUserId
                     ? connection.userBId
                     : connection.userAId;
-                final other = production
-                    ? null
-                    : identity!.users.firstWhere((user) => user.id == otherId);
                 return _ConversationTile(
                   conversation: conversation,
                   connectionId: connection.id,
                   currentUserId: currentUserId,
-                  displayName: other?.displayName ?? 'Connection',
+                  displayName: peerProfileLabel(profiles, otherId),
                 );
-              }).toList(),
+              },
             );
           },
         ),
@@ -121,11 +130,10 @@ class _ConversationTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final messages = conversation == null
         ? null
-        : ref.watch(chatMessagesProvider(conversation!.id));
+        : ref.watch(chatLatestMessageProvider(conversation!.id));
     final preview =
         messages?.when(
-          data: (items) =>
-              items.isEmpty ? 'Start a conversation' : items.last.text,
+          data: (message) => message?.text ?? 'Start a conversation',
           loading: () => 'Loading messages…',
           error: (_, _) => 'Messages unavailable',
         ) ??
@@ -133,7 +141,7 @@ class _ConversationTile extends ConsumerWidget {
     return ListTile(
       leading: ProfileAvatar(displayName: displayName, radius: 24),
       title: Text(displayName),
-      subtitle: Text(preview),
+      subtitle: Text(preview, maxLines: 2, overflow: TextOverflow.ellipsis),
       onTap: () => _open(context, ref),
     );
   }
@@ -160,4 +168,29 @@ class _ConversationTile extends ConsumerWidget {
       }
     }
   }
+}
+
+class _RetryState extends StatelessWidget {
+  const _RetryState({
+    required this.message,
+    required this.onRetry,
+    this.actionLabel = 'Try again',
+  });
+  final String message;
+  final VoidCallback onRetry;
+  final String actionLabel;
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          TextButton(onPressed: onRetry, child: Text(actionLabel)),
+        ],
+      ),
+    ),
+  );
 }

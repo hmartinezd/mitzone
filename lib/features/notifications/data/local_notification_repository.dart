@@ -23,6 +23,7 @@ class LocalNotificationRepository implements NotificationRepository {
               entityId: x['entity'] as String,
               destination: x['destination'] as String,
               read: x['read'] == true,
+              actorUserId: x['actor'] as String?,
             ),
           )
           .toList();
@@ -45,6 +46,7 @@ class LocalNotificationRepository implements NotificationRepository {
                   'entity': n.entityId,
                   'destination': n.destination,
                   'read': n.read,
+                  'actor': n.actorUserId,
                 },
               )
               .toList(),

@@ -9,6 +9,7 @@ class LocalNotification {
     required this.entityId,
     required this.destination,
     this.read = false,
+    this.actorUserId,
   });
   final String id;
   final LocalNotificationType type;
@@ -17,6 +18,7 @@ class LocalNotification {
   final String entityId;
   final String destination;
   final bool read;
+  final String? actorUserId;
   LocalNotification copyWith({bool? read}) => LocalNotification(
     id: id,
     type: type,
@@ -25,5 +27,6 @@ class LocalNotification {
     entityId: entityId,
     destination: destination,
     read: read ?? this.read,
+    actorUserId: actorUserId,
   );
 }

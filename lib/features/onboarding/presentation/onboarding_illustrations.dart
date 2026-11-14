@@ -71,7 +71,7 @@ class OnboardingIllustration2 extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           Icon(
-            Icons.qr_code_scanner,
+            Icons.place_outlined,
             size: 100,
             color: colorScheme.primary.withValues(alpha: 0.5),
           ),
@@ -113,7 +113,7 @@ class OnboardingIllustration3 extends StatelessWidget {
               colorScheme.primary.withValues(alpha: 0.3),
             ),
           ),
-          const Icon(Icons.handshake_outlined, size: 100, color: Colors.white),
+          Icon(Icons.handshake_outlined, size: 100, color: colorScheme.primary),
           Positioned(
             top: 20,
             child: _Node(color: colorScheme.primary, size: 24),

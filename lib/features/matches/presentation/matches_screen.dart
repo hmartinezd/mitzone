@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/widgets/mitzone_card.dart';
+import '../../../app/router/app_routes.dart';
 import '../../../shared/widgets/mitzone_empty_state.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
 import '../../chat/data/chat_providers.dart';
@@ -24,23 +25,51 @@ class MatchesScreen extends ConsumerWidget {
       title: 'People you crossed paths with',
       child: encounters.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const MitzoneEmptyState(
+        error: (_, _) => MitzoneEmptyState(
           title: 'Unable to load encounters',
-          message: 'Please try again later.',
+          message: 'Your shared moments could not be loaded.',
           icon: Icons.people_outline,
+          primaryAction: TextButton(
+            onPressed: () => ref.invalidate(encountersForCurrentUserProvider),
+            child: const Text('Try again'),
+          ),
         ),
         data: (items) => Column(
           children: [
+            if (incoming.isLoading)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('Loading connection requests…'),
+              ),
+            if (incoming.hasError)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Text('Connection requests could not be loaded.'),
+                    TextButton(
+                      onPressed: () =>
+                          ref.invalidate(incomingConnectionRequestsProvider),
+                      child: const Text('Retry requests'),
+                    ),
+                  ],
+                ),
+              ),
             if ((incoming.value ?? const <ConnectionRequest>[]).isNotEmpty)
               _RequestsSection(
                 requests: incoming.value ?? const <ConnectionRequest>[],
+                encounters: items,
               ),
             if (items.isEmpty)
-              const MitzoneEmptyState(
+              MitzoneEmptyState(
                 title: 'No shared moments yet',
                 message:
                     'Choose voluntary presence from Home to discover shared experiences. Browsing or joining an event does not activate presence.',
                 icon: Icons.people_outline,
+                primaryAction: TextButton(
+                  onPressed: () => context.go(AppRoutes.home),
+                  child: const Text('Go to Home'),
+                ),
               )
             else
               ListView.separated(
@@ -197,15 +226,19 @@ class _EncounterCard extends ConsumerWidget {
 }
 
 class _RequestsSection extends ConsumerWidget {
-  const _RequestsSection({required this.requests});
+  const _RequestsSection({required this.requests, required this.encounters});
   final List<ConnectionRequest> requests;
+  final List<Encounter> encounters;
   @override
   Widget build(BuildContext context, WidgetRef ref) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       const Padding(
         padding: EdgeInsets.only(top: 16),
-        child: Text('REQUESTS', style: TextStyle(fontWeight: FontWeight.bold)),
+        child: Text(
+          'Connection requests',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
       for (final r in requests)
         Padding(
@@ -221,7 +254,8 @@ class _RequestsSection extends ConsumerWidget {
                           ?.displayName ??
                       'Someone',
                 ),
-                const Text('You crossed paths. They said hi.'),
+                const Text('They said hi.'),
+                _RequestContext(request: r, encounters: encounters),
                 const SizedBox(height: 8),
                 _RequestDecisionActions(key: ValueKey(r.id), request: r),
               ],
@@ -230,6 +264,36 @@ class _RequestsSection extends ConsumerWidget {
         ),
     ],
   );
+}
+
+/// Only reuse context already authorized and returned with this user's
+/// encounters. Do not infer a location from opaque context IDs or coordinates.
+class _RequestContext extends ConsumerWidget {
+  const _RequestContext({required this.request, required this.encounters});
+  final ConnectionRequest request;
+  final List<Encounter> encounters;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final encounter = encounters
+        .where(
+          (item) =>
+              item.id == request.encounterId &&
+              item.otherUserId == request.senderUserId,
+        )
+        .firstOrNull;
+    if (encounter == null) {
+      return const Text('Shared experience details are unavailable.');
+    }
+    final event = ref.watch(encounterEventProvider(encounter.eventId));
+    if (event != null) return Text('You crossed paths at ${event.title}.');
+    if (encounter.eventId.startsWith('cell:')) {
+      return const Text(
+        'You crossed paths in a shared area. Exact locations are not shown.',
+      );
+    }
+    return const Text('You crossed paths during a shared experience.');
+  }
 }
 
 class _SayHiAction extends ConsumerStatefulWidget {

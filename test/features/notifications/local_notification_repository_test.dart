@@ -11,6 +11,7 @@ void main() {
       id: 'request-1',
       type: LocalNotificationType.connectionRequest,
       userId: 'jose',
+      actorUserId: 'sofia',
       timestamp: DateTime(2026, 1, 1),
       entityId: 'r1',
       destination: '/app/matches',
@@ -34,6 +35,7 @@ void main() {
     expect((await repo.getForUser('jose')).single.read, isTrue);
     final reloaded = LocalNotificationRepository(storage);
     expect((await reloaded.getForUser('jose')).single.read, isTrue);
+    expect((await reloaded.getForUser('jose')).single.actorUserId, 'sofia');
   });
 
   test('emits changes for reactive providers', () async {

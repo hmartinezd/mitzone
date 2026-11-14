@@ -271,12 +271,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(MatchesScreen), findsOneWidget);
 
-      // Tap Chat
-      await tester.tap(
+      expect(
         find.descendant(of: navBar, matching: find.text('Groups')),
+        findsNothing,
       );
-      await tester.pumpAndSettle();
-      expect(find.byType(GroupsScreen), findsOneWidget);
 
       // Tap Profile
       await tester.tap(
@@ -312,16 +310,16 @@ void main() {
             ),
             findsOneWidget,
           );
-          expect(
-            tester
-                .widget<NavigationBar>(find.byType(NavigationBar))
-                .selectedIndex,
-            route == AppRoutes.explore
-                ? 1
-                : route == AppRoutes.nearby
-                ? 2
-                : 3,
-          );
+          if (route != AppRoutes.groups) {
+            expect(
+              tester
+                  .widget<NavigationBar>(find.byType(NavigationBar))
+                  .selectedIndex,
+              route == AppRoutes.explore ? 1 : 2,
+            );
+          } else {
+            expect(find.byType(NavigationBar), findsNothing);
+          }
           if (route == AppRoutes.groups) {
             expect(find.text('Groups are not available yet'), findsOneWidget);
           }
@@ -400,7 +398,7 @@ void main() {
         expect(find.byType(MainNavigationShell), findsOneWidget);
 
         final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-        expect(navBar.selectedIndex, 4);
+        expect(navBar.selectedIndex, 3);
       });
     });
 
@@ -442,7 +440,7 @@ void main() {
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Groups')),
-          findsOneWidget,
+          findsNothing,
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Profile')),
@@ -480,7 +478,7 @@ void main() {
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Groups')),
-          findsOneWidget,
+          findsNothing,
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Profile')),
@@ -518,7 +516,7 @@ void main() {
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Groups')),
-          findsOneWidget,
+          findsNothing,
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Profile')),
@@ -556,7 +554,7 @@ void main() {
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Groups')),
-          findsOneWidget,
+          findsNothing,
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Profile')),
@@ -598,7 +596,7 @@ void main() {
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Groups')),
-          findsOneWidget,
+          findsNothing,
         );
         expect(
           find.descendant(of: navBarFinder, matching: find.text('Profile')),

@@ -108,6 +108,29 @@ Future<void> _activate(WidgetTester tester) async {
 }
 
 void main() {
+  testWidgets(
+    'unknown server presence remains explicit and stoppable without location',
+    (tester) async {
+      final location = _Location();
+      final gateway = _Gateway();
+      final service = ForegroundPresenceService(
+        location: location,
+        presence: gateway,
+      );
+      await tester.pumpWidget(_app(MemoryLocalStorage(), service));
+      await tester.pumpAndSettle();
+      expect(find.text('Presence status unknown'), findsOneWidget);
+      expect(find.text('Presence off'), findsNothing);
+      expect(location.calls, 0);
+      await tester.tap(find.text('Stop any active presence'));
+      await tester.pumpAndSettle();
+      expect(gateway.stops, 1);
+      expect(location.calls, 0);
+      expect(find.text('Presence off'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
   test(
     'consent and recorded expiry are scoped to one account; legacy consent is ignored',
     () async {

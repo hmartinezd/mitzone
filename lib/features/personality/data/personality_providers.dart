@@ -5,6 +5,7 @@ import '../../../core/storage/storage_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
 import 'local_personality_repository.dart';
 import 'personality_repository.dart';
+import 'personality_draft_store.dart';
 import 'supabase_personality_repository.dart';
 
 final personalityRepositoryProvider = Provider<PersonalityRepository>(
@@ -16,4 +17,8 @@ final currentPersonalityProvider = FutureProvider(
   (ref) async => ref
       .watch(personalityRepositoryProvider)
       .getForUser(await ref.watch(currentUserIdProvider.future)),
+);
+
+final personalityDraftStoreProvider = Provider<PersonalityDraftStore>(
+  (ref) => PersonalityDraftStore(ref.watch(localStorageProvider)),
 );

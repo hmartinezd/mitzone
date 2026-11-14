@@ -17,3 +17,11 @@ abstract interface class ChatRepository {
     String? clientMessageId,
   });
 }
+
+/// Optional bounded preview capability; implementations retain chat authorization.
+abstract interface class LatestChatMessageRepository {
+  Future<Message?> getLatestMessage({
+    required String conversationId,
+    required String userId,
+  });
+}

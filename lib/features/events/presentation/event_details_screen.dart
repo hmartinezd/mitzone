@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,7 +10,6 @@ import '../../../shared/widgets/mitzone_page_body.dart';
 import '../data/event_providers.dart';
 import '../domain/event.dart';
 import '../domain/event_check_in.dart';
-import '../../../core/identity/mock_identity_repository.dart';
 import 'event_category_presentation.dart';
 
 class EventDetailsScreen extends ConsumerStatefulWidget {
@@ -40,7 +38,11 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go(AppRoutes.events);
+      context.go(
+        widget.origin == EventDetailsOrigin.home
+            ? AppRoutes.home
+            : AppRoutes.events,
+      );
     }
   }
 
@@ -58,7 +60,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
           SnackBar(
             content: Text(
               joined
-                  ? "We couldn't join this event. Please try again."
+                  ? "We couldn't save this plan. Please try again."
                   : "We couldn't update your participation. Please try again.",
             ),
             behavior: SnackBarBehavior.floating,
@@ -149,7 +151,9 @@ class _EventDetailsContent extends ConsumerWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(
-              height: 208,
+              height:
+                  160 *
+                  MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0),
               width: double.infinity,
               child: Uri.tryParse(event.imageKey ?? '')?.scheme == 'https'
                   ? Image.network(
@@ -186,32 +190,7 @@ class _EventDetailsContent extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             _DetailLine(icon: Icons.map_outlined, text: location),
           ],
-          const SizedBox(height: AppSpacing.xl),
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            'About this event',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(event.description, style: theme.textTheme.bodyLarge),
-          if (event.source.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Text('Source: ${event.source}', style: theme.textTheme.bodySmall),
-          ],
-          if (event.imageAttribution case final attribution?)
-            Text(attribution, style: theme.textTheme.bodySmall),
-          if (event.sourceUrl case final url?)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _showProviderUrl(context, url),
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('View event source'),
-              ),
-            ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
           MitzoneCard(
             child: joinedIds.when(
               loading: () => const Center(
@@ -237,7 +216,7 @@ class _EventDetailsContent extends ConsumerWidget {
                   children: [
                     if (!isJoined)
                       Semantics(
-                        label: 'Join ${event.title}',
+                        label: 'Plan to attend ${event.title}',
                         button: true,
                         excludeSemantics: true,
                         child: FilledButton.icon(
@@ -252,12 +231,12 @@ class _EventDetailsContent extends ConsumerWidget {
                                   ),
                                 )
                               : const Icon(Icons.add),
-                          label: const Text('Join event'),
+                          label: const Text('Plan to attend'),
                         ),
                       )
                     else ...[
                       Semantics(
-                        label: 'Participating in ${event.title}',
+                        label: 'Planning to attend ${event.title}',
                         excludeSemantics: true,
                         child: Container(
                           padding: const EdgeInsets.all(AppSpacing.md),
@@ -271,7 +250,7 @@ class _EventDetailsContent extends ConsumerWidget {
                               const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Text(
-                                  "You're participating",
+                                  "Added to your plans",
                                   style: theme.textTheme.titleMedium,
                                 ),
                               ),
@@ -281,7 +260,7 @@ class _EventDetailsContent extends ConsumerWidget {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Semantics(
-                        label: 'Leave ${event.title}',
+                        label: 'Remove ${event.title} from plans',
                         button: true,
                         excludeSemantics: true,
                         child: TextButton.icon(
@@ -296,14 +275,14 @@ class _EventDetailsContent extends ConsumerWidget {
                                   ),
                                 )
                               : const Icon(Icons.remove_circle_outline),
-                          label: const Text('Leave event'),
+                          label: const Text('Remove from plans'),
                         ),
                       ),
                     ],
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Join to keep this event in your upcoming activities. '
-                      'Participation does not verify that you were present.',
+                      'Save your intent to attend. This is not a ticket or reservation, '
+                      'and does not activate presence.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -314,6 +293,38 @@ class _EventDetailsContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: const EdgeInsets.only(bottom: AppSpacing.md),
+            title: const Text('About this event'),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  event.description,
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ),
+            ],
+          ),
+          if (event.source.isNotEmpty)
+            Text('Source: ${event.source}', style: theme.textTheme.bodySmall),
+          if (event.imageAttribution case final attribution?)
+            if (attribution.trim().toLowerCase() !=
+                    event.source.trim().toLowerCase() &&
+                attribution.trim().toLowerCase() !=
+                    'source: ${event.source}'.toLowerCase())
+              Text(attribution, style: theme.textTheme.bodySmall),
+          if (event.sourceUrl case final url?)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _showProviderUrl(context, url),
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('View event source'),
+              ),
+            ),
+          const SizedBox(height: AppSpacing.lg),
           if (!ref.watch(productionModeProvider))
             _CheckInSection(
               event: event,
@@ -323,10 +334,6 @@ class _EventDetailsContent extends ConsumerWidget {
               onCheckIn: onCheckIn,
               onRetry: onRetryCheckIns,
             ),
-          if (kDebugMode) ...[
-            const SizedBox(height: AppSpacing.lg),
-            _DeveloperPresenceSection(eventId: event.id),
-          ],
           const SizedBox(height: AppSpacing.xxl),
         ],
       ),
@@ -347,58 +354,6 @@ class _EventDetailsContent extends ConsumerWidget {
         ],
       ),
     );
-  }
-}
-
-class _DeveloperPresenceSection extends ConsumerWidget {
-  const _DeveloperPresenceSection({required this.eventId});
-  final String eventId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final attendees = ref.watch(
-      mockEventAttendeesProvider((
-        eventId: eventId,
-        referenceTime: ref.watch(utcNowProvider)().toUtc(),
-      )),
-    );
-    final theme = Theme.of(context);
-    return MitzoneCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'DEVELOPER PRESENCE',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (attendees.isEmpty) const Text('No mock attendees configured.'),
-          for (final presence in attendees)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: Text(_displayName(presence.identityId)),
-              subtitle: Text(
-                '${_format(presence.checkedInAt)} – ${_format(presence.effectiveCheckedOutAt())}',
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  String _displayName(String id) =>
-      MockUsers.all.firstWhere((user) => user.id == id).displayName;
-  String _format(DateTime value) {
-    final hour = value.toLocal().hour;
-    final minute = value.toLocal().minute.toString().padLeft(2, '0');
-    final suffix = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour % 12 == 0 ? 12 : hour % 12;
-    return '$displayHour:$minute $suffix';
   }
 }
 

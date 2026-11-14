@@ -128,7 +128,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           controller: _passwordController,
           label: 'Password',
           helperText: _isSignUp
-              ? 'Your password must meet Supabase account requirements.'
+              ? 'Choose a strong, unique password. We will explain if it needs to be stronger.'
               : null,
           enabled: !_isSubmitting,
           obscureText: true,
@@ -172,6 +172,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           text: _isSignUp ? 'Create Account' : 'Sign In',
           isLoading: _isSubmitting,
           onPressed: _isSubmitting ? null : _submit,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            TextButton(
+              onPressed: _isSubmitting
+                  ? null
+                  : () => context.push(AppRoutes.terms),
+              child: const Text('Terms & Conditions'),
+            ),
+            TextButton(
+              onPressed: _isSubmitting
+                  ? null
+                  : () => context.push(AppRoutes.privacyPolicy),
+              child: const Text('Privacy Policy'),
+            ),
+          ],
         ),
         if (!_isSignUp)
           TextButton(
@@ -387,7 +405,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ? 'We could not create your account. Please check your details and try again.'
             : 'We could not sign you in. Check your details and try again.';
       case DomainErrorCode.unavailable:
-        return 'Authentication is temporarily unavailable.';
+        return 'We cannot connect right now. Your entries are still here. Check your connection and try again later.';
       case DomainErrorCode.notFound:
       case DomainErrorCode.interactionUnavailable:
       case DomainErrorCode.invalidState:

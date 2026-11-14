@@ -97,6 +97,21 @@ void main() {
       await tester.pump();
     }
 
+    testWidgets('legal information is available before account creation', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget());
+      await switchToSignUp(tester);
+      await tester.ensureVisible(find.text('Privacy Policy'));
+      await tester.tap(find.text('Privacy Policy'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Pre-release information'), findsOneWidget);
+      expect(auth.signUpCalls, 0);
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
+      expect(find.text('Create your Mitzone account'), findsOneWidget);
+    });
+
     testWidgets('defaults to sign in and switches to account creation', (
       tester,
     ) async {

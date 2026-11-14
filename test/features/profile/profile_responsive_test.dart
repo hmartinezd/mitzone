@@ -186,12 +186,12 @@ void main() {
 
       final scrollable = find.byType(Scrollable).first;
       await tester.scrollUntilVisible(
-        find.text('Complete profile'),
+        find.text('Review profile details'),
         100,
         scrollable: scrollable,
       );
-      expect(find.text('14%'), findsOneWidget);
-      expect(find.text('Complete profile'), findsOneWidget);
+      expect(find.text('Make it yours'), findsOneWidget);
+      expect(find.text('Review profile details'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
 

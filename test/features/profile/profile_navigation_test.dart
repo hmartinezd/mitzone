@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mitzone/core/auth/auth_providers.dart';
+import 'package:mitzone/core/storage/storage_providers.dart';
+import '../../support/memory_local_storage.dart';
 import 'package:mitzone/core/auth/auth_repository.dart';
 import 'package:mitzone/core/auth/auth_models.dart';
 import 'package:mitzone/core/config/app_config.dart';
@@ -93,7 +95,11 @@ void main() {
     );
   }
 
-  Widget productionAccount(_AccountAuthRepository auth, {double scale = 1}) {
+  Widget productionAccount(
+    _AccountAuthRepository auth, {
+    double scale = 1,
+    MemoryLocalStorage? storage,
+  }) {
     final router = GoRouter(
       initialLocation: '/account',
       routes: [
@@ -106,7 +112,10 @@ void main() {
     );
     addTearDown(router.dispose);
     return ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(auth)],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(auth),
+        localStorageProvider.overrideWithValue(storage ?? MemoryLocalStorage()),
+      ],
       child: MaterialApp.router(
         routerConfig: router,
         builder: (context, child) => MediaQuery(
@@ -118,6 +127,42 @@ void main() {
       ),
     );
   }
+
+  testWidgets(
+    'storage failure leaves account actions retryable without remote mutation',
+    (tester) async {
+      final auth = _AccountAuthRepository();
+      await tester.pumpWidget(
+        productionAccount(auth, storage: _FailingDraftStorage()),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sign out'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Could not finish signing out. Please try again.'),
+        findsOneWidget,
+      );
+      expect(auth.signOutCalls, 0);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete account'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+      expect(auth.deleteCalls, 0);
+      expect(
+        find.text('Could not complete account deletion. Please try again.'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<ListTile>(find.widgetWithText(ListTile, 'Delete account'))
+            .enabled,
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'configured account controls remain enabled at 2x; cancel does not mutate and sign-out navigates',
@@ -189,7 +234,7 @@ void main() {
 
         expect(find.byType(MainNavigationShell), findsOneWidget);
         final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-        expect(navBar.selectedIndex, 4);
+        expect(navBar.selectedIndex, 3);
       });
     }
 
@@ -239,7 +284,7 @@ void main() {
           tester
               .widget<NavigationBar>(find.byType(NavigationBar))
               .selectedIndex,
-          4,
+          3,
         );
         await tester.tap(find.byTooltip('Back'));
         await tester.pumpAndSettle();
@@ -285,4 +330,10 @@ class _AccountAuthRepository implements AuthRepository {
   Future<void> requestPasswordReset(String email) => throw UnimplementedError();
   @override
   Future<void> updatePassword(String password) => throw UnimplementedError();
+}
+
+class _FailingDraftStorage extends MemoryLocalStorage {
+  @override
+  Future<void> setString(String key, String value) async =>
+      throw StateError('fixture storage failure');
 }

@@ -84,8 +84,10 @@ class HomeScreen extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.xxl),
-          const SharedMomentsHero(),
+          const SizedBox(height: AppSpacing.lg),
+          const ForegroundPresenceCard(),
+          const SizedBox(height: AppSpacing.lg),
+          HomeDiscovery(interests: interests),
           const SizedBox(height: AppSpacing.lg),
           if (priority == HomeActivityPriority.lowActivity &&
               encounters.hasValue &&
@@ -95,10 +97,6 @@ class HomeScreen extends ConsumerWidget {
             QuietMomentsCard(onExplore: () => context.go(AppRoutes.explore)),
             const SizedBox(height: AppSpacing.lg),
           ],
-          HomeDiscovery(interests: interests),
-          const SizedBox(height: AppSpacing.xxl),
-          const ForegroundPresenceCard(),
-          const SizedBox(height: AppSpacing.xxl),
           if (priority != HomeActivityPriority.lowActivity ||
               encounters.hasError ||
               incomingRequests.hasError ||
@@ -197,7 +195,7 @@ class _HomeMissingProfile extends StatelessWidget {
         builder: (context, constraints) {
           final action = TextButton(
             onPressed: onFinish,
-            child: const Text('Finish now'),
+            child: const Text('Reload profile'),
           );
           final stackAction =
               constraints.maxWidth / MediaQuery.textScalerOf(context).scale(1) <
@@ -208,7 +206,7 @@ class _HomeMissingProfile extends StatelessWidget {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
-                  "Complete your profile to get the most out of Mitzone.",
+                  "Your profile is not available yet. Try loading it again.",
                   style: theme.textTheme.bodyMedium,
                 ),
               ),

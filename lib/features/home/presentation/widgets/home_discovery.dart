@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
@@ -23,11 +24,15 @@ class HomeDiscovery extends ConsumerWidget {
     this.filter,
     this.onSeeAll,
     this.seeAllLabel = 'See Explore',
+    this.searchQuery = '',
+    this.showSeeAll = true,
   });
   final Set<String> interests;
   final DiscoveryItemType? filter;
   final VoidCallback? onSeeAll;
   final String seeAllLabel;
+  final String searchQuery;
+  final bool showSeeAll;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final places = filter == DiscoveryItemType.activity
@@ -57,11 +62,21 @@ class HomeDiscovery extends ConsumerWidget {
               : event.imageAttribution,
         ),
     ];
-    final items = [
+    final availableItems = [
       ...eventItems.where((item) => item.imageReference != null),
       ...?places.value,
       ...eventItems.where((item) => item.imageReference == null),
     ];
+    final query = searchQuery.trim().toLowerCase();
+    final items = availableItems
+        .where(
+          (item) =>
+              query.isEmpty ||
+              '${item.title} ${item.context ?? ''} ${item.category.join(' ')}'
+                  .toLowerCase()
+                  .contains(query),
+        )
+        .toList();
     final loading = places.isLoading || events.isLoading;
     final error = places.error ?? events.error;
     final locationError = [
@@ -86,17 +101,26 @@ class HomeDiscovery extends ConsumerWidget {
           DiscoverySection(
             items: items,
             showDemoBadge: !production,
+            title: filter == DiscoveryItemType.place
+                ? 'Places nearby'
+                : 'Happening around you',
+            showSeeAll: showSeeAll,
             onSeeAll: onSeeAll ?? () => context.go(AppRoutes.explore),
             seeAllLabel: seeAllLabel,
             actionForItem: (item) =>
                 item.type == DiscoveryItemType.activity &&
                     eventItems.any((event) => event.id == item.id)
-                ? () => context.go(
+                ? () => context.push(
                     AppRoutes.eventDetails(
                       item.id,
-                      origin: EventDetailsOrigin.home,
+                      origin:
+                          GoRouterState.of(context).uri.path == AppRoutes.home
+                          ? EventDetailsOrigin.home
+                          : EventDetailsOrigin.direct,
                     ),
                   )
+                : item.type == DiscoveryItemType.place
+                ? () => _showPlace(context, item)
                 : null,
           ),
         if (loading)
@@ -137,13 +161,81 @@ class HomeDiscovery extends ConsumerWidget {
             ),
         ],
         if (!loading && error == null && items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Text('Nothing nearby was found yet.'),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text(
+              query.isEmpty
+                  ? 'Nothing nearby was found yet.'
+                  : 'No nearby places match your search.',
+            ),
           ),
       ],
     );
   }
+}
+
+void _showPlace(BuildContext context, DiscoveryItem item) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (sheetContext) => SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              item.title,
+              style: Theme.of(sheetContext).textTheme.headlineSmall,
+            ),
+            if (item.context != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(item.context!),
+              ),
+            if (item.distanceKm != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('${item.distanceKm!.toStringAsFixed(1)} km away'),
+              ),
+            const SizedBox(height: 16),
+            const Text('Viewing this place does not activate presence.'),
+            if (item.source == 'google-places')
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text('Google Maps'),
+              ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () async {
+                await Clipboard.setData(
+                  ClipboardData(text: item.context ?? item.title),
+                );
+                if (!sheetContext.mounted) return;
+                final messenger = ScaffoldMessenger.of(sheetContext);
+                Navigator.of(sheetContext).pop();
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      item.context == null
+                          ? 'Place name copied.'
+                          : 'Place address copied.',
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.copy),
+              label: Text(
+                item.context == null ? 'Copy place name' : 'Copy address',
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _DiscoveryFeedback extends StatelessWidget {

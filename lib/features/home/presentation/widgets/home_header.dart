@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
-import '../../../../shared/widgets/mitzone_brand.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({required this.displayName, super.key});
@@ -11,8 +10,6 @@ class HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      const MitzoneBrand(size: 36, showText: false),
-      const SizedBox(width: 12),
       Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

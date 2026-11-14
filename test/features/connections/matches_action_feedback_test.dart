@@ -82,6 +82,7 @@ void main() {
     WidgetTester tester,
     _ControlledRepository repo, {
     bool incoming = false,
+    bool includeEncounter = false,
   }) async {
     final encounter = Encounter(
       id: 'test-encounter',
@@ -106,7 +107,7 @@ void main() {
           currentUserIdProvider.overrideWithValue(const AsyncData('owner')),
           connectionRepositoryProvider.overrideWithValue(repo),
           encountersForCurrentUserProvider.overrideWithValue(
-            AsyncData(incoming ? [] : [encounter]),
+            AsyncData(incoming && !includeEncounter ? [] : [encounter]),
           ),
           incomingConnectionRequestsProvider.overrideWithValue(
             AsyncData(incoming ? [request] : []),
@@ -134,6 +135,37 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('request includes authorized coarse context beside decision', (
+    tester,
+  ) async {
+    await showMatches(
+      tester,
+      _ControlledRepository(),
+      incoming: true,
+      includeEncounter: true,
+    );
+    expect(
+      find.text(
+        'You crossed paths in a shared area. Exact locations are not shown.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Accept'), findsOneWidget);
+    expect(find.textContaining('cell:'), findsNothing);
+  });
+
+  testWidgets(
+    'request without matching encounter has honest context fallback',
+    (tester) async {
+      await showMatches(tester, _ControlledRepository(), incoming: true);
+      expect(
+        find.text('Shared experience details are unavailable.'),
+        findsOneWidget,
+      );
+      expect(find.text('Accept'), findsOneWidget);
+    },
+  );
 
   testWidgets(
     'failed send is awaited, disables duplicate submit and offers retry',

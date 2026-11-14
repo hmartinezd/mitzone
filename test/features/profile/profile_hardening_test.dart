@@ -127,7 +127,7 @@ void main() {
       expect(find.byType(ProfileScreen), findsOneWidget);
       // NavigationBar should show index 4
       final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(navBar.selectedIndex, 4);
+      expect(navBar.selectedIndex, 3);
     });
 
     testWidgets('Profile Details -> Back returns to Profile', (tester) async {
@@ -177,7 +177,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // Change name
-      await tester.enterText(find.byType(TextFormField), 'Hector Updated');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Display name'),
+        'Hector Updated',
+      );
+      await tester.ensureVisible(find.text('Save Changes'));
       await tester.tap(find.text('Save Changes'));
       await tester.pumpAndSettle();
 
@@ -195,8 +199,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.text('Save Changes'));
       await tester.tap(find.text('Save Changes'));
+      await tester.ensureVisible(find.text('Save Changes'));
       await tester.tap(find.text('Save Changes'));
+      await tester.ensureVisible(find.text('Save Changes'));
       await tester.tap(find.text('Save Changes'));
 
       await tester.pump(const Duration(seconds: 2));
@@ -214,6 +221,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
+        await tester.ensureVisible(find.text('Save Changes'));
         await tester.tap(find.text('Save Changes'));
         await tester.pumpAndSettle();
 

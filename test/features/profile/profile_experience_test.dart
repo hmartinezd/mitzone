@@ -58,14 +58,14 @@ void main() {
       'Travel',
       'Spanish',
       'English',
-      '100%',
+      'Make it yours',
       'Joined events',
       '2',
     ]) {
       expect(find.text(text), findsOneWidget);
     }
     expect(find.text('Complete profile'), findsNothing);
-    expect(find.textContaining('Your profile is complete'), findsOneWidget);
+    expect(find.text('Review profile details'), findsOneWidget);
   });
 
   testWidgets(
@@ -80,11 +80,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Hector'), findsOneWidget);
-      expect(find.text('14%'), findsOneWidget);
+      expect(find.text('Make it yours'), findsOneWidget);
       expect(find.text('Add bio'), findsOneWidget);
       expect(find.text('Add interests'), findsOneWidget);
       expect(find.text('Add languages'), findsOneWidget);
-      expect(find.text('Complete profile'), findsOneWidget);
+      expect(find.text('Review profile details'), findsOneWidget);
       expect(find.text('Not added yet'), findsNothing);
       expect(find.text('Joined events'), findsOneWidget);
       expect(find.text('0'), findsOneWidget);

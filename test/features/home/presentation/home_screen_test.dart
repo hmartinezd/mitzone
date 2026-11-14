@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mitzone/core/config/app_config.dart';
@@ -147,11 +148,29 @@ void main() {
       expect(findHomeText('Hi, Hector'), findsOneWidget);
       expect(
         findHomeText(
-          'Discover places and activities. Choose when to be discoverable, and connect only when you both agree.',
+          'Choose when to be discoverable to people who share a place and time with you.',
         ),
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'missing profile offers an honest retry, not false completion',
+      (tester) async {
+        await tester.pumpWidget(
+          createHomeScreen(profileState: const AsyncValue.data(null)),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          findHomeText(
+            'Your profile is not available yet. Try loading it again.',
+          ),
+          findsOneWidget,
+        );
+        expect(findHomeText('Reload profile'), findsOneWidget);
+        expect(findHomeText('Finish now'), findsNothing);
+      },
+    );
 
     testWidgets('renders Unicode name Zoë correctly', (tester) async {
       const profile = UserProfile(id: '1', displayName: 'Zoë');
@@ -196,10 +215,7 @@ void main() {
         createHomeScreen(profileState: const AsyncValue.data(null)),
       );
       await tester.pumpAndSettle();
-      expect(
-        findHomeText('Real moments, voluntary digital connection.'),
-        findsOneWidget,
-      );
+      expect(findHomeText('Presence off'), findsOneWidget);
       expect(findHomeText('I’m here'), findsOneWidget);
       expect(findHomeText('Happening around you'), findsOneWidget);
       expect(findHomeText('Upcoming activities'), findsNothing);
@@ -324,7 +340,7 @@ void main() {
       },
     );
 
-    testWidgets('headline remains primary when there is social activity', (
+    testWidgets('presence remains primary when there is social activity', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -345,16 +361,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(findHomeText('Presence off'), findsOneWidget);
       expect(
-        findHomeText('Real moments, voluntary digital connection.'),
-        findsOneWidget,
-      );
-      expect(
-        tester
-            .getTopLeft(
-              findHomeText('Real moments, voluntary digital connection.'),
-            )
-            .dy,
+        tester.getTopLeft(findHomeText('Presence off')).dy,
         lessThan(tester.getTopLeft(findHomeText('Happening around you')).dy),
       );
       expect(
@@ -365,25 +374,99 @@ void main() {
       );
     });
 
-    testWidgets('places remain informational without tap controls', (
+    testWidgets('places open useful details without activating presence', (
       tester,
     ) async {
+      String? copiedText;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'Clipboard.setData') {
+            copiedText = (call.arguments as Map)['text'] as String;
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+
       await tester.pumpWidget(
         createHomeScreen(profileState: const AsyncData(null), darkTheme: true),
       );
       await tester.pumpAndSettle();
-      final card = find
-          .ancestor(
-            of: findHomeText(discoveryItem.title),
-            matching: find.byType(Card),
-          )
-          .first;
-      expect(
-        find.descendant(of: card, matching: find.byType(InkWell)),
-        findsNothing,
-      );
       expect(findHomeText('Photo unavailable'), findsOneWidget);
       expect(findHomeText('Google Maps'), findsOneWidget);
+      await tester.ensureVisible(findHomeText('View place'));
+      await tester.tap(findHomeText('View place'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Viewing this place does not activate presence.'),
+        findsOneWidget,
+      );
+      expect(find.text('Copy address'), findsOneWidget);
+      await tester.runAsync(() async {
+        await tester.tap(find.text('Copy address'));
+      });
+      await tester.pumpAndSettle();
+      expect(copiedText, discoveryItem.context);
+      expect(find.text('Plan to attend'), findsNothing);
+    });
+
+    testWidgets('Places mode filters locally and hides activity actions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(null),
+          initialLocation: AppRoutes.explore,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Places'));
+      await tester.pumpAndSettle();
+      expect(find.text('Places nearby'), findsOneWidget);
+      expect(find.text('See activities'), findsNothing);
+      expect(find.text('Search all activities'), findsNothing);
+      await tester.enterText(find.byType(TextField), 'not a nearby place');
+      await tester.pumpAndSettle();
+      expect(find.text('No nearby places match your search.'), findsOneWidget);
+      expect(find.text(discoveryItem.title), findsNothing);
+      await tester.enterText(find.byType(TextField), 'gallery');
+      await tester.pumpAndSettle();
+      expect(find.text(discoveryItem.title), findsOneWidget);
+    });
+
+    testWidgets('event back restores Explore Activities selection', (
+      tester,
+    ) async {
+      final event = demoEvents.first;
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(null),
+          initialLocation: AppRoutes.explore,
+          eventState: AsyncData([event]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Activities'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(event.title));
+      await tester.tap(find.text(event.title));
+      await tester.pumpAndSettle();
+      expect(find.byType(EventDetailsScreen), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(find.byType(ExploreScreen), findsOneWidget);
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, 'Activities'))
+            .selected,
+        isTrue,
+      );
     });
 
     testWidgets('event metadata opens existing details and returns to Home', (
@@ -528,7 +611,7 @@ void main() {
       expect(nav.selectedIndex, 1);
     });
 
-    testWidgets('Home -> Profile tab -> Profile (index 4)', (tester) async {
+    testWidgets('Home -> Profile tab -> Profile (index 3)', (tester) async {
       const profile = UserProfile(id: '1', displayName: 'Hector');
       await tester.pumpWidget(
         createHomeScreen(profileState: const AsyncValue.data(profile)),
@@ -539,7 +622,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final nav = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(nav.selectedIndex, 4);
+      expect(nav.selectedIndex, 3);
     });
   });
 
@@ -630,7 +713,7 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        expect(findHomeText('Someone'), findsOneWidget);
+        expect(findHomeText('Name unavailable'), findsOneWidget);
         expect(findHomeText('Shared event'), findsOneWidget);
         expect(findHomeText('Sofia'), findsNothing);
         expect(findHomeText('Urban Art Gallery Opening'), findsNothing);
@@ -862,7 +945,7 @@ void main() {
           );
           for (final label in [
             'Welcome back',
-            'Real moments, voluntary digital connection.',
+            'Presence off',
             'I’m here',
             'Happening around you',
             'Google Maps',

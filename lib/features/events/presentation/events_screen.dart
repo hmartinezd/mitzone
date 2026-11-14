@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../../../app/router/app_routes.dart';
 import '../../../app/theme/app_spacing.dart';
@@ -13,6 +14,14 @@ import '../data/event_providers.dart';
 import '../../encounters/data/foreground_location_sources.dart';
 import '../../discovery/domain/nearby_provider_exception.dart';
 import 'widgets/event_list_card.dart';
+
+// Injected in tests: no test or review needs to open device settings.
+final openActivityAppSettingsProvider = Provider<Future<bool> Function()>(
+  (ref) => Geolocator.openAppSettings,
+);
+final openActivityLocationSettingsProvider = Provider<Future<bool> Function()>(
+  (ref) => Geolocator.openLocationSettings,
+);
 
 class EventsScreen extends ConsumerStatefulWidget {
   const EventsScreen({super.key});
@@ -31,13 +40,51 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
     super.dispose();
   }
 
+  String? _settingsLabel(Object? error) {
+    if (error is! ForegroundLocationException) return null;
+    return switch (error.failure) {
+      ForegroundLocationFailure.servicesDisabled => 'Open location settings',
+      ForegroundLocationFailure.permissionPermanentlyDenied =>
+        'Open app settings',
+      _ => null,
+    };
+  }
+
+  Future<void> _openSettings(Object? error) async {
+    final open =
+        error is ForegroundLocationException &&
+            error.failure == ForegroundLocationFailure.servicesDisabled
+        ? ref.read(openActivityLocationSettingsProvider)
+        : ref.read(openActivityAppSettingsProvider);
+    var opened = false;
+    try {
+      opened = await open();
+    } catch (_) {
+      // A device may not provide a settings destination.
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          opened
+              ? 'Return here and try again after updating location access.'
+              : 'Could not open settings. Open your device settings to review location access.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final eventsAsync = ref.watch(nearbyEventsProvider);
     final all = eventsAsync.value ?? const [];
     final joined = ref.watch(joinedEventIdsProvider);
-    final categories = all.map((e) => e.category).toSet().toList();
+    final categories = {
+      ...all.map((e) => e.category),
+      // Keep the selected category visible after refreshed results change.
+      ?category,
+    }.toList();
     final query = search.text.trim().toLowerCase();
     final filtered = all
         .where(
@@ -52,6 +99,13 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
 
     return MitzonePageBody(
       title: 'Discover nearby activities',
+      onBack: () {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go(AppRoutes.explore);
+        }
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -70,12 +124,18 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
             _EventsLoadError(
               message: _eventsLoadErrorMessage(eventsAsync.error),
               onRetry: () => ref.invalidate(nearbyEventsProvider),
+              settingsLabel: _settingsLabel(eventsAsync.error),
+              onSettings: _settingsLabel(eventsAsync.error) == null
+                  ? null
+                  : () => _openSettings(eventsAsync.error),
             ),
           TextField(
             controller: search,
             onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
-              labelText: 'Search activities or venues',
+              labelText: 'Search',
+              hintText: 'Activity or venue',
+              floatingLabelBehavior: FloatingLabelBehavior.always,
               prefixIcon: Icon(Icons.search),
             ),
           ),
@@ -93,25 +153,34 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
                 selected: joinedOnly,
                 onSelected: (_) => setState(() => joinedOnly = true),
               ),
-              SizedBox(
-                width: 180,
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  hint: const Text('Category'),
-                  value: category,
-                  items: [
-                    const DropdownMenuItem(
-                      value: null,
-                      child: Text('All categories'),
-                    ),
-                    ...categories.map(
-                      (c) => DropdownMenuItem(value: c, child: Text(c)),
-                    ),
-                  ],
-                  onChanged: (v) => setState(() => category = v),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text('Category', style: theme.textTheme.labelLarge),
+          DropdownButton<String>(
+            isExpanded: true,
+            itemHeight: null,
+            hint: const Text('All categories'),
+            value: categories.contains(category) ? category : null,
+            items: [
+              const DropdownMenuItem(
+                value: null,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Text('All categories'),
+                ),
+              ),
+              ...categories.map(
+                (c) => DropdownMenuItem(
+                  value: c,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(c),
+                  ),
                 ),
               ),
             ],
+            onChanged: (v) => setState(() => category = v),
           ),
           const SizedBox(height: AppSpacing.lg),
           if (joinedOnly && joined.isLoading) const _ParticipationLoading(),
@@ -124,14 +193,27 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
               (!joinedOnly || joined.hasValue) &&
               filtered.isEmpty)
             _EmptyEvents(
-              message: joinedOnly
-                  ? 'No joined events match your filters.'
-                  : 'No events match your filters.',
-              onClear: () => setState(() {
-                search.clear();
-                category = null;
-                joinedOnly = false;
-              }),
+              message: query.isNotEmpty || category != null
+                  ? 'No activities match your filters.'
+                  : joinedOnly
+                  ? 'No joined activities nearby.'
+                  : 'No nearby activities are available right now.',
+              actionLabel: query.isNotEmpty || category != null
+                  ? 'Clear filters'
+                  : joinedOnly
+                  ? 'Browse all activities'
+                  : 'Refresh',
+              onAction: () {
+                if (query.isEmpty && category == null && !joinedOnly) {
+                  ref.invalidate(nearbyEventsProvider);
+                  return;
+                }
+                setState(() {
+                  search.clear();
+                  category = null;
+                  joinedOnly = false;
+                });
+              },
             ),
           if (filtered.isNotEmpty)
             ListView.separated(
@@ -194,10 +276,17 @@ String _eventsLoadErrorMessage(Object? error) {
 }
 
 class _EventsLoadError extends StatelessWidget {
-  const _EventsLoadError({required this.message, required this.onRetry});
+  const _EventsLoadError({
+    required this.message,
+    required this.onRetry,
+    this.settingsLabel,
+    this.onSettings,
+  });
 
   final String message;
   final VoidCallback onRetry;
+  final String? settingsLabel;
+  final VoidCallback? onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -207,6 +296,14 @@ class _EventsLoadError extends StatelessWidget {
         child: Column(
           children: [
             Text(message, textAlign: TextAlign.center),
+            if (onSettings != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'Exploring does not make you discoverable to other people.',
+                textAlign: TextAlign.center,
+              ),
+              TextButton(onPressed: onSettings, child: Text(settingsLabel!)),
+            ],
             const SizedBox(height: AppSpacing.sm),
             TextButton(onPressed: onRetry, child: const Text('Try again')),
           ],
@@ -217,16 +314,21 @@ class _EventsLoadError extends StatelessWidget {
 }
 
 class _EmptyEvents extends StatelessWidget {
-  const _EmptyEvents({required this.message, required this.onClear});
+  const _EmptyEvents({
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
   final String message;
-  final VoidCallback onClear;
+  final String actionLabel;
+  final VoidCallback onAction;
   @override
   Widget build(BuildContext context) => Center(
     child: Column(
       children: [
         const SizedBox(height: 24),
-        Text(message),
-        TextButton(onPressed: onClear, child: const Text('Clear filters')),
+        Text(message, textAlign: TextAlign.center),
+        TextButton(onPressed: onAction, child: Text(actionLabel)),
       ],
     ),
   );

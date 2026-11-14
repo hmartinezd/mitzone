@@ -6,6 +6,7 @@ import '../../../core/identity/identity_providers.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
 import '../data/chat_providers.dart';
+import '../../profile/data/public_peer_profiles.dart';
 import '../../connections/data/connection_providers.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/observability/observability.dart';
@@ -106,11 +107,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         : conversation.userAId == currentUserId
         ? conversation.userBId
         : conversation.userAId;
-    final other = otherId == null || production
-        ? null
-        : identity!.users.where((u) => u.id == otherId).firstOrNull;
+    final profiles = ref.watch(
+      publicPeerProfilesProvider(publicPeerIdsKey([?otherId])),
+    );
+    final displayName = otherId == null
+        ? 'Conversation'
+        : peerProfileLabel(profiles, otherId);
     return Scaffold(
-      appBar: AppBar(title: Text(other?.displayName ?? 'Conversation')),
+      appBar: AppBar(title: Text(displayName)),
       body: messages.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => Center(
@@ -137,29 +141,63 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
                 ),
               ),
             Expanded(
-              child: ListView(
+              child: ListView.builder(
                 padding: const EdgeInsets.all(16),
-                children: items.map((message) {
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final message = items[index];
                   final mine = message.senderUserId == currentUserId;
-                  return Align(
-                    alignment: mine
-                        ? Alignment.centerRight
-                        : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: mine
-                            ? Theme.of(context).colorScheme.primaryContainer
-                            : Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(16),
+                  final author = mine ? 'You' : displayName;
+                  final localTime = message.sentAt.toLocal();
+                  final time = MaterialLocalizations.of(context)
+                      .formatTimeOfDay(
+                        TimeOfDay.fromDateTime(localTime),
+                        alwaysUse24HourFormat:
+                            MediaQuery.alwaysUse24HourFormatOf(context),
+                      );
+                  final date = MaterialLocalizations.of(
+                    context,
+                  ).formatMediumDate(localTime);
+                  return Semantics(
+                    label: '$author, $date, $time. ${message.text}',
+                    child: ExcludeSemantics(
+                      child: Align(
+                        alignment: mine
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: mine
+                                ? Theme.of(context).colorScheme.primaryContainer
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                author,
+                                style: Theme.of(context).textTheme.labelMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(message.text),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$date · $time',
+                                style: Theme.of(context).textTheme.labelSmall,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      child: Text(message.text),
                     ),
                   );
-                }).toList(),
+                },
               ),
             ),
             SafeArea(

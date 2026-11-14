@@ -9,8 +9,9 @@ import '../../../connections/domain/connection_request.dart';
 import '../../../encounters/domain/encounter.dart';
 import '../../../events/domain/event_catalog.dart';
 import '../../../profile/domain/user_profile.dart';
+import '../../../profile/data/public_peer_profiles.dart';
 
-class HomeSocialSummary extends StatelessWidget {
+class HomeSocialSummary extends ConsumerWidget {
   const HomeSocialSummary({
     required this.encounters,
     required this.incomingRequests,
@@ -41,7 +42,7 @@ class HomeSocialSummary extends StatelessWidget {
   final VoidCallback onRetryEncounters;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final requestItems = incomingRequests.value ?? const <ConnectionRequest>[];
     final connectionItems = connections.value ?? const <Connection>[];
     final conversationItems = conversations.value ?? const <Conversation>[];
@@ -50,6 +51,19 @@ class HomeSocialSummary extends StatelessWidget {
         connectionItems.isNotEmpty ||
         conversationItems.isNotEmpty;
 
+    final profiles = ref.watch(
+      publicPeerProfilesProvider(
+        publicPeerIdsKey([
+          for (final c in conversationItems)
+            c.userAId == currentUserId ? c.userBId : c.userAId,
+          for (final e in encounters.value ?? const <Encounter>[])
+            e.otherUserId,
+        ]),
+      ),
+    );
+    String displayName(String id) =>
+        users.where((u) => u.id == id).firstOrNull?.displayName ??
+        peerProfileLabel(profiles, id);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -66,7 +80,7 @@ class HomeSocialSummary extends StatelessWidget {
           state: conversations,
           connections: connectionItems,
           currentUserId: currentUserId,
-          displayNameFor: _displayName,
+          displayNameFor: displayName,
           eventCatalog: eventCatalog,
           onOpenChat: onOpenChat,
           onOpenConversation: onOpenConversation,
@@ -77,7 +91,7 @@ class HomeSocialSummary extends StatelessWidget {
         _EncounterState(
           state: encounters,
           suppressEmpty: hasAdvancedState,
-          displayNameFor: _displayName,
+          displayNameFor: displayName,
           eventCatalog: eventCatalog,
           onExploreEvents: onExploreEvents,
           onViewMatches: onViewMatches,
@@ -86,13 +100,6 @@ class HomeSocialSummary extends StatelessWidget {
       ],
     );
   }
-
-  String _displayName(String userId) =>
-      users
-          .where((user) => user.id == userId)
-          .map((user) => user.displayName)
-          .firstOrNull ??
-      'Someone';
 }
 
 class _RequestState extends StatelessWidget {

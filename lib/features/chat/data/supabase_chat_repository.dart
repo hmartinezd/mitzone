@@ -2,7 +2,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/chat_models.dart';
 import '../domain/chat_repository.dart';
 
-class SupabaseChatRepository implements ChatRepository {
+class SupabaseChatRepository
+    implements ChatRepository, LatestChatMessageRepository {
   const SupabaseChatRepository(this.client);
   final SupabaseClient client;
   String _own(String id) {
@@ -65,6 +66,25 @@ class SupabaseChatRepository implements ChatRepository {
       params: {'p_conversation_id': conversationId},
     );
     return [for (final r in rows as List) _message(r)];
+  }
+
+  @override
+  Future<Message?> getLatestMessage({
+    required String conversationId,
+    required String userId,
+  }) async {
+    _own(userId);
+    // Retain the same secured RPC; bound the returned preview to one row.
+    final rows = await client
+        .rpc(
+          'get_conversation_messages',
+          params: {'p_conversation_id': conversationId},
+        )
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .limit(1);
+    final items = rows as List;
+    return items.isEmpty ? null : _message(items.first as Map<String, dynamic>);
   }
 
   @override

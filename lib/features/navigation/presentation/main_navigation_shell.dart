@@ -40,7 +40,11 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
     }
   }
 
-  void _onTap(int index) {
+  // Groups remains deep-linkable, but is not a primary destination until usable.
+  static const _visibleBranches = [0, 1, 2, 4];
+
+  void _onTap(int destinationIndex) {
+    final index = _visibleBranches[destinationIndex];
     if (index == widget.navigationShell.currentIndex) {
       _refreshSocial(index);
     }
@@ -68,46 +72,44 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
 
     return Scaffold(
       body: widget.navigationShell,
-      bottomNavigationBar: NavigationBar(
-        height:
-            80 +
-            (MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0) - 1) *
-                24,
-        elevation: 0,
-        indicatorShape: const StadiumBorder(),
-        selectedIndex: widget.navigationShell.currentIndex,
-        onDestinationSelected: _onTap,
-        labelBehavior: isNarrow
-            ? NavigationDestinationLabelBehavior.onlyShowSelected
-            : NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore),
-            label: 'Explore',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'Nearby',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.groups_outlined),
-            selectedIcon: Icon(Icons.groups),
-            label: 'Groups',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
+      bottomNavigationBar: currentIndex == 3
+          ? null
+          : NavigationBar(
+              height:
+                  80 +
+                  (MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0) -
+                          1) *
+                      24,
+              elevation: 0,
+              indicatorShape: const StadiumBorder(),
+              selectedIndex: _visibleBranches.indexOf(currentIndex),
+              onDestinationSelected: _onTap,
+              labelBehavior: isNarrow
+                  ? NavigationDestinationLabelBehavior.onlyShowSelected
+                  : NavigationDestinationLabelBehavior.alwaysShow,
+              destinations: [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.explore_outlined),
+                  selectedIcon: Icon(Icons.explore),
+                  label: 'Explore',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.people_outline),
+                  selectedIcon: Icon(Icons.people),
+                  label: 'Nearby',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person),
+                  label: 'Profile',
+                ),
+              ],
+            ),
     );
   }
 }

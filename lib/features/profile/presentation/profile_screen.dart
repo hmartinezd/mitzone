@@ -20,7 +20,6 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(currentProfileProvider);
     return MitzonePageBody(
-      title: 'Profile',
       child: profileAsync.when(
         data: (profile) => profile == null
             ? _MessageState(
@@ -53,7 +52,7 @@ class _MessageState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -81,13 +80,29 @@ class _ProfileContent extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Profile',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ),
+            IconButton(
+              tooltip: 'Settings',
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => context.go(AppRoutes.settings),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
         _ProfileHeader(profile: profile),
-        const SizedBox(height: AppSpacing.xxl),
-        _CompletionCard(percentage: profile.completionPercentage),
-        const SizedBox(height: AppSpacing.xxl),
+        const SizedBox(height: AppSpacing.lg),
+        _CompletionCard(profile: profile),
+        const SizedBox(height: AppSpacing.lg),
         _AboutSection(bio: profile.bio),
-        const SizedBox(height: AppSpacing.xxl),
+        const SizedBox(height: AppSpacing.lg),
         _ChipSection(
           title: 'Interests',
           values: profile.interests,
@@ -95,16 +110,16 @@ class _ProfileContent extends ConsumerWidget {
               'Add interests so people can quickly understand what you enjoy.',
           actionLabel: 'Add interests',
         ),
-        const SizedBox(height: AppSpacing.xxl),
+        const SizedBox(height: AppSpacing.lg),
         _ChipSection(
           title: 'Languages',
           values: profile.languages,
           emptyMessage: 'Add the languages you use to connect with others.',
           actionLabel: 'Add languages',
         ),
-        const SizedBox(height: AppSpacing.xxl),
+        const SizedBox(height: AppSpacing.lg),
         _ActivitySection(activity: activity),
-        const SizedBox(height: AppSpacing.xxl),
+        const SizedBox(height: AppSpacing.lg),
         MitzoneCard(
           onTap: () => context.go(AppRoutes.personality),
           padding: const EdgeInsets.all(AppSpacing.lg),
@@ -117,9 +132,7 @@ class _ProfileContent extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.xxl),
-        const _SettingsAction(),
-        const SizedBox(height: AppSpacing.xxl),
+        const SizedBox(height: AppSpacing.lg),
       ],
     );
   }
@@ -140,7 +153,7 @@ class _ProfileHeader extends StatelessWidget {
           ProfileAvatar(
             displayName: profile.displayName,
             avatarUri: profile.avatarUri,
-            radius: 50,
+            radius: 32,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
@@ -192,65 +205,31 @@ String? _connectionGoalLabel(ConnectionGoal? goal) => switch (goal) {
 };
 
 class _CompletionCard extends StatelessWidget {
-  const _CompletionCard({required this.percentage});
-  final int percentage;
+  const _CompletionCard({required this.profile});
+  final UserProfile profile;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final complete = percentage >= 100;
-    return Semantics(
-      label: 'Profile $percentage percent complete',
-      child: MitzoneCard(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Your profile',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Text(
-                  '$percentage%',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ExcludeSemantics(
-              child: LinearProgressIndicator(
-                value: percentage / 100,
-                borderRadius: BorderRadius.circular(4),
-                minHeight: 8,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              complete
-                  ? 'Your profile is complete. You can update your details anytime.'
-                  : 'Add a few more details to help people understand who you are.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (!complete) ...[
-              const SizedBox(height: AppSpacing.sm),
-              TextButton(
-                onPressed: () => context.go(AppRoutes.profileDetails),
-                child: const Text('Complete profile'),
-              ),
-            ],
-          ],
-        ),
+    final next = (profile.bio?.trim().isEmpty ?? true)
+        ? 'Add a short bio so people can get to know you.'
+        : profile.interests.isEmpty
+        ? 'Add an interest to find something in common.'
+        : profile.languages.isEmpty
+        ? 'Add the languages you enjoy speaking.'
+        : 'Review the details you share with other people.';
+    return MitzoneCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Make it yours', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(next),
+          TextButton(
+            onPressed: () => context.go(AppRoutes.profileEdit),
+            child: const Text('Review profile details'),
+          ),
+        ],
       ),
     );
   }
@@ -344,7 +323,7 @@ class _ProgressiveEmptyState extends StatelessWidget {
       Text(message),
       const SizedBox(height: AppSpacing.xs),
       TextButton(
-        onPressed: () => context.go(AppRoutes.profileDetails),
+        onPressed: () => context.go(AppRoutes.profileEdit),
         child: Text(actionLabel),
       ),
     ],
@@ -402,27 +381,6 @@ class _ActivitySection extends ConsumerWidget {
           ],
         ),
       ),
-    ),
-  );
-}
-
-class _SettingsAction extends StatelessWidget {
-  const _SettingsAction();
-
-  @override
-  Widget build(BuildContext context) => MitzoneCard(
-    onTap: () => context.go(AppRoutes.settings),
-    padding: const EdgeInsets.all(AppSpacing.lg),
-    child: Row(
-      children: [
-        Icon(
-          Icons.settings_outlined,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        const SizedBox(width: AppSpacing.md),
-        const Expanded(child: Text('Settings')),
-        const Icon(Icons.chevron_right),
-      ],
     ),
   );
 }

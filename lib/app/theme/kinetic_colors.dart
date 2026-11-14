@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 
-/// Exact rendered roles from the owner's saved Stitch v2 screens.
-/// Screen exports take precedence over design-system default role values.
+/// Provisional neutral direction for the November design review.
+/// Legacy token names remain source-compatible; roles are deliberately restrained.
 abstract final class KineticColors {
-  static const canvas = Color(0xfff3fbf9);
+  static const canvas = Color(0xfffaf9f6);
   static const surface = Colors.white;
-  static const surfaceLow = Color(0xffedf5f3);
-  static const ink = Color(0xff151d1c);
-  static const inkMuted = Color(0xff3b4a48);
-  static const primary = Color(0xff006a65);
-  static const cyan = Color(0xff31eadf);
-  static const teal = Color(0xff2f6763);
-  static const mint = Color(0xffb2eae4);
-  static const outline = Color(0xff6b7a78);
-  static const outlineVariant = Color(0xffbacac7);
+  static const surfaceLow = Color(0xfff0f1f3);
+  static const ink = Color(0xff20242b);
+  static const inkMuted = Color(0xff4f5662);
+  static const primary = Color(0xff294f86);
+  static const cyan = Color(0xffdbe6f6);
+  static const teal = Color(0xff405b80);
+  static const mint = Color(0xffe7edf6);
+  static const outline = Color(0xff6d7480);
+  static const outlineVariant = Color(0xffd4d8df);
   static const amber = Color(0xffffcb54);
 }

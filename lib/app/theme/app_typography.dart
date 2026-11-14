@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
+import 'kinetic_colors.dart';
 
 class AppTypography {
   static TextTheme get kineticTextTheme {
     final base = textTheme.apply(
       fontFamily: 'PlusJakartaSans',
-      bodyColor: const Color(0xff151d1c),
-      displayColor: const Color(0xff151d1c),
+      bodyColor: KineticColors.ink,
+      displayColor: KineticColors.ink,
     );
     TextStyle heading(double size, double line, FontWeight weight) => TextStyle(
       fontFamily: 'SpaceGrotesk',
@@ -15,7 +16,7 @@ class AppTypography {
       height: line / size,
       letterSpacing: -size * .01,
       fontWeight: weight,
-      color: const Color(0xff151d1c),
+      color: KineticColors.ink,
     );
     return base.copyWith(
       headlineLarge: heading(32, 40, FontWeight.w600),
@@ -35,7 +36,7 @@ class AppTypography {
       bodySmall: base.bodySmall?.copyWith(
         fontSize: 12,
         height: 1.5,
-        color: const Color(0xff3b4a48),
+        color: KineticColors.inkMuted,
       ),
     );
   }

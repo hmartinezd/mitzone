@@ -10,6 +10,8 @@ class DiscoverySection extends StatelessWidget {
     this.actionForItem,
     this.showDemoBadge = false,
     this.seeAllLabel = 'See Explore',
+    this.title = 'Happening around you',
+    this.showSeeAll = true,
     super.key,
   });
   final List<DiscoveryItem> items;
@@ -17,6 +19,8 @@ class DiscoverySection extends StatelessWidget {
   final VoidCallback? Function(DiscoveryItem)? actionForItem;
   final bool showDemoBadge;
   final String seeAllLabel;
+  final String title;
+  final bool showSeeAll;
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -24,7 +28,7 @@ class DiscoverySection extends StatelessWidget {
       LayoutBuilder(
         builder: (context, constraints) {
           final title = Text(
-            'Happening around you',
+            this.title,
             style: Theme.of(context).textTheme.titleLarge,
           );
           final action = TextButton(
@@ -36,13 +40,13 @@ class DiscoverySection extends StatelessWidget {
               300) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [title, action],
+              children: [title, if (showSeeAll) action],
             );
           }
           return Row(
             children: [
               Expanded(child: title),
-              action,
+              if (showSeeAll) action,
             ],
           );
         },
@@ -50,7 +54,7 @@ class DiscoverySection extends StatelessWidget {
       const SizedBox(height: AppSpacing.sm),
       LayoutBuilder(
         builder: (context, constraints) {
-          final width = (constraints.maxWidth * .9).clamp(230.0, 360.0);
+          final width = (constraints.maxWidth * .84).clamp(220.0, 320.0);
           return SingleChildScrollView(
             key: const ValueKey('home-discovery-carousel'),
             scrollDirection: Axis.horizontal,
@@ -92,36 +96,39 @@ class _DiscoveryCard extends StatelessWidget {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          height:
-              128 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0),
-          child: item.imageReference == null
-              ? const _MissingPhoto()
-              : Image.network(
-                  item.imageReference!,
-                  fit: BoxFit.cover,
-                  excludeFromSemantics: true,
-                  loadingBuilder: (_, child, progress) => progress == null
-                      ? child
-                      : const _MissingPhoto(loading: true),
-                  errorBuilder: (_, _, _) => const _MissingPhoto(),
-                ),
-        ),
+        if (item.imageReference != null)
+          SizedBox(
+            height: 128,
+            child: item.imageReference == null
+                ? const _MissingPhoto()
+                : Image.network(
+                    item.imageReference!,
+                    fit: BoxFit.cover,
+                    cacheWidth: (width * MediaQuery.devicePixelRatioOf(context))
+                        .round(),
+                    excludeFromSemantics: true,
+                    loadingBuilder: (_, child, progress) => progress == null
+                        ? child
+                        : const _MissingPhoto(loading: true),
+                    errorBuilder: (_, _, _) => const _MissingPhoto(),
+                  ),
+          ),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                (item.category.isEmpty ? item.type.name : item.category.first)
-                    .toUpperCase(),
+                item.category.isEmpty
+                    ? item.type.name
+                    : item.category.first.replaceAll('_', ' '),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 6),
-              Text(item.title, style: theme.textTheme.titleLarge),
+              Text(item.title, style: theme.textTheme.titleMedium),
               if (item.context != null) ...[
                 const SizedBox(height: 4),
                 Text(
@@ -157,7 +164,9 @@ class _DiscoveryCard extends StatelessWidget {
               if (onTap != null) ...[
                 const SizedBox(height: 12),
                 Text(
-                  'View event details',
+                  item.type == DiscoveryItemType.place
+                      ? 'View place'
+                      : 'View event details',
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: theme.colorScheme.primary,
                   ),
@@ -176,7 +185,8 @@ class _DiscoveryCard extends StatelessWidget {
             ? content
             : Semantics(
                 button: true,
-                label: 'View event: ${item.title}',
+                label:
+                    'View ${item.type == DiscoveryItemType.place ? 'place' : 'event'}: ${item.title}',
                 child: InkWell(onTap: onTap, child: content),
               ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/profile_tags_field.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
@@ -106,24 +107,6 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
     super.dispose();
   }
 
-  String? _validateList(String? value, String label, String singularLabel) {
-    if (value == null || value.trim().isEmpty) return null;
-    final rawItems = value.split(',').map((e) => e.trim()).toList();
-    final normalizedItems = ProfileValidation.normalizeList(rawItems);
-
-    if (normalizedItems.length > ProfileValidation.maxListItems) {
-      return 'Add up to ${ProfileValidation.maxListItems} $label.';
-    }
-
-    for (final item in rawItems) {
-      if (item.isNotEmpty &&
-          item.length > ProfileValidation.maxListItemLength) {
-        return 'Each $singularLabel must be ${ProfileValidation.maxListItemLength} characters or fewer.';
-      }
-    }
-    return null;
-  }
-
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_isSaving) return;
@@ -201,8 +184,6 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
               decoration: InputDecoration(
                 labelText: 'Bio',
                 hintText: 'Tell others about yourself',
-                helperText:
-                    '${_bioController.text.length}/${ProfileValidation.maxBioLength}',
                 alignLabelWithHint: true,
               ),
               maxLines: 4,
@@ -222,37 +203,38 @@ class _ProfileDetailsFormState extends ConsumerState<ProfileDetailsForm> {
             ),
             const SizedBox(height: AppSpacing.lg),
 
-            // Interests
-            TextFormField(
-              key: const Key('interests_field'),
+            ProfileTagsField(
               controller: _interestsController,
-              decoration: const InputDecoration(
-                labelText: 'Interests',
-                hintText: 'Music, Technology, Travel...',
-                helperText:
-                    'Separate with commas (max ${ProfileValidation.maxListItems})',
-              ),
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (value) =>
-                  _validateList(value, 'interests', 'interest'),
+              label: 'Interests',
+              singular: 'interest',
+              fieldKey: const Key('interests_field'),
+              suggestions: const [
+                'Music',
+                'Travel',
+                'Technology',
+                'Sports',
+                'Art',
+              ],
             ),
             const SizedBox(height: AppSpacing.lg),
-
-            // Languages
-            TextFormField(
-              key: const Key('languages_field'),
+            ProfileTagsField(
               controller: _languagesController,
-              decoration: const InputDecoration(
-                labelText: 'Languages',
-                hintText: 'English, Spanish...',
-                helperText:
-                    'Separate with commas (max ${ProfileValidation.maxListItems})',
-              ),
-              autovalidateMode: AutovalidateMode.onUserInteraction,
-              validator: (value) =>
-                  _validateList(value, 'languages', 'language'),
+              label: 'Languages',
+              singular: 'language',
+              fieldKey: const Key('languages_field'),
+              suggestions: const [
+                'English',
+                'Spanish',
+                'French',
+                'Portuguese',
+                'German',
+                'Italian',
+                'Japanese',
+                'Mandarin',
+                'Arabic',
+              ],
             ),
-            const SizedBox(height: AppSpacing.xxl),
+            const SizedBox(height: AppSpacing.lg),
 
             // Connection Goal
             Text(

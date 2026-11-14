@@ -73,6 +73,8 @@ class _MitzoneTextFieldState extends State<MitzoneTextField> {
         labelText: widget.label,
         hintText: widget.hint,
         helperText: widget.helperText,
+        helperMaxLines: 6,
+        errorMaxLines: 6,
         errorText: widget.errorText,
         prefixIcon: widget.prefixIcon,
         suffixIcon: widget.showObscureToggle

@@ -96,9 +96,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Hector'), findsOneWidget);
-      expect(find.text('14%'), findsOneWidget);
+      expect(find.text('Make it yours'), findsOneWidget);
       expect(find.text('Edit profile'), findsOneWidget);
-      expect(find.text('Settings'), findsOneWidget);
+      expect(find.byTooltip('Settings'), findsOneWidget);
     });
 
     testWidgets('navigates to Edit Profile', (tester) async {
@@ -117,7 +117,11 @@ void main() {
       await tester.pumpWidget(createWidget(AppRoutes.profileEdit));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextFormField), 'A');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Display name'),
+        'A',
+      );
+      await tester.ensureVisible(find.text('Save Changes'));
       await tester.tap(find.text('Save Changes'));
       await tester.pumpAndSettle();
 
@@ -126,15 +130,34 @@ void main() {
     });
 
     testWidgets('saves name changes', (tester) async {
+      repo.profile = const UserProfile(
+        id: '1',
+        displayName: 'Hector',
+        bio: 'My bio',
+        city: 'Tampa',
+        interests: ['Cycling'],
+        languages: ['Spanish'],
+        connectionGoal: ConnectionGoal.both,
+      );
       await tester.pumpWidget(createWidget(AppRoutes.profileEdit));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextFormField), 'Hector Updated');
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Display name'),
+        'Hector Updated',
+      );
+      await tester.ensureVisible(find.text('Save Changes'));
       await tester.tap(find.text('Save Changes'));
       await tester.pumpAndSettle();
 
       expect(repo.saveCount, 1);
       expect(repo.profile?.displayName, 'Hector Updated');
+      expect(repo.profile?.id, '1');
+      expect(repo.profile?.bio, 'My bio');
+      expect(repo.profile?.city, 'Tampa');
+      expect(repo.profile?.interests, ['Cycling']);
+      expect(repo.profile?.languages, ['Spanish']);
+      expect(repo.profile?.connectionGoal, ConnectionGoal.both);
     });
   });
 
@@ -177,7 +200,7 @@ void main() {
       final scrollable = find.byType(Scrollable).first;
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Interests'),
+        find.byKey(const Key('interests_field')),
         ' Flutter, dart , Flutter ',
       );
 

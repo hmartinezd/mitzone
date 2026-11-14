@@ -59,6 +59,14 @@ GoRouter createAppRouter({
     errorBuilder: (context, state) => RouteErrorScreen(error: state.error),
     routes: [
       GoRoute(
+        path: AppRoutes.terms,
+        builder: (_, _) => const Scaffold(body: TermsSettingsScreen()),
+      ),
+      GoRoute(
+        path: AppRoutes.privacyPolicy,
+        builder: (_, _) => const Scaffold(body: PrivacyPolicySettingsScreen()),
+      ),
+      GoRoute(
         path: '/app/notifications',
         builder: (context, state) => const NotificationCenterScreen(),
       ),
@@ -298,7 +306,9 @@ FutureOr<String?> _authRedirect(Ref ref, GoRouterState state) {
       PasswordRecoveryState.idle;
   if (recovery.blocksApp &&
       location != AppRoutes.resetPassword &&
-      location != AppRoutes.forgotPassword) {
+      location != AppRoutes.forgotPassword &&
+      location != AppRoutes.terms &&
+      location != AppRoutes.privacyPolicy) {
     return AppRoutes.resetPassword;
   }
   final sessionState = ref.read(authSessionProvider);

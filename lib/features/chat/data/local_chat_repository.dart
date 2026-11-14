@@ -221,6 +221,7 @@ class LocalChatRepository implements ChatRepository {
       LocalNotification(
         id: 'message_${m.id}',
         type: LocalNotificationType.newMessage,
+        actorUserId: senderUserId,
         userId: other,
         timestamp: timestamp,
         entityId: conversationId,

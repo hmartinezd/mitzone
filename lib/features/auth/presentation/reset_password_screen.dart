@@ -99,7 +99,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               controller: _password,
               label: 'New password',
               helperText:
-                  'Your password must meet the account security requirements.',
+                  'Choose a strong, unique password. We will explain if it needs to be stronger.',
               enabled: !_loading,
               obscureText: true,
               showObscureToggle: true,

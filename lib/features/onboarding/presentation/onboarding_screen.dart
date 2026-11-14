@@ -35,7 +35,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     _OnboardingData(
       title: 'Share experiences.',
       description:
-          'Join events, scan QR codes, and discover people who were there with you.',
+          'Explore activities and choose when to share your presence to discover people with a shared moment.',
       illustration: OnboardingIllustration2(),
     ),
     _OnboardingData(

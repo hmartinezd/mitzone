@@ -21,6 +21,7 @@ import 'package:mitzone/features/onboarding/presentation/onboarding_screen.dart'
 import 'package:mitzone/features/profile/data/profile_providers.dart';
 import 'package:mitzone/features/profile/data/profile_repository.dart';
 import 'package:mitzone/features/auth/presentation/login_screen.dart';
+import 'package:mitzone/features/profile/presentation/settings_placeholders.dart';
 import 'package:mitzone/features/splash/presentation/splash_screen.dart';
 import 'package:mitzone/features/profile/domain/user_profile.dart';
 import 'package:mitzone/features/home/presentation/home_screen.dart';
@@ -93,6 +94,28 @@ void main() {
           },
         ),
       );
+    }
+
+    for (final route in [AppRoutes.terms, AppRoutes.privacyPolicy]) {
+      testWidgets('legal route $route remains public without session', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildApp(initialLocation: route));
+        await tester.pumpAndSettle();
+        expect(find.byType(LoginScreen), findsNothing);
+        expect(
+          find.byType(
+            route == AppRoutes.terms
+                ? TermsSettingsScreen
+                : PrivacyPolicySettingsScreen,
+          ),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Pre-release information'), findsOneWidget);
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+        expect(find.byType(LoginScreen), findsOneWidget);
+      });
     }
 
     Future<void> completeSplash(WidgetTester tester) async {

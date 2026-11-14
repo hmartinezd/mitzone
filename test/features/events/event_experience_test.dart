@@ -215,7 +215,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Joined'));
       await tester.pump();
-      expect(find.text('No joined events match your filters.'), findsNothing);
+      expect(find.text('No joined activities nearby.'), findsNothing);
       await tester.pumpAndSettle();
       expect(find.text("Couldn't load joined events."), findsOneWidget);
     },
@@ -247,14 +247,14 @@ void main() {
     await tester.pumpWidget(appAt('/app/events/tech-mixer-2026', repository));
     await tester.pumpAndSettle();
 
-    await revealAndTap(tester, 'Join event');
+    await revealAndTap(tester, 'Plan to attend');
     await tester.pumpAndSettle();
-    expect(find.text("You're participating"), findsOneWidget);
+    expect(find.text("Added to your plans"), findsOneWidget);
     expect(repository.idsByIdentity['identity-a'], {'tech-mixer-2026'});
 
-    await revealAndTap(tester, 'Leave event');
+    await revealAndTap(tester, 'Remove from plans');
     await tester.pumpAndSettle();
-    expect(find.text('Join event'), findsOneWidget);
+    expect(find.text('Plan to attend'), findsOneWidget);
     expect(repository.idsByIdentity['identity-a'], isEmpty);
   });
 
@@ -263,18 +263,18 @@ void main() {
     await tester.pumpWidget(appAt('/app/events/tech-mixer-2026', repository));
     await tester.pumpAndSettle();
 
-    await revealAndTap(tester, 'Join event');
+    await revealAndTap(tester, 'Plan to attend');
     await tester.pumpAndSettle();
-    expect(find.text('Join event'), findsOneWidget);
+    expect(find.text('Plan to attend'), findsOneWidget);
     expect(
-      find.text("We couldn't join this event. Please try again."),
+      find.text("We couldn't save this plan. Please try again."),
       findsOneWidget,
     );
 
     repository.failMutations = false;
-    await revealAndTap(tester, 'Join event');
+    await revealAndTap(tester, 'Plan to attend');
     await tester.pumpAndSettle();
-    expect(find.text("You're participating"), findsOneWidget);
+    expect(find.text("Added to your plans"), findsOneWidget);
   });
 
   testWidgets('failed leave preserves joined state and allows retry', (
@@ -286,19 +286,19 @@ void main() {
     await tester.pumpWidget(appAt('/app/events/tech-mixer-2026', repository));
     await tester.pumpAndSettle();
 
-    await revealAndTap(tester, 'Leave event');
+    await revealAndTap(tester, 'Remove from plans');
     await tester.pumpAndSettle();
-    expect(find.text("You're participating"), findsOneWidget);
-    expect(find.text('Leave event'), findsOneWidget);
+    expect(find.text("Added to your plans"), findsOneWidget);
+    expect(find.text('Remove from plans'), findsOneWidget);
     expect(
       find.text("We couldn't update your participation. Please try again."),
       findsOneWidget,
     );
 
     repository.failMutations = false;
-    await revealAndTap(tester, 'Leave event');
+    await revealAndTap(tester, 'Remove from plans');
     await tester.pumpAndSettle();
-    expect(find.text('Join event'), findsOneWidget);
+    expect(find.text('Plan to attend'), findsOneWidget);
   });
 
   testWidgets('check-in requires participation and records persistent status', (
@@ -313,7 +313,7 @@ void main() {
     expect(find.text('Join this event to enable check-in.'), findsOneWidget);
     expect(find.text('Local demo check-in'), findsNothing);
 
-    await revealAndTap(tester, 'Join event');
+    await revealAndTap(tester, 'Plan to attend');
     await tester.pumpAndSettle();
     expect(find.text('Local demo check-in'), findsOneWidget);
     await revealAndTap(tester, 'Local demo check-in');
@@ -326,9 +326,9 @@ void main() {
       DateTime.utc(2026, 8, 21, 23, 42),
     );
 
-    await revealAndTap(tester, 'Leave event');
+    await revealAndTap(tester, 'Remove from plans');
     await tester.pumpAndSettle();
-    expect(find.text('Join event'), findsOneWidget);
+    expect(find.text('Plan to attend'), findsOneWidget);
     expect(participation.idsByIdentity['identity-a'], isEmpty);
     expect(find.text('✓ Checked in locally'), findsOneWidget);
     expect(find.text('Local demo check-in'), findsNothing);
@@ -388,13 +388,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tech Mixer 2026'), findsOneWidget);
     expect(find.text('The Innovation Hub'), findsOneWidget);
+    await revealAndTap(tester, 'About this event');
+    await tester.pumpAndSettle();
     expect(find.textContaining('Meet curious builders'), findsOneWidget);
     expect(find.text("We couldn't load your participation."), findsOneWidget);
 
     repository.failLoads = false;
     await revealAndTap(tester, 'Try again');
     await tester.pumpAndSettle();
-    expect(find.text('Join event'), findsOneWidget);
+    expect(find.text('Plan to attend'), findsOneWidget);
   });
 
   testWidgets('historical check-in remains visible on participation failure', (
@@ -450,21 +452,27 @@ void main() {
     await tester.pumpWidget(appAt('/app/events/tech-mixer-2026', repository));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
-      find.text('Join event'),
+      find.text('Plan to attend'),
       200,
       scrollable: find.byType(Scrollable).first,
     );
     Finder semanticsWithLabel(String label) => find.byWidgetPredicate(
       (widget) => widget is Semantics && widget.properties.label == label,
     );
-    expect(semanticsWithLabel('Join Tech Mixer 2026'), findsOneWidget);
-    await tester.tap(find.text('Join event'));
-    await tester.pumpAndSettle();
     expect(
-      semanticsWithLabel('Participating in Tech Mixer 2026'),
+      semanticsWithLabel('Plan to attend Tech Mixer 2026'),
       findsOneWidget,
     );
-    expect(semanticsWithLabel('Leave Tech Mixer 2026'), findsOneWidget);
+    await tester.tap(find.text('Plan to attend'));
+    await tester.pumpAndSettle();
+    expect(
+      semanticsWithLabel('Planning to attend Tech Mixer 2026'),
+      findsOneWidget,
+    );
+    expect(
+      semanticsWithLabel('Remove Tech Mixer 2026 from plans'),
+      findsOneWidget,
+    );
     semantics.dispose();
   });
 
@@ -535,34 +543,28 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Tech Mixer 2026'));
       await tester.pumpAndSettle();
-      await revealAndTap(tester, 'Join event');
+      await revealAndTap(tester, 'Plan to attend');
       await tester.pumpAndSettle();
       expect(repository.idsByIdentity['identity-a'], {'tech-mixer-2026'});
       expectNoPresence();
       await selectTab('Home');
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(
-        find.text('Real moments, voluntary digital connection.'),
-        findsOneWidget,
-      );
+      expect(find.text('Presence off'), findsOneWidget);
       expect(find.text('Upcoming activities'), findsNothing);
       expectNoPresence();
       await selectTab('Explore');
       expect(find.byType(EventDetailsScreen), findsOneWidget);
-      expect(find.text("You're participating"), findsOneWidget);
-      await revealAndTap(tester, 'Leave event');
+      expect(find.text("Added to your plans"), findsOneWidget);
+      await revealAndTap(tester, 'Remove from plans');
       await tester.pumpAndSettle();
       expect(repository.idsByIdentity['identity-a'], isEmpty);
       expectNoPresence();
       await selectTab('Home');
       expect(find.byType(HomeScreen), findsOneWidget);
-      expect(
-        find.text('Real moments, voluntary digital connection.'),
-        findsOneWidget,
-      );
+      expect(find.text('Presence off'), findsOneWidget);
       expectNoPresence();
       await selectTab('Explore');
-      expect(find.text('Join event'), findsOneWidget);
+      expect(find.text('Plan to attend'), findsOneWidget);
       // Selecting the active Explore tab returns to its discovery root.
       await selectTab('Explore');
       await tester.ensureVisible(find.text('Search all activities'));
@@ -570,7 +572,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Joined'));
       await tester.pumpAndSettle();
-      expect(find.text('No joined events match your filters.'), findsOneWidget);
+      expect(find.text('No joined activities nearby.'), findsOneWidget);
       expectNoPresence();
     },
   );
@@ -598,7 +600,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('Back'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Leave event'),
+      find.text('Remove from plans'),
       200,
       scrollable: find
           .descendant(
@@ -607,8 +609,8 @@ void main() {
           )
           .first,
     );
-    expect(find.text("You're participating"), findsOneWidget);
-    expect(find.text('Leave event'), findsOneWidget);
+    expect(find.text("Added to your plans"), findsOneWidget);
+    expect(find.text('Remove from plans'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Local demo check-in'),
       200,
@@ -699,7 +701,7 @@ void main() {
       await tester.tap(find.text('Tech Mixer 2026'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      expect(find.text('Join event'), findsOneWidget);
+      expect(find.text('Plan to attend'), findsOneWidget);
     });
   }
 }

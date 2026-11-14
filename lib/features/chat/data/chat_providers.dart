@@ -52,6 +52,24 @@ final chatMessagesProvider = FutureProvider.family<List<Message>, String>((
       );
 });
 
+/// Chat tiles do not download every message merely to show one-line previews.
+final chatLatestMessageProvider = FutureProvider.autoDispose
+    .family<Message?, String>((ref, id) async {
+      await ref.watch(connectionsProvider.future);
+      await ref.watch(chatConversationsProvider.future);
+      final repository = ref.watch(chatRepositoryProvider);
+      final userId = ref.watch(productionModeProvider)
+          ? await ref.watch(currentUserIdProvider.future)
+          : ref.watch(mockIdentityRepositoryProvider).currentUser.id;
+      if (repository is LatestChatMessageRepository) {
+        return (repository as LatestChatMessageRepository).getLatestMessage(
+          conversationId: id,
+          userId: userId,
+        );
+      }
+      return (await ref.watch(chatMessagesProvider(id).future)).lastOrNull;
+    });
+
 final conversationContextProvider = FutureProvider.family<String?, String>((
   ref,
   id,

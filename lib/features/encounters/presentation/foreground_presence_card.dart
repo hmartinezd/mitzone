@@ -382,6 +382,22 @@ class _AccountPresenceCardState extends ConsumerState<_AccountPresenceCard>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // No device-local record is not proof that another device has no presence.
+    final serverStateUnknown =
+        ref.watch(productionModeProvider) && !recorded && !stopConfirmed;
+    final statusLabel = restoring
+        ? 'Checking presence…'
+        : stopFailed
+        ? 'Stop not confirmed'
+        : recorded
+        ? (_refreshAuthorized
+              ? 'Presence active'
+              : 'Presence recorded · updates paused')
+        : stopConfirmed
+        ? 'Presence off'
+        : serverStateUnknown
+        ? 'Presence status unknown'
+        : 'Presence off';
     final text = restoring
         ? 'Loading presence controls…'
         : switch (status) {
@@ -395,7 +411,9 @@ class _AccountPresenceCardState extends ConsumerState<_AccountPresenceCard>
             _ =>
               stopConfirmed
                   ? 'Presence stopped.'
-                  : 'Discover people you may have shared a place and time with.',
+                  : serverStateUnknown
+                  ? 'No active session is saved on this device. You can stop any presence on your account.'
+                  : 'Choose when to be discoverable to people who share a place and time with you.',
           };
     return Card(
       child: Padding(
@@ -403,6 +421,11 @@ class _AccountPresenceCardState extends ConsumerState<_AccountPresenceCard>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Semantics(
+              liveRegion: true,
+              child: Text(statusLabel, style: theme.textTheme.titleMedium),
+            ),
+            const SizedBox(height: 8),
             Text(text, style: theme.textTheme.bodyMedium),
             if (expiresAt != null)
               Padding(
@@ -467,6 +490,8 @@ class _AccountPresenceCardState extends ConsumerState<_AccountPresenceCard>
                           ? 'Stopping…'
                           : stopFailed
                           ? 'Retry Stop'
+                          : serverStateUnknown
+                          ? 'Stop any active presence'
                           : 'Stop',
                     ),
                   ),

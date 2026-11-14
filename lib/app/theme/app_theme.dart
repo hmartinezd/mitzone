@@ -8,18 +8,18 @@ import 'mitzone_theme_colors.dart';
 import 'kinetic_colors.dart';
 
 class AppTheme {
-  /// Kinetic Teal & Muted Sage: owner-approved beta visual direction.
+  /// Neutral canvas with a restrained blue accent, provisional for review.
   /// The dark theme remains available for legacy review and regression tests.
   static ThemeData get lightTheme {
     const scheme = ColorScheme.light(
       primary: KineticColors.primary,
       onPrimary: Colors.white,
       primaryContainer: KineticColors.cyan,
-      onPrimaryContainer: Color(0xff00504c),
+      onPrimaryContainer: Color(0xff19365e),
       secondary: KineticColors.teal,
       onSecondary: Colors.white,
       secondaryContainer: KineticColors.mint,
-      onSecondaryContainer: Color(0xff124f4b),
+      onSecondaryContainer: Color(0xff243e61),
       tertiary: Color(0xff795900),
       onTertiary: Colors.white,
       tertiaryContainer: KineticColors.amber,
@@ -57,13 +57,13 @@ class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: Color(0x40bacac7)),
+          side: const BorderSide(color: KineticColors.outlineVariant),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: KineticColors.cyan,
-          foregroundColor: const Color(0xff00504c),
+          backgroundColor: KineticColors.primary,
+          foregroundColor: Colors.white,
           minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: const StadiumBorder(),
@@ -143,7 +143,7 @@ class AppTheme {
           info: KineticColors.primary,
           infoContainer: KineticColors.mint,
           onInfo: Colors.white,
-          onInfoContainer: Color(0xff00201e),
+          onInfoContainer: Color(0xff19365e),
           focusIndicator: KineticColors.primary,
         ),
       ],

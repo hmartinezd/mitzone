@@ -7,12 +7,13 @@ import '../../../shared/widgets/mitzone_card.dart';
 import '../../../app/theme/app_spacing.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../core/identity/identity_providers.dart';
+import '../../../core/auth/auth_providers.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MitzonePageBody(
       title: 'Settings',
       onBack: () => context.pop(),
@@ -30,7 +31,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               _SettingsItem(
                 icon: Icons.lock_outline,
-                title: 'Privacy',
+                title: 'Blocked people',
                 onTap: () => context.go(AppRoutes.settingsPrivacy),
               ),
               _SettingsItem(
@@ -41,7 +42,7 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
-          if (kDebugMode) ...[
+          if (kDebugMode && !ref.watch(productionModeProvider)) ...[
             const _DeveloperUserSection(),
             const SizedBox(height: AppSpacing.xl),
           ],
@@ -78,7 +79,7 @@ class _DeveloperUserSection extends ConsumerWidget {
       items: [
         _SettingsItem(
           icon: Icons.developer_mode_outlined,
-          title: 'Current User',
+          title: 'Test identity (local data only)',
           subtitle: '${repository.currentUser.displayName}  >',
           onTap: () => _showUserPicker(context, ref),
         ),

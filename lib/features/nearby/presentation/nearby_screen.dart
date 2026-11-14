@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/router/app_routes.dart';
 import '../../../core/identity/current_user_provider.dart';
 import '../../../shared/widgets/mitzone_card.dart';
+import '../../../shared/widgets/mitzone_empty_state.dart';
 import '../../chat/data/chat_providers.dart';
 import '../../connections/data/connection_providers.dart';
 import '../../connections/domain/connection.dart';
@@ -53,7 +54,10 @@ class _NearbyScreenState extends State<NearbyScreen> {
         ),
         Expanded(
           child: connections
-              ? const _ConnectionsPanel()
+              ? _ConnectionsPanel(
+                  onViewSharedMoments: () =>
+                      setState(() => connections = false),
+                )
               : const MatchesScreen(),
         ),
       ],
@@ -62,7 +66,8 @@ class _NearbyScreenState extends State<NearbyScreen> {
 }
 
 class _ConnectionsPanel extends ConsumerWidget {
-  const _ConnectionsPanel();
+  const _ConnectionsPanel({required this.onViewSharedMoments});
+  final VoidCallback onViewSharedMoments;
   @override
   Widget build(BuildContext context, WidgetRef ref) => ref
       .watch(connectionsProvider)
@@ -84,13 +89,14 @@ class _ConnectionsPanel extends ConsumerWidget {
           ),
         ),
         data: (items) => items.isEmpty
-            ? const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
+            ? MitzoneEmptyState(
+                title: 'No connections yet',
+                message:
                     'Your mutual connections will appear here. Review shared moments to choose who to connect with.',
-                    textAlign: TextAlign.center,
-                  ),
+                icon: Icons.people_outline,
+                primaryAction: TextButton(
+                  onPressed: onViewSharedMoments,
+                  child: const Text('Review shared moments'),
                 ),
               )
             : ListView.separated(

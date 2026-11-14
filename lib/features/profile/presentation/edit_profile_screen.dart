@@ -9,6 +9,7 @@ import '../data/profile_providers.dart';
 import '../domain/user_profile.dart';
 import '../domain/profile_validation.dart';
 import 'widgets/profile_avatar.dart';
+import 'widgets/profile_tags_field.dart';
 
 class EditProfileScreen extends ConsumerWidget {
   const EditProfileScreen({super.key});
@@ -78,6 +79,11 @@ class EditProfileForm extends ConsumerStatefulWidget {
 class _EditProfileFormState extends ConsumerState<EditProfileForm> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
+  late TextEditingController _bioController;
+  late TextEditingController _cityController;
+  late TextEditingController _interestsController;
+  late TextEditingController _languagesController;
+  ConnectionGoal? _connectionGoal;
   String? _newAvatarPath;
   bool _isSaving = false;
 
@@ -85,11 +91,24 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.profile.displayName);
+    _bioController = TextEditingController(text: widget.profile.bio);
+    _cityController = TextEditingController(text: widget.profile.city);
+    _interestsController = TextEditingController(
+      text: widget.profile.interests.join(', '),
+    );
+    _languagesController = TextEditingController(
+      text: widget.profile.languages.join(', '),
+    );
+    _connectionGoal = widget.profile.connectionGoal;
   }
 
   @override
   void dispose() {
     _nameController.dispose();
+    _bioController.dispose();
+    _cityController.dispose();
+    _interestsController.dispose();
+    _languagesController.dispose();
     super.dispose();
   }
 
@@ -131,11 +150,19 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
         id: widget.profile.id,
         displayName: _nameController.text.trim(),
         avatarUri: stagedAvatarUri ?? oldAvatarUri,
-        bio: widget.profile.bio,
-        city: widget.profile.city,
-        languages: widget.profile.languages,
-        interests: widget.profile.interests,
-        connectionGoal: widget.profile.connectionGoal,
+        bio: _bioController.text.trim().isEmpty
+            ? null
+            : _bioController.text.trim(),
+        city: _cityController.text.trim().isEmpty
+            ? null
+            : _cityController.text.trim(),
+        languages: ProfileValidation.normalizeList(
+          _languagesController.text.split(','),
+        ),
+        interests: ProfileValidation.normalizeList(
+          _interestsController.text.split(','),
+        ),
+        connectionGoal: _connectionGoal,
       );
 
       await ref.read(profileRepositoryProvider).saveProfile(updatedProfile);
@@ -195,11 +222,11 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
               child: ProfileAvatar(
                 displayName: widget.profile.displayName,
                 avatarUri: _newAvatarPath ?? widget.profile.avatarUri,
-                radius: 60,
+                radius: 36,
                 onEdit: _pickImage,
               ),
             ),
-            const SizedBox(height: AppSpacing.xxxl),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               'Basic Identity',
               style: theme.textTheme.titleMedium?.copyWith(
@@ -213,6 +240,8 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
                 labelText: 'Display name',
                 hintText: 'Enter your name',
                 helperText: 'Visible to everyone on Mitzone',
+                helperMaxLines: 3,
+                errorMaxLines: 3,
               ),
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _save(),
@@ -234,7 +263,89 @@ class _EditProfileFormState extends ConsumerState<EditProfileForm> {
                 return null;
               },
             ),
-            const SizedBox(height: AppSpacing.xxxl),
+            const SizedBox(height: AppSpacing.lg),
+            Text('About you', style: theme.textTheme.titleMedium),
+            const SizedBox(height: AppSpacing.sm),
+            const Text(
+              'These details are optional. Share only what you want other people to see.',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _bioController,
+              decoration: const InputDecoration(
+                labelText: 'Bio',
+                alignLabelWithHint: true,
+              ),
+              maxLines: 3,
+              maxLength: ProfileValidation.maxBioLength,
+              validator: (value) => ProfileValidation.isValidBio(value)
+                  ? null
+                  : 'Bio is too long.',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextFormField(
+              controller: _cityController,
+              decoration: const InputDecoration(labelText: 'City'),
+              maxLength: ProfileValidation.maxCityLength,
+              validator: (value) => ProfileValidation.isValidCity(value)
+                  ? null
+                  : 'City is too long.',
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ProfileTagsField(
+              controller: _interestsController,
+              label: 'Interests',
+              singular: 'interest',
+              fieldKey: const Key('interests_field'),
+              suggestions: const [
+                'Music',
+                'Travel',
+                'Technology',
+                'Sports',
+                'Art',
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            ProfileTagsField(
+              controller: _languagesController,
+              label: 'Languages',
+              singular: 'language',
+              fieldKey: const Key('languages_field'),
+              suggestions: const [
+                'English',
+                'Spanish',
+                'French',
+                'Portuguese',
+                'German',
+                'Italian',
+                'Japanese',
+                'Mandarin',
+                'Arabic',
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text('Connection goal', style: theme.textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final option in <ConnectionGoal?, String>{
+                  null: 'Not set',
+                  ConnectionGoal.social: 'Social',
+                  ConnectionGoal.professional: 'Professional',
+                  ConnectionGoal.both: 'Both',
+                }.entries)
+                  ChoiceChip(
+                    label: Text(option.value),
+                    selected: _connectionGoal == option.key,
+                    onSelected: _isSaving
+                        ? null
+                        : (_) => setState(() => _connectionGoal = option.key),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
             MitzoneButton(
               text: 'Save Changes',
               onPressed: _save,

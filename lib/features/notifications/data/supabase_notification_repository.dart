@@ -14,6 +14,7 @@ class SupabaseNotificationRepository implements NotificationRepository {
     entityId: row['entity_id'] as String? ?? '',
     destination: row['destination'] as String? ?? '',
     read: row['read_at'] != null,
+    actorUserId: row['actor_user_id'] as String?,
   );
   String _requireOwner(String requested) {
     final id = client.auth.currentUser?.id;

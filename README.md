@@ -4,7 +4,34 @@
 
 Mitzone transforms real-world encounters into meaningful digital connections, helping people reconnect after sharing the same place, event, and moment.
 
-## Project Status
+## Canonical development workspace
+
+Use `/Users/josema/Projects/mitzone` on `main` for ongoing development.
+The recovered beta source and its Git history were integrated here on
+2026-11-14. The separate `mitzone-recovered` folder is retained as recovery
+history/backup, not a second active development workspace.
+
+The current app includes Kinetic Teal & Muted Sage styling and
+Home / Explore / Nearby / Groups / Profile navigation, with Messages available
+from top actions. Groups remains explicitly unavailable.
+
+The existing ignored `config/dev.json` selects the original Mitzone dev
+Supabase project. Its database has migrations0001–0031 applied. Hosted discovery
+functions/credentials exist there; successful nearby results still require live
+verification. Staging is separate and has not been deleted.
+
+Run Android from this folder:
+
+```sh
+flutter run --dart-define-from-file=config/dev.json -d emulator-5554
+```
+
+The IDE launch configuration also uses `config/dev.json`. Never commit runtime
+keys, signing files, APKs or recovery evidence. See
+[the recovery record](RECOVERY_REPORT.md) for historical provenance. The milestone
+section below describes earlier snapshots and is not the current readiness checklist.
+
+## Historical project milestones
 
 **Current Phase**: Sprint 3 — Supabase authentication/profile slice implemented; broader backend architecture remains deferred
 

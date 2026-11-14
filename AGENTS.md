@@ -5,6 +5,17 @@ working functionality, integrations, real data, attribution, and privacy control
 
 ## Current authorization
 
+2026-11-14 update: the owner designated `/Users/josema/Projects/mitzone` as the
+canonical development project and authorized integrating recovered beta work
+into its local `main`, preserving both Git histories and existing private dev
+configuration. Use this workspace for subsequent development; do not create
+another active copy/worktree merely to choose a different backend. The separate
+recovered folder is retained for provenance/backup. The original dev project's
+0001–0031 migrations are now applied under separate owner authorization.
+Staging retirement, further remote changes and pushing canonical `main` require
+explicit approval. Historical paths/restrictions below are context; current
+owner instructions govern the authorized scope.
+
 2026-11-05 update: the owner explicitly rejected the running UI as complete and
 authorized local fixes for Android location/discovery plus the navigation
 Home / Explore / Nearby / Groups / Profile. Chat moves to top messaging actions

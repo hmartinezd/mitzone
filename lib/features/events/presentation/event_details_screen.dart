@@ -8,6 +8,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../shared/widgets/mitzone_card.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
+import '../../encounters/presentation/foreground_presence_card.dart';
 import '../data/event_providers.dart';
 import '../domain/event.dart';
 import '../domain/event_check_in.dart';
@@ -149,7 +150,7 @@ class _EventDetailsContent extends ConsumerWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(
-              height: 208,
+              height: 256,
               width: double.infinity,
               child: Uri.tryParse(event.imageKey ?? '')?.scheme == 'https'
                   ? Image.network(
@@ -162,12 +163,17 @@ class _EventDetailsContent extends ConsumerWidget {
                   : _EventPhotoFallback(category: event.category),
             ),
           ),
+          if (event.imageAttribution case final attribution?)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(attribution, style: theme.textTheme.labelSmall),
+            ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             event.category.toUpperCase(),
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w500,
               letterSpacing: 1.2,
             ),
           ),
@@ -175,7 +181,7 @@ class _EventDetailsContent extends ConsumerWidget {
           Text(
             event.title,
             style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -186,32 +192,7 @@ class _EventDetailsContent extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             _DetailLine(icon: Icons.map_outlined, text: location),
           ],
-          const SizedBox(height: AppSpacing.xl),
-          const SizedBox(height: AppSpacing.xl),
-          Text(
-            'About this event',
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(event.description, style: theme.textTheme.bodyLarge),
-          if (event.source.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.lg),
-            Text('Source: ${event.source}', style: theme.textTheme.bodySmall),
-          ],
-          if (event.imageAttribution case final attribution?)
-            Text(attribution, style: theme.textTheme.bodySmall),
-          if (event.sourceUrl case final url?)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: () => _showProviderUrl(context, url),
-                icon: const Icon(Icons.open_in_new),
-                label: const Text('View event source'),
-              ),
-            ),
-          const SizedBox(height: AppSpacing.xl),
+          const SizedBox(height: AppSpacing.lg),
           MitzoneCard(
             child: joinedIds.when(
               loading: () => const Center(
@@ -302,8 +283,7 @@ class _EventDetailsContent extends ConsumerWidget {
                     ],
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      'Join to keep this event in your upcoming activities. '
-                      'Participation does not verify that you were present.',
+                      'Attendance intent only. This does not activate presence.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -314,6 +294,32 @@ class _EventDetailsContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          if (ref.watch(productionModeProvider) &&
+              TickerMode.valuesOf(context).enabled) ...[
+            const ForegroundPresenceCard(emphasized: true),
+            const SizedBox(height: AppSpacing.lg),
+          ],
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: const Text('About this event'),
+            childrenPadding: const EdgeInsets.only(bottom: 16),
+            children: [
+              Text(event.description, style: theme.textTheme.bodyMedium),
+              if (event.source.isNotEmpty)
+                Text(
+                  'Source: ${event.source}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              if (event.imageAttribution case final attribution?)
+                Text(attribution, style: theme.textTheme.bodySmall),
+              if (event.sourceUrl case final url?)
+                TextButton.icon(
+                  onPressed: () => _showProviderUrl(context, url),
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('View event source'),
+                ),
+            ],
+          ),
           if (!ref.watch(productionModeProvider))
             _CheckInSection(
               event: event,
@@ -323,7 +329,7 @@ class _EventDetailsContent extends ConsumerWidget {
               onCheckIn: onCheckIn,
               onRetry: onRetryCheckIns,
             ),
-          if (kDebugMode) ...[
+          if (kDebugMode && !ref.watch(productionModeProvider)) ...[
             const SizedBox(height: AppSpacing.lg),
             _DeveloperPresenceSection(eventId: event.id),
           ],
@@ -371,7 +377,7 @@ class _DeveloperPresenceSection extends ConsumerWidget {
             'DEVELOPER PRESENCE',
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w500,
               letterSpacing: 1.2,
             ),
           ),
@@ -430,7 +436,7 @@ class _CheckInSection extends StatelessWidget {
             'EVENT CHECK-IN',
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w500,
               letterSpacing: 1.2,
             ),
           ),
@@ -465,7 +471,7 @@ class _CheckInSection extends StatelessWidget {
                       Text(
                         '✓ Checked in locally',
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),

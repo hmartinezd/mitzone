@@ -97,7 +97,8 @@ class HomeScreen extends ConsumerWidget {
           ],
           HomeDiscovery(interests: interests),
           const SizedBox(height: AppSpacing.xxl),
-          const ForegroundPresenceCard(),
+          if (TickerMode.valuesOf(context).enabled)
+            const ForegroundPresenceCard(),
           const SizedBox(height: AppSpacing.xxl),
           if (priority != HomeActivityPriority.lowActivity ||
               encounters.hasError ||

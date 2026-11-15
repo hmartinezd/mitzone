@@ -60,7 +60,7 @@ class MitzoneCard extends StatelessWidget {
                       : Theme.of(context).colorScheme.outline,
                   width: selected ? 2 : 1,
                 )
-              : BorderSide.none,
+              : BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: content,
       ),

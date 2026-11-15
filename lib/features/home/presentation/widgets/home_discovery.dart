@@ -23,11 +23,17 @@ class HomeDiscovery extends ConsumerWidget {
     this.filter,
     this.onSeeAll,
     this.seeAllLabel = 'See Explore',
+    this.vertical = false,
+    this.query = '',
+    this.onEventSelected,
   });
   final Set<String> interests;
   final DiscoveryItemType? filter;
   final VoidCallback? onSeeAll;
   final String seeAllLabel;
+  final bool vertical;
+  final String query;
+  final ValueChanged<String>? onEventSelected;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final places = filter == DiscoveryItemType.activity
@@ -57,11 +63,23 @@ class HomeDiscovery extends ConsumerWidget {
               : event.imageAttribution,
         ),
     ];
-    final items = [
+    final allItems = [
       ...eventItems.where((item) => item.imageReference != null),
       ...?places.value,
       ...eventItems.where((item) => item.imageReference == null),
     ];
+    final search = query.trim().toLowerCase();
+    final items = allItems
+        .where(
+          (item) =>
+              search.isEmpty ||
+              [
+                item.title,
+                item.context ?? '',
+                ...item.category,
+              ].join(' ').toLowerCase().contains(search),
+        )
+        .toList();
     final loading = places.isLoading || events.isLoading;
     final error = places.error ?? events.error;
     final locationError = [
@@ -85,18 +103,25 @@ class HomeDiscovery extends ConsumerWidget {
         if (items.isNotEmpty)
           DiscoverySection(
             items: items,
+            vertical: vertical,
             showDemoBadge: !production,
             onSeeAll: onSeeAll ?? () => context.go(AppRoutes.explore),
             seeAllLabel: seeAllLabel,
             actionForItem: (item) =>
                 item.type == DiscoveryItemType.activity &&
                     eventItems.any((event) => event.id == item.id)
-                ? () => context.go(
-                    AppRoutes.eventDetails(
-                      item.id,
-                      origin: EventDetailsOrigin.home,
-                    ),
-                  )
+                ? () {
+                    if (onEventSelected != null) {
+                      onEventSelected!(item.id);
+                    } else {
+                      context.go(
+                        AppRoutes.eventDetails(
+                          item.id,
+                          origin: EventDetailsOrigin.home,
+                        ),
+                      );
+                    }
+                  }
                 : null,
           ),
         if (loading)
@@ -137,9 +162,26 @@ class HomeDiscovery extends ConsumerWidget {
             ),
         ],
         if (!loading && error == null && items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Text('Nothing nearby was found yet.'),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  query.trim().isEmpty
+                      ? 'Nothing nearby was found yet.'
+                      : 'No nearby matches.',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  query.trim().isEmpty
+                      ? 'Try again later or explore another area.'
+                      : 'Try another name or category.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
+            ),
           ),
       ],
     );

@@ -145,12 +145,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(findHomeText('Hi, Hector'), findsOneWidget);
-      expect(
-        findHomeText(
-          'Discover places and activities. Choose when to be discoverable, and connect only when you both agree.',
-        ),
-        findsOneWidget,
-      );
+      expect(findHomeText('Your presence. Your choice.'), findsOneWidget);
     });
 
     testWidgets('renders Unicode name Zoë correctly', (tester) async {
@@ -197,10 +192,10 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        findHomeText('Real moments, voluntary digital connection.'),
+        findHomeText('Real moments, intentional connection.'),
         findsOneWidget,
       );
-      expect(findHomeText('I’m here'), findsOneWidget);
+      expect(findHomeText('Activate presence'), findsOneWidget);
       expect(findHomeText('Happening around you'), findsOneWidget);
       expect(findHomeText('Upcoming activities'), findsNothing);
       expect(findHomeText('Events near you'), findsNothing);
@@ -346,14 +341,12 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        findHomeText('Real moments, voluntary digital connection.'),
+        findHomeText('Real moments, intentional connection.'),
         findsOneWidget,
       );
       expect(
         tester
-            .getTopLeft(
-              findHomeText('Real moments, voluntary digital connection.'),
-            )
+            .getTopLeft(findHomeText('Real moments, intentional connection.'))
             .dy,
         lessThan(tester.getTopLeft(findHomeText('Happening around you')).dy),
       );
@@ -363,6 +356,31 @@ void main() {
           tester.getTopLeft(findHomeText("1 person you've connected with")).dy,
         ),
       );
+    });
+
+    testWidgets('Explore event back returns to Explore instead of Home', (
+      tester,
+    ) async {
+      final event = demoEvents.first;
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(null),
+          eventState: AsyncData([event]),
+          initialLocation: AppRoutes.explore,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(event.title));
+      await tester.tap(find.text(event.title));
+      await tester.pumpAndSettle();
+      expect(find.byType(EventDetailsScreen), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        1,
+      );
+      expect(find.byType(TextField), findsOneWidget);
     });
 
     testWidgets('places remain informational without tap controls', (
@@ -491,7 +509,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(findHomeText('Try again'), findsOneWidget);
-        expect(findHomeText('I’m here'), findsOneWidget);
+        expect(findHomeText('Activate presence'), findsOneWidget);
         expect(
           findHomeText('You’re discoverable here for a limited time.'),
           findsNothing,
@@ -862,8 +880,8 @@ void main() {
           );
           for (final label in [
             'Welcome back',
-            'Real moments, voluntary digital connection.',
-            'I’m here',
+            'Real moments, intentional connection.',
+            'Activate presence',
             'Happening around you',
             'Google Maps',
             'DEMO',

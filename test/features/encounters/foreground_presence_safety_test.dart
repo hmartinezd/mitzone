@@ -101,7 +101,7 @@ Widget _app(
 );
 
 Future<void> _activate(WidgetTester tester) async {
-  await tester.tap(find.text('I’m here'));
+  await tester.tap(find.text('Activate presence'));
   await tester.pumpAndSettle();
   await tester.tap(find.text('Continue'));
   await tester.pumpAndSettle();
@@ -225,7 +225,7 @@ void main() {
       gateway.pendingStop!.complete();
       await tester.pumpAndSettle();
       expect(find.text('Presence stopped.'), findsOneWidget);
-      expect(find.text('I’m here'), findsOneWidget);
+      expect(find.text('Activate presence'), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     },
   );
@@ -249,6 +249,22 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Stop'), findsOneWidget);
       expect(find.text('Resume presence'), findsOneWidget);
+      final stop = find
+          .ancestor(
+            of: find.text('Stop'),
+            matching: find.byWidgetPredicate(
+              (widget) => widget is FilledButton,
+            ),
+          )
+          .first;
+      final button = tester.widget<FilledButton>(stop);
+      final theme = Theme.of(tester.element(stop));
+      expect(
+        button.style!.backgroundColor!.resolve({}),
+        theme.colorScheme.error,
+      );
+      expect(tester.getSize(stop).height, greaterThanOrEqualTo(48));
+      expect(tester.getSize(stop).width, greaterThan(300));
       await tester.pump(const Duration(minutes: 2));
       expect(location.calls, 0);
       await tester.pumpWidget(const SizedBox.shrink());
@@ -271,7 +287,7 @@ void main() {
     );
     container.read(_account.notifier).state = 'account-b';
     await tester.pumpAndSettle();
-    await tester.tap(find.text('I’m here'));
+    await tester.tap(find.text('Activate presence'));
     await tester.pumpAndSettle();
     expect(find.text('Choose to be discoverable'), findsOneWidget);
     expect(gateway.records, 0);

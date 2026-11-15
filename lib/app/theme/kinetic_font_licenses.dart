@@ -8,7 +8,7 @@ void registerKineticFontLicenses() {
   if (_registered) return;
   _registered = true;
   LicenseRegistry.addLicense(() async* {
-    for (final family in ['SpaceGrotesk', 'PlusJakartaSans']) {
+    for (final family in ['SpaceGrotesk', 'PlusJakartaSans', 'EBGaramond']) {
       yield LicenseEntryWithLineBreaks([
         family,
       ], await rootBundle.loadString('assets/fonts/$family-OFL.txt'));

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../../../app/theme/valinor_colors.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../core/identity/current_user_provider.dart';
 import '../../../core/storage/storage_providers.dart';
@@ -16,14 +17,19 @@ import '../domain/foreground_presence_controller.dart';
 
 /// Account-keyed state prevents consent or an in-flight UI from crossing users.
 class ForegroundPresenceCard extends ConsumerWidget {
-  const ForegroundPresenceCard({super.key});
+  const ForegroundPresenceCard({this.emphasized = false, super.key});
+  final bool emphasized;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ref
         .watch(currentUserIdProvider)
         .when(
-          data: (id) => _AccountPresenceCard(key: ValueKey(id), userId: id),
+          data: (id) => _AccountPresenceCard(
+            key: ValueKey(id),
+            userId: id,
+            emphasized: emphasized,
+          ),
           loading: () => const Card(
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -41,7 +47,12 @@ class ForegroundPresenceCard extends ConsumerWidget {
 }
 
 class _AccountPresenceCard extends ConsumerStatefulWidget {
-  const _AccountPresenceCard({super.key, required this.userId});
+  const _AccountPresenceCard({
+    super.key,
+    required this.userId,
+    required this.emphasized,
+  });
+  final bool emphasized;
   final String userId;
   @override
   ConsumerState<_AccountPresenceCard> createState() =>
@@ -217,7 +228,7 @@ class _AccountPresenceCardState extends ConsumerState<_AccountPresenceCard>
             title: const Text('Choose to be discoverable'),
             content: const SingleChildScrollView(
               child: Text(
-                'Discovery location permission is separate from presence. When you choose “I’m here”, your current location is sent to Mitzone to create a short-lived, coarse shared-place record. While this screen is visible and the app is in the foreground, it refreshes about once a minute, for at most 30 minutes. Other people do not see your exact coordinates. This makes you eligible for shared-context encounters. Mitzone does not collect presence in the background. The record expires automatically, or you can use Stop to remove your active presence record.',
+                'Discovery location permission is separate from presence. When you choose “Activate presence”, your current location is sent to Mitzone to create a short-lived, coarse shared-place record. While this screen is visible and the app is in the foreground, it refreshes about once a minute, for at most 30 minutes. Other people do not see your exact coordinates. This makes you eligible for shared-context encounters. Mitzone does not collect presence in the background. The record expires automatically, or you can use Stop to remove your active presence record.',
               ),
             ),
             actions: [
@@ -379,39 +390,107 @@ class _AccountPresenceCardState extends ConsumerState<_AccountPresenceCard>
     super.dispose();
   }
 
+  void _showPrivacy() => showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Presence & privacy'),
+      content: const SingleChildScrollView(
+        child: Text(
+          'Browsing and attendance intent do not activate presence. Activation sends your current location to Mitzone to create a coarse shared-place record. Other people do not see your exact coordinates. Updates occur only while these controls are visible and the app is in the foreground, for at most 30 minutes. Stop removes the active record; existing encounters and connections are retained. Contact requires mutual acceptance, and blocks restrict access.',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final foreground = widget.emphasized
+        ? Colors.white
+        : theme.colorScheme.onSurface;
+    final muted = widget.emphasized
+        ? Colors.white.withValues(alpha: .85)
+        : theme.colorScheme.onSurfaceVariant;
     final text = restoring
         ? 'Loading presence controls…'
         : switch (status) {
             ForegroundPresenceStatus.locating => 'Finding your location…',
             ForegroundPresenceStatus.recording => 'Confirming your presence…',
             ForegroundPresenceStatus.recorded ||
-            ForegroundPresenceStatus.active =>
-              'Your last presence record is valid for a limited time.',
+            ForegroundPresenceStatus.active => 'Presence active',
             ForegroundPresenceStatus.unavailable =>
               'We couldn’t confirm your location.',
             _ =>
               stopConfirmed
                   ? 'Presence stopped.'
-                  : 'Discover people you may have shared a place and time with.',
+                  : 'Off until you choose to activate.',
           };
+    final stopLabel = stopping
+        ? 'Stopping…'
+        : stopFailed
+        ? 'Retry Stop'
+        : 'Stop';
     return Card(
+      color: widget.emphasized ? ValinorColors.blue : null,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(text, style: theme.textTheme.bodyMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Voluntary presence',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: foreground,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Presence privacy',
+                  onPressed: _showPrivacy,
+                  color: foreground,
+                  icon: const Icon(Icons.info_outline, size: 20),
+                ),
+              ],
+            ),
+            Text(
+              text,
+              style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Coarse place · foreground only · up to 30 minutes',
+              style: theme.textTheme.bodySmall?.copyWith(color: muted),
+            ),
             if (expiresAt != null)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   'Record expires at ${TimeOfDay.fromDateTime(expiresAt!.toLocal()).format(context)}.',
-                  style: theme.textTheme.bodySmall,
+                  style: theme.textTheme.bodySmall?.copyWith(color: muted),
                 ),
               ),
+            if (recorded || stopFailed) ...[
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                  backgroundColor: theme.colorScheme.error,
+                  foregroundColor: theme.colorScheme.onError,
+                ),
+                onPressed: busy || restoring ? null : _stop,
+                icon: const Icon(Icons.stop_circle_outlined),
+                label: Text(stopLabel),
+              ),
+            ],
             if (feedback != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -420,58 +499,46 @@ class _AccountPresenceCardState extends ConsumerState<_AccountPresenceCard>
                   child: Text(
                     feedback!,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: stopFailed
+                      color: widget.emphasized
+                          ? foreground
+                          : stopFailed
                           ? theme.colorScheme.error
-                          : theme.colorScheme.onSurfaceVariant,
+                          : muted,
                     ),
                   ),
                 ),
               ),
-            const SizedBox(height: 8),
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                if (failure ==
-                    ForegroundLocationFailure.permissionPermanentlyDenied)
-                  TextButton(
-                    onPressed: busy ? null : () => Geolocator.openAppSettings(),
-                    child: const Text('Settings'),
-                  )
-                else if (failure == ForegroundLocationFailure.servicesDisabled)
-                  TextButton(
-                    onPressed: busy
-                        ? null
-                        : () => Geolocator.openLocationSettings(),
-                    child: const Text('Settings'),
-                  ),
-                if (!recorded || !_refreshAuthorized)
-                  FilledButton(
-                    onPressed: busy || restoring ? null : _activate,
-                    child: Text(
-                      recorded
-                          ? 'Resume presence'
-                          : status == ForegroundPresenceStatus.unavailable
-                          ? 'Try again'
-                          : 'I’m here',
-                    ),
-                  ),
-                // Absence of device-local state cannot prove the server is inactive.
-                // Keep Stop reachable after reinstall, restart or another device.
-                if (recorded || ref.watch(productionModeProvider) || stopFailed)
-                  TextButton(
-                    onPressed: busy || restoring ? null : _stop,
-                    child: Text(
-                      stopping
-                          ? 'Stopping…'
-                          : stopFailed
-                          ? 'Retry Stop'
-                          : 'Stop',
-                    ),
-                  ),
-              ],
-            ),
+            const SizedBox(height: 12),
+            if (failure ==
+                    ForegroundLocationFailure.permissionPermanentlyDenied ||
+                failure == ForegroundLocationFailure.servicesDisabled)
+              TextButton(
+                onPressed: busy
+                    ? null
+                    : () =>
+                          failure == ForegroundLocationFailure.servicesDisabled
+                          ? Geolocator.openLocationSettings()
+                          : Geolocator.openAppSettings(),
+                child: const Text('Settings'),
+              ),
+            if (!recorded || !_refreshAuthorized)
+              FilledButton(
+                onPressed: busy || restoring ? null : _activate,
+                child: Text(
+                  recorded
+                      ? 'Resume presence'
+                      : status == ForegroundPresenceStatus.unavailable
+                      ? 'Try again'
+                      : 'Activate presence',
+                ),
+              ),
+            // Missing local expiry does not prove the server has no record.
+            if (!recorded && !stopFailed && ref.watch(productionModeProvider))
+              TextButton(
+                onPressed: busy || restoring ? null : _stop,
+                style: TextButton.styleFrom(foregroundColor: foreground),
+                child: Text(stopLabel),
+              ),
           ],
         ),
       ),

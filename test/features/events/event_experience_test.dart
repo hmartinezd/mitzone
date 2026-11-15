@@ -388,6 +388,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tech Mixer 2026'), findsOneWidget);
     expect(find.text('The Innovation Hub'), findsOneWidget);
+    await revealAndTap(tester, 'About this event');
+    await tester.pumpAndSettle();
     expect(find.textContaining('Meet curious builders'), findsOneWidget);
     expect(find.text("We couldn't load your participation."), findsOneWidget);
 
@@ -542,7 +544,7 @@ void main() {
       await selectTab('Home');
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(
-        find.text('Real moments, voluntary digital connection.'),
+        find.text('Real moments, intentional connection.'),
         findsOneWidget,
       );
       expect(find.text('Upcoming activities'), findsNothing);
@@ -557,7 +559,7 @@ void main() {
       await selectTab('Home');
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(
-        find.text('Real moments, voluntary digital connection.'),
+        find.text('Real moments, intentional connection.'),
         findsOneWidget,
       );
       expectNoPresence();

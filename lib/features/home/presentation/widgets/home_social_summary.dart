@@ -90,7 +90,8 @@ class HomeSocialSummary extends StatelessWidget {
   String _displayName(String userId) =>
       users
           .where((user) => user.id == userId)
-          .map((user) => user.displayName)
+          .map((user) => user.displayName.trim())
+          .where((name) => name.isNotEmpty)
           .firstOrNull ??
       'Someone';
 }

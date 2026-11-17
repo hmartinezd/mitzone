@@ -228,9 +228,7 @@ void main() {
       }
       expect(
         MediaQuery.textScalerOf(
-          tester.element(
-            find.text('Real moments, voluntary digital connection.'),
-          ),
+          tester.element(find.text('Real moments, intentional connection.')),
         ).scale(10),
         10 * scale,
       );

@@ -1,55 +1,57 @@
 import 'package:flutter/material.dart';
 
-/// A compact reminder of the product's consent model. Discovery and explicit
-/// presence controls should remain the useful focus of a returning user's Home.
+/// Editorial introduction. No people, attendance or location state is invented.
 class SharedMomentsHero extends StatelessWidget {
   const SharedMomentsHero({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Column(
       mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Real moments, voluntary digital connection.',
-          style: theme.textTheme.titleLarge,
+          'Real moments, intentional connection.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineLarge,
         ),
         const SizedBox(height: 8),
         Text(
-          'Explore nearby. Choose when to be discoverable. Connect only when you both agree.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          'Your presence. Your choice.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
-    );
-  }
+    ),
+  );
 }
 
 class QuietMomentsCard extends StatelessWidget {
   const QuietMomentsCard({required this.onExplore, super.key});
   final VoidCallback onExplore;
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'No shared moments yet',
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      const SizedBox(height: 8),
-      Text(
-        'Discover an activity that interests you. Presence is always a separate choice.',
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
-      const SizedBox(height: 8),
-      TextButton.icon(
-        onPressed: onExplore,
-        icon: const Icon(Icons.explore_outlined),
-        label: const Text('Browse nearby activities'),
-      ),
-    ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 20),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'No shared moments yet',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Start with a place or activity you love.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: onExplore,
+          icon: const Icon(Icons.explore_outlined),
+          label: const Text('Browse nearby activities'),
+        ),
+      ],
+    ),
   );
 }

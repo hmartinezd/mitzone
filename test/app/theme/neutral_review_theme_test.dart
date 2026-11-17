@@ -9,26 +9,27 @@ double contrast(Color a, Color b) {
 }
 
 void main() {
-  test(
-    'neutral review theme keeps primary reading/action pairs accessible',
-    () {
-      final theme = AppTheme.lightTheme;
-      final scheme = theme.colorScheme;
-      for (final pair in [
-        [scheme.onSurface, scheme.surface],
-        [scheme.onSurfaceVariant, scheme.surface],
-        [scheme.onPrimary, scheme.primary],
-        [scheme.onPrimaryContainer, scheme.primaryContainer],
-        [scheme.onSecondaryContainer, scheme.secondaryContainer],
-      ]) {
-        expect(contrast(pair[0], pair[1]), greaterThanOrEqualTo(4.5));
-      }
-      expect(
-        theme.filledButtonTheme.style!.backgroundColor!.resolve({}),
-        scheme.primary,
-      );
-    },
-  );
+  test('current theme keeps primary reading/action pairs accessible', () {
+    final theme = AppTheme.lightTheme;
+    final scheme = theme.colorScheme;
+    for (final pair in [
+      [scheme.onSurface, scheme.surface],
+      [scheme.onSurfaceVariant, scheme.surface],
+      [scheme.onPrimary, scheme.primary],
+      [scheme.onPrimaryContainer, scheme.primaryContainer],
+      [scheme.onSecondaryContainer, scheme.secondaryContainer],
+    ]) {
+      expect(contrast(pair[0], pair[1]), greaterThanOrEqualTo(4.5));
+    }
+    final buttonStyle = theme.filledButtonTheme.style!;
+    expect(
+      contrast(
+        buttonStyle.foregroundColor!.resolve({})!,
+        buttonStyle.backgroundColor!.resolve({})!,
+      ),
+      greaterThanOrEqualTo(4.5),
+    );
+  });
   testWidgets('temporary branding renders a title, never the retired logo', (
     tester,
   ) async {

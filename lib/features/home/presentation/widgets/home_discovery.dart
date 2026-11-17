@@ -26,6 +26,9 @@ class HomeDiscovery extends ConsumerWidget {
     this.seeAllLabel = 'See Explore',
     this.searchQuery = '',
     this.showSeeAll = true,
+    this.vertical = false,
+    this.query = '',
+    this.onEventSelected,
   });
   final Set<String> interests;
   final DiscoveryItemType? filter;
@@ -33,6 +36,9 @@ class HomeDiscovery extends ConsumerWidget {
   final String seeAllLabel;
   final String searchQuery;
   final bool showSeeAll;
+  final bool vertical;
+  final String query;
+  final ValueChanged<String>? onEventSelected;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final places = filter == DiscoveryItemType.activity
@@ -62,19 +68,23 @@ class HomeDiscovery extends ConsumerWidget {
               : event.imageAttribution,
         ),
     ];
-    final availableItems = [
+    final allItems = [
       ...eventItems.where((item) => item.imageReference != null),
       ...?places.value,
       ...eventItems.where((item) => item.imageReference == null),
     ];
-    final query = searchQuery.trim().toLowerCase();
-    final items = availableItems
+    final search = (query.isNotEmpty ? query : searchQuery)
+        .trim()
+        .toLowerCase();
+    final items = allItems
         .where(
           (item) =>
-              query.isEmpty ||
-              '${item.title} ${item.context ?? ''} ${item.category.join(' ')}'
-                  .toLowerCase()
-                  .contains(query),
+              search.isEmpty ||
+              [
+                item.title,
+                item.context ?? '',
+                ...item.category,
+              ].join(' ').toLowerCase().contains(search),
         )
         .toList();
     final loading = places.isLoading || events.isLoading;
@@ -100,6 +110,7 @@ class HomeDiscovery extends ConsumerWidget {
         if (items.isNotEmpty)
           DiscoverySection(
             items: items,
+            vertical: vertical,
             showDemoBadge: !production,
             title: filter == DiscoveryItemType.place
                 ? 'Places nearby'
@@ -110,15 +121,18 @@ class HomeDiscovery extends ConsumerWidget {
             actionForItem: (item) =>
                 item.type == DiscoveryItemType.activity &&
                     eventItems.any((event) => event.id == item.id)
-                ? () => context.push(
-                    AppRoutes.eventDetails(
-                      item.id,
-                      origin:
-                          GoRouterState.of(context).uri.path == AppRoutes.home
-                          ? EventDetailsOrigin.home
-                          : EventDetailsOrigin.direct,
-                    ),
-                  )
+                ? () => onEventSelected != null
+                      ? onEventSelected!(item.id)
+                      : context.push(
+                          AppRoutes.eventDetails(
+                            item.id,
+                            origin:
+                                GoRouterState.of(context).uri.path ==
+                                    AppRoutes.home
+                                ? EventDetailsOrigin.home
+                                : EventDetailsOrigin.direct,
+                          ),
+                        )
                 : item.type == DiscoveryItemType.place
                 ? () => _showPlace(context, item)
                 : null,
@@ -163,10 +177,23 @@ class HomeDiscovery extends ConsumerWidget {
         if (!loading && error == null && items.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Text(
-              query.isEmpty
-                  ? 'Nothing nearby was found yet.'
-                  : 'No nearby places match your search.',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  search.isEmpty
+                      ? 'Nothing nearby was found yet.'
+                      : 'No nearby matches.',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  search.isEmpty
+                      ? 'Try again later or explore another area.'
+                      : 'Try another name or category.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
             ),
           ),
       ],

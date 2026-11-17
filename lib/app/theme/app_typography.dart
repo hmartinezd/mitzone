@@ -4,6 +4,63 @@ import 'app_colors.dart';
 import 'kinetic_colors.dart';
 
 class AppTypography {
+  static TextTheme get valinorTextTheme {
+    final base = textTheme.apply(
+      fontFamily: 'PlusJakartaSans',
+      bodyColor: const Color(0xff1a1c1a),
+      displayColor: const Color(0xff1a1c1a),
+    );
+    TextStyle heading(double size, double line, FontWeight weight) => TextStyle(
+      fontFamily: 'EBGaramond',
+      fontSize: size,
+      height: line / size,
+      letterSpacing: -size * .01,
+      fontWeight: weight,
+      color: const Color(0xff1a1c1a),
+    );
+    return base.copyWith(
+      displayLarge: heading(48, 56, FontWeight.w400),
+      displayMedium: heading(40, 48, FontWeight.w400),
+      displaySmall: heading(36, 44, FontWeight.w400),
+      headlineLarge: heading(36, 44, FontWeight.w400),
+      headlineMedium: heading(30, 38, FontWeight.w500),
+      headlineSmall: heading(28, 36, FontWeight.w400),
+      titleLarge: heading(22, 30, FontWeight.w500),
+      titleMedium: heading(18, 26, FontWeight.w500),
+      bodyLarge: base.bodyLarge?.copyWith(
+        fontSize: 16,
+        height: 1.5,
+        letterSpacing: 0,
+      ),
+      bodyMedium: base.bodyMedium?.copyWith(
+        fontSize: 15,
+        height: 1.6,
+        letterSpacing: 0,
+      ),
+      bodySmall: base.bodySmall?.copyWith(
+        fontSize: 13,
+        height: 20 / 13,
+        letterSpacing: 0,
+        color: const Color(0xff466274),
+      ),
+      labelLarge: base.labelLarge?.copyWith(
+        fontSize: 14,
+        height: 1.4,
+        letterSpacing: 0,
+      ),
+      labelMedium: base.labelMedium?.copyWith(
+        fontSize: 12,
+        height: 1.4,
+        letterSpacing: .2,
+      ),
+      labelSmall: base.labelSmall?.copyWith(
+        fontSize: 11,
+        height: 1.4,
+        letterSpacing: .2,
+      ),
+    );
+  }
+
   static TextTheme get kineticTextTheme {
     final base = textTheme.apply(
       fontFamily: 'PlusJakartaSans',

@@ -7,6 +7,7 @@ import '../../../app/theme/app_spacing.dart';
 import '../../../core/auth/auth_providers.dart';
 import '../../../shared/widgets/mitzone_card.dart';
 import '../../../shared/widgets/mitzone_page_body.dart';
+import '../../encounters/presentation/foreground_presence_card.dart';
 import '../data/event_providers.dart';
 import '../domain/event.dart';
 import '../domain/event_check_in.dart';
@@ -152,7 +153,7 @@ class _EventDetailsContent extends ConsumerWidget {
             borderRadius: BorderRadius.circular(12),
             child: SizedBox(
               height:
-                  160 *
+                  256 *
                   MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0),
               width: double.infinity,
               child: Uri.tryParse(event.imageKey ?? '')?.scheme == 'https'
@@ -166,12 +167,17 @@ class _EventDetailsContent extends ConsumerWidget {
                   : _EventPhotoFallback(category: event.category),
             ),
           ),
+          if (event.imageAttribution case final attribution?)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(attribution, style: theme.textTheme.labelSmall),
+            ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             event.category.toUpperCase(),
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w500,
               letterSpacing: 1.2,
             ),
           ),
@@ -179,7 +185,7 @@ class _EventDetailsContent extends ConsumerWidget {
           Text(
             event.title,
             style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -293,6 +299,11 @@ class _EventDetailsContent extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
+          if (ref.watch(productionModeProvider) &&
+              TickerMode.valuesOf(context).enabled) ...[
+            const ForegroundPresenceCard(emphasized: true),
+            const SizedBox(height: AppSpacing.lg),
+          ],
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
             childrenPadding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -309,12 +320,6 @@ class _EventDetailsContent extends ConsumerWidget {
           ),
           if (event.source.isNotEmpty)
             Text('Source: ${event.source}', style: theme.textTheme.bodySmall),
-          if (event.imageAttribution case final attribution?)
-            if (attribution.trim().toLowerCase() !=
-                    event.source.trim().toLowerCase() &&
-                attribution.trim().toLowerCase() !=
-                    'source: ${event.source}'.toLowerCase())
-              Text(attribution, style: theme.textTheme.bodySmall),
           if (event.sourceUrl case final url?)
             Align(
               alignment: Alignment.centerLeft,
@@ -385,7 +390,7 @@ class _CheckInSection extends StatelessWidget {
             'EVENT CHECK-IN',
             style: theme.textTheme.labelLarge?.copyWith(
               color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w500,
               letterSpacing: 1.2,
             ),
           ),
@@ -420,7 +425,7 @@ class _CheckInSection extends StatelessWidget {
                       Text(
                         '✓ Checked in locally',
                         style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),

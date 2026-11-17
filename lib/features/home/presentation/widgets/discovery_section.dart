@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/theme/app_spacing.dart';
 import '../../../discovery/domain/discovery_item.dart';
 
 class DiscoverySection extends StatelessWidget {
@@ -10,6 +9,7 @@ class DiscoverySection extends StatelessWidget {
     this.actionForItem,
     this.showDemoBadge = false,
     this.seeAllLabel = 'See Explore',
+    this.vertical = false,
     this.title = 'Happening around you',
     this.showSeeAll = true,
     super.key,
@@ -19,42 +19,44 @@ class DiscoverySection extends StatelessWidget {
   final VoidCallback? Function(DiscoveryItem)? actionForItem;
   final bool showDemoBadge;
   final String seeAllLabel;
+  final bool vertical;
   final String title;
   final bool showSeeAll;
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.headlineSmall),
+          if (showSeeAll)
+            TextButton(onPressed: onSeeAll, child: Text(seeAllLabel)),
+        ],
+      ),
+      const SizedBox(height: 12),
       LayoutBuilder(
         builder: (context, constraints) {
-          final title = Text(
-            this.title,
-            style: Theme.of(context).textTheme.titleLarge,
-          );
-          final action = TextButton(
-            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-            onPressed: onSeeAll,
-            child: Text(seeAllLabel),
-          );
-          if (constraints.maxWidth / MediaQuery.textScalerOf(context).scale(1) <
-              300) {
+          if (vertical) {
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [title, if (showSeeAll) action],
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var i = 0; i < items.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 20),
+                  _DiscoveryCard(
+                    item: items[i],
+                    width: constraints.maxWidth,
+                    onTap: actionForItem?.call(items[i]),
+                    showDemoBadge: showDemoBadge,
+                  ),
+                ],
+              ],
             );
           }
-          return Row(
-            children: [
-              Expanded(child: title),
-              if (showSeeAll) action,
-            ],
-          );
-        },
-      ),
-      const SizedBox(height: AppSpacing.sm),
-      LayoutBuilder(
-        builder: (context, constraints) {
-          final width = (constraints.maxWidth * .84).clamp(220.0, 320.0);
+          final width = (constraints.maxWidth * .92).clamp(200.0, 360.0);
           return SingleChildScrollView(
             key: const ValueKey('home-discovery-carousel'),
             scrollDirection: Axis.horizontal,
@@ -62,7 +64,7 @@ class DiscoverySection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (var i = 0; i < items.length; i++) ...[
-                  if (i > 0) const SizedBox(width: AppSpacing.md),
+                  if (i > 0) const SizedBox(width: 16),
                   _DiscoveryCard(
                     item: items[i],
                     width: width,
@@ -90,88 +92,83 @@ class _DiscoveryCard extends StatelessWidget {
   final double width;
   final VoidCallback? onTap;
   final bool showDemoBadge;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final image = Uri.tryParse(item.imageReference ?? '');
+    final hasPhoto = image?.scheme == 'https' && image!.host.isNotEmpty;
+    final providerLabel = switch (item.source) {
+      'google-places' => 'Google Maps',
+      'ticketmaster' => 'Ticketmaster',
+      _ => null,
+    };
+    final attribution = item.imageAttribution?.trim();
+    final metadata = [
+      if (item.context?.isNotEmpty == true) item.context!,
+      if (item.distanceKm != null)
+        '${item.distanceKm!.toStringAsFixed(1)} km away',
+    ];
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (item.imageReference != null)
-          SizedBox(
-            height: 128,
-            child: item.imageReference == null
-                ? const _MissingPhoto()
-                : Image.network(
-                    item.imageReference!,
-                    fit: BoxFit.cover,
-                    cacheWidth: (width * MediaQuery.devicePixelRatioOf(context))
-                        .round(),
-                    excludeFromSemantics: true,
-                    loadingBuilder: (_, child, progress) => progress == null
-                        ? child
-                        : const _MissingPhoto(loading: true),
-                    errorBuilder: (_, _, _) => const _MissingPhoto(),
-                  ),
-          ),
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: hasPhoto
+              ? Image.network(
+                  item.imageReference!,
+                  fit: BoxFit.cover,
+                  excludeFromSemantics: true,
+                  loadingBuilder: (_, child, progress) => progress == null
+                      ? child
+                      : const _MissingPhoto(loading: true),
+                  errorBuilder: (_, _, _) => const _MissingPhoto(),
+                )
+              : const _MissingPhoto(),
+        ),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                item.category.isEmpty
-                    ? item.type.name
-                    : item.category.first.replaceAll('_', ' '),
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w700,
+              Text(item.title, style: theme.textTheme.headlineSmall),
+              if (metadata.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(metadata.join(' · '), style: theme.textTheme.bodySmall),
+              ],
+              if (item.subtitle?.isNotEmpty == true) ...[
+                const SizedBox(height: 6),
+                Text(
+                  item.subtitle!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.tertiary,
+                  ),
                 ),
+              ],
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (providerLabel != null)
+                    Text(providerLabel, style: theme.textTheme.labelSmall),
+                  if (attribution != null &&
+                      attribution.isNotEmpty &&
+                      attribution.toLowerCase() != providerLabel?.toLowerCase())
+                    Text(attribution, style: theme.textTheme.labelSmall),
+                  if (showDemoBadge) const Text('DEMO'),
+                  if (onTap != null)
+                    Text(
+                      item.type == DiscoveryItemType.place
+                          ? 'View place'
+                          : 'View event details',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(height: 6),
-              Text(item.title, style: theme.textTheme.titleMedium),
-              if (item.context != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  item.context!,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-              if (item.subtitle != null) ...[
-                const SizedBox(height: 4),
-                Text(item.subtitle!, style: theme.textTheme.bodySmall),
-              ],
-              if (item.distanceKm != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  '${item.distanceKm!.toStringAsFixed(1)} km away',
-                  style: theme.textTheme.labelSmall,
-                ),
-              ],
-              if (item.source == 'google-places') ...[
-                const SizedBox(height: 8),
-                Text('Google Maps', style: theme.textTheme.labelSmall),
-              ],
-              if (item.imageAttribution != null) ...[
-                const SizedBox(height: 4),
-                Text(item.imageAttribution!, style: theme.textTheme.labelSmall),
-              ],
-              if (showDemoBadge) ...[
-                const SizedBox(height: 4),
-                const Text('DEMO'),
-              ],
-              if (onTap != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  item.type == DiscoveryItemType.place
-                      ? 'View place'
-                      : 'View event details',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-              ],
             ],
           ),
         ),
@@ -185,8 +182,7 @@ class _DiscoveryCard extends StatelessWidget {
             ? content
             : Semantics(
                 button: true,
-                label:
-                    'View ${item.type == DiscoveryItemType.place ? 'place' : 'event'}: ${item.title}',
+                label: 'View event: ${item.title}',
                 child: InkWell(onTap: onTap, child: content),
               ),
       ),
@@ -202,16 +198,18 @@ class _MissingPhoto extends StatelessWidget {
     color: Theme.of(context).colorScheme.surfaceContainerLow,
     child: Center(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.landscape_outlined,
-              size: 32,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 8),
+            if (MediaQuery.textScalerOf(context).scale(1) < 1.5) ...[
+              Icon(
+                Icons.landscape_outlined,
+                size: 32,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+              const SizedBox(height: 8),
+            ],
             Text(
               loading ? 'Loading photo…' : 'Photo unavailable',
               textAlign: TextAlign.center,

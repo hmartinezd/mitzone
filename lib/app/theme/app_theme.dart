@@ -5,51 +5,51 @@ import 'app_typography.dart';
 import 'app_radii.dart';
 import 'app_spacing.dart';
 import 'mitzone_theme_colors.dart';
-import 'kinetic_colors.dart';
+import 'valinor_colors.dart';
 
 class AppTheme {
-  /// Neutral canvas with a restrained blue accent, provisional for review.
+  /// Valinor Minimal: saved Stitch palette, serif headings and quiet surfaces.
   /// The dark theme remains available for legacy review and regression tests.
   static ThemeData get lightTheme {
     const scheme = ColorScheme.light(
-      primary: KineticColors.primary,
+      primary: ValinorColors.goldInk,
       onPrimary: Colors.white,
-      primaryContainer: KineticColors.cyan,
-      onPrimaryContainer: Color(0xff19365e),
-      secondary: KineticColors.teal,
+      primaryContainer: ValinorColors.gold,
+      onPrimaryContainer: ValinorColors.onGold,
+      secondary: ValinorColors.blue,
       onSecondary: Colors.white,
-      secondaryContainer: KineticColors.mint,
-      onSecondaryContainer: Color(0xff243e61),
+      secondaryContainer: Color(0xffe5eef4),
+      onSecondaryContainer: Color(0xff001e2d),
       tertiary: Color(0xff795900),
       onTertiary: Colors.white,
-      tertiaryContainer: KineticColors.amber,
+      tertiaryContainer: Color(0xffcce5ff),
       onTertiaryContainer: Color(0xff5b4300),
-      surface: KineticColors.canvas,
-      onSurface: KineticColors.ink,
-      surfaceContainer: KineticColors.surface,
-      surfaceContainerLow: KineticColors.surfaceLow,
-      onSurfaceVariant: KineticColors.inkMuted,
-      outline: KineticColors.outline,
-      outlineVariant: KineticColors.outlineVariant,
+      surface: ValinorColors.canvas,
+      onSurface: ValinorColors.ink,
+      surfaceContainer: Colors.white,
+      surfaceContainerLow: ValinorColors.surfaceLow,
+      onSurfaceVariant: ValinorColors.blueGray,
+      outline: ValinorColors.outline,
+      outlineVariant: ValinorColors.border,
       error: Color(0xffba1a1a),
       onError: Colors.white,
       errorContainer: Color(0xffffdad6),
       onErrorContainer: Color(0xff93000a),
     );
-    final text = AppTypography.kineticTextTheme;
+    final text = AppTypography.valinorTextTheme;
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: scheme,
-      scaffoldBackgroundColor: KineticColors.canvas,
+      scaffoldBackgroundColor: ValinorColors.canvas,
       fontFamily: 'PlusJakartaSans',
       textTheme: text,
       appBarTheme: AppBarTheme(
-        backgroundColor: KineticColors.canvas,
+        backgroundColor: ValinorColors.canvas,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: text.titleLarge,
-        iconTheme: const IconThemeData(color: KineticColors.inkMuted),
+        iconTheme: const IconThemeData(color: ValinorColors.blueGray),
       ),
       cardTheme: CardThemeData(
         color: Colors.white,
@@ -57,30 +57,30 @@ class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: KineticColors.outlineVariant),
+          side: const BorderSide(color: ValinorColors.border),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: KineticColors.primary,
-          foregroundColor: Colors.white,
+          backgroundColor: ValinorColors.gold,
+          foregroundColor: ValinorColors.onGold,
           minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          shape: const StadiumBorder(),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           textStyle: text.labelLarge?.copyWith(fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: KineticColors.teal,
+          foregroundColor: ValinorColors.blue,
           minimumSize: const Size(48, 48),
-          shape: const StadiumBorder(),
-          side: const BorderSide(color: KineticColors.teal, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          side: const BorderSide(color: ValinorColors.border, width: 1),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: KineticColors.primary,
+          foregroundColor: ValinorColors.goldInk,
           minimumSize: const Size(48, 48),
         ),
       ),
@@ -90,34 +90,34 @@ class AppTheme {
         contentPadding: const EdgeInsets.all(16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: KineticColors.outlineVariant),
+          borderSide: const BorderSide(color: ValinorColors.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: KineticColors.outlineVariant),
+          borderSide: const BorderSide(color: ValinorColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: KineticColors.primary, width: 2),
+          borderSide: const BorderSide(color: ValinorColors.goldInk, width: 2),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: KineticColors.mint,
+        indicatorColor: Color(0xffe5eef4),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => text.labelSmall?.copyWith(
             color: states.contains(WidgetState.selected)
-                ? KineticColors.teal
-                : KineticColors.inkMuted,
+                ? ValinorColors.blue
+                : ValinorColors.blueGray,
             fontWeight: FontWeight.w600,
           ),
         ),
         iconTheme: WidgetStatePropertyAll(
-          const IconThemeData(color: KineticColors.inkMuted),
+          const IconThemeData(color: ValinorColors.blueGray),
         ),
       ),
       dividerTheme: const DividerThemeData(
-        color: KineticColors.outlineVariant,
+        color: ValinorColors.border,
         thickness: .5,
       ),
       snackBarTheme: const SnackBarThemeData(
@@ -127,10 +127,10 @@ class AppTheme {
       ),
       extensions: const [
         MitzoneThemeColors(
-          brandCyan: KineticColors.cyan,
-          brandBlue: KineticColors.teal,
-          brandPurple: KineticColors.amber,
-          surfaceSubtle: KineticColors.surfaceLow,
+          brandCyan: ValinorColors.gold,
+          brandBlue: ValinorColors.blue,
+          brandPurple: Color(0xffcce5ff),
+          surfaceSubtle: ValinorColors.surfaceLow,
           surfaceStrong: Colors.white,
           success: Color(0xff216753),
           successContainer: Color(0xffabf1d6),
@@ -140,11 +140,11 @@ class AppTheme {
           warningContainer: Color(0xffffdf9e),
           onWarning: Colors.white,
           onWarningContainer: Color(0xff261a00),
-          info: KineticColors.primary,
-          infoContainer: KineticColors.mint,
+          info: ValinorColors.goldInk,
+          infoContainer: Color(0xffe5eef4),
           onInfo: Colors.white,
-          onInfoContainer: Color(0xff19365e),
-          focusIndicator: KineticColors.primary,
+          onInfoContainer: Color(0xff00201e),
+          focusIndicator: ValinorColors.goldInk,
         ),
       ],
     );

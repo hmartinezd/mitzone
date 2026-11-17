@@ -550,6 +550,10 @@ void main() {
       await selectTab('Home');
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.text('Presence off'), findsOneWidget);
+      expect(
+        find.text('Real moments, intentional connection.'),
+        findsOneWidget,
+      );
       expect(find.text('Upcoming activities'), findsNothing);
       expectNoPresence();
       await selectTab('Explore');
@@ -562,6 +566,10 @@ void main() {
       await selectTab('Home');
       expect(find.byType(HomeScreen), findsOneWidget);
       expect(find.text('Presence off'), findsOneWidget);
+      expect(
+        find.text('Real moments, intentional connection.'),
+        findsOneWidget,
+      );
       expectNoPresence();
       await selectTab('Explore');
       expect(find.text('Plan to attend'), findsOneWidget);

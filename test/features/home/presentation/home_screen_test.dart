@@ -62,10 +62,20 @@ void main() {
     double textScale = 1,
     bool darkTheme = false,
     bool production = false,
+    List<UserProfile>? participants,
+    List<Event>? catalogEvents,
   }) {
     return ProviderScope(
       retry: (_, _) => null,
       overrides: [
+        if (participants != null)
+          homeParticipantProfilesProvider.overrideWithValue(
+            AsyncData(participants),
+          ),
+        if (catalogEvents != null)
+          eventCatalogProvider.overrideWithValue(
+            RuntimeEventCatalog()..replace(catalogEvents),
+          ),
         appConfigProvider.overrideWithValue(
           AppConfig.validated(env: AppEnvironment.local),
         ),
@@ -135,6 +145,214 @@ void main() {
     );
   }
 
+  group('Adaptive Home', () {
+    testWidgets('request and presence controls precede discovery', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(null),
+          requestState: AsyncData([
+            ConnectionRequest(
+              id: 'r',
+              senderUserId: 'peer',
+              recipientUserId: 'me',
+              encounterId: 'e',
+              createdAt: DateTime.utc(2026),
+              status: ConnectionRequestStatus.pending,
+            ),
+          ]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(findHomeText('Activate presence')).dy,
+        lessThan(tester.getTopLeft(findHomeText('Review request')).dy),
+      );
+      expect(
+        tester.getTopLeft(findHomeText('Review request')).dy,
+        lessThan(tester.getTopLeft(findHomeText('Happening around you')).dy),
+      );
+      expect(findHomeText('No shared moments yet'), findsNothing);
+    });
+
+    testWidgets(
+      'returning conversation precedes discovery without unread claims',
+      (tester) async {
+        await tester.pumpWidget(
+          createHomeScreen(
+            profileState: const AsyncData(null),
+            conversationState: AsyncData([
+              Conversation(
+                id: 'conversation',
+                connectionId: 'c',
+                userAId: MockUsers.joseId,
+                userBId: MockUsers.sofiaId,
+                createdAt: DateTime.utc(2026),
+              ),
+            ]),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.getTopLeft(findHomeText('Recent conversations')).dy,
+          lessThan(tester.getTopLeft(findHomeText('Happening around you')).dy),
+        );
+        expect(find.textContaining('unread'), findsNothing);
+      },
+    );
+
+    testWidgets('authorized participant names render in configured Home', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(null),
+          production: true,
+          participants: const [
+            UserProfile(id: 'peer', displayName: 'Authorized peer'),
+          ],
+          conversationState: AsyncData([
+            Conversation(
+              id: 'conversation',
+              connectionId: 'c',
+              userAId: 'real-user',
+              userBId: 'peer',
+              createdAt: DateTime.utc(2026),
+            ),
+          ]),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(findHomeText('Authorized peer'), findsOneWidget);
+      expect(findHomeText('Someone'), findsNothing);
+    });
+
+    testWidgets(
+      'joined future activity opens existing detail; missing metadata stays hidden',
+      (tester) async {
+        final event = Event(
+          id: 'future',
+          title: 'Future activity',
+          venue: 'Real venue',
+          timeLabel: 'Provider time',
+          category: 'Music',
+          description: '',
+          startsAt: DateTime.now().add(const Duration(days: 2)),
+        );
+        await tester.pumpWidget(
+          createHomeScreen(
+            profileState: const AsyncData(null),
+            joinedEventIdsState: const AsyncData({'future', 'missing'}),
+            eventState: AsyncData([event]),
+            catalogEvents: [event],
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(findHomeText('Your upcoming activities'), findsOneWidget);
+        expect(findHomeText('Real venue · Provider time'), findsOneWidget);
+        await tester.scrollUntilVisible(
+          findHomeText('Future activity').first,
+          150,
+          scrollable: findHomeScrollable(),
+        );
+        await tester.tap(findHomeText('Future activity').first);
+        await tester.pumpAndSettle();
+        expect(find.byType(EventDetailsScreen), findsOneWidget);
+        expect(find.text('Future activity'), findsWidgets);
+      },
+    );
+
+    testWidgets('unknown joined activity does not invent a section', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(null),
+          joinedEventIdsState: const AsyncData({'missing'}),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(findHomeText('Your upcoming activities'), findsNothing);
+    });
+
+    testWidgets(
+      'pull gesture reloads discovery through its existing repository',
+      (tester) async {
+        final repository = _DiscoveryRepository();
+        await tester.pumpWidget(
+          createHomeScreen(
+            profileState: const AsyncData(null),
+            discoveryRepository: repository,
+          ),
+        );
+        repository.pending.complete([discoveryItem]);
+        await tester.pumpAndSettle();
+        expect(repository.calls, 1);
+        repository.pending = Completer<List<DiscoveryItem>>();
+        await tester.fling(findHomeScrollable(), const Offset(0, 500), 1000);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(repository.calls, 2);
+        repository.pending.complete([discoveryItem]);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets('pull refresh callback settles while providers report errors', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(null),
+          discoveryState: AsyncError(
+            StateError('unavailable'),
+            StackTrace.empty,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester
+          .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+          .onRefresh();
+      await tester.pumpAndSettle();
+      expect(find.text('Places unavailable'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  test(
+    'upcoming joined activities exclude past, undated and incomplete metadata and sort',
+    () {
+      final now = DateTime.utc(2026, 11, 16);
+      Event event(String id, DateTime? date, {String venue = 'Venue'}) => Event(
+        id: id,
+        title: id,
+        venue: venue,
+        timeLabel: 'Time',
+        category: '',
+        description: '',
+        startsAt: date,
+      );
+      final events = [
+        event('later', now.add(const Duration(days: 3))),
+        event('first', now.add(const Duration(days: 1))),
+        event('undated', null),
+        event('past', now.subtract(const Duration(days: 1))),
+        event('incomplete', now.add(const Duration(days: 1)), venue: ''),
+      ];
+      expect(
+        upcomingJoinedActivities(
+          events.map((e) => e.id).toSet(),
+          events,
+          now,
+        ).map((e) => e.id),
+        ['first', 'later'],
+      );
+    },
+  );
+
   group('HomeScreen - Personalized Greeting', () {
     testWidgets('renders Hi, Hector for profile with name Hector', (
       tester,
@@ -152,6 +370,7 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(findHomeText('Your presence. Your choice.'), findsOneWidget);
     });
 
     testWidgets(
@@ -215,8 +434,11 @@ void main() {
         createHomeScreen(profileState: const AsyncValue.data(null)),
       );
       await tester.pumpAndSettle();
-      expect(findHomeText('Presence off'), findsOneWidget);
-      expect(findHomeText('I’m here'), findsOneWidget);
+      expect(
+        findHomeText('Real moments, intentional connection.'),
+        findsOneWidget,
+      );
+      expect(findHomeText('Activate presence'), findsOneWidget);
       expect(findHomeText('Happening around you'), findsOneWidget);
       expect(findHomeText('Upcoming activities'), findsNothing);
       expect(findHomeText('Events near you'), findsNothing);
@@ -363,7 +585,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(findHomeText('Presence off'), findsOneWidget);
       expect(
-        tester.getTopLeft(findHomeText('Presence off')).dy,
+        findHomeText('Real moments, intentional connection.'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .getTopLeft(findHomeText('Real moments, intentional connection.'))
+            .dy,
         lessThan(tester.getTopLeft(findHomeText('Happening around you')).dy),
       );
       expect(
@@ -372,6 +600,31 @@ void main() {
           tester.getTopLeft(findHomeText("1 person you've connected with")).dy,
         ),
       );
+    });
+
+    testWidgets('Explore event back returns to Explore instead of Home', (
+      tester,
+    ) async {
+      final event = demoEvents.first;
+      await tester.pumpWidget(
+        createHomeScreen(
+          profileState: const AsyncData(null),
+          eventState: AsyncData([event]),
+          initialLocation: AppRoutes.explore,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(event.title));
+      await tester.tap(find.text(event.title));
+      await tester.pumpAndSettle();
+      expect(find.byType(EventDetailsScreen), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        1,
+      );
+      expect(find.byType(TextField), findsOneWidget);
     });
 
     testWidgets('places open useful details without activating presence', (
@@ -433,7 +686,7 @@ void main() {
       expect(find.text('Search all activities'), findsNothing);
       await tester.enterText(find.byType(TextField), 'not a nearby place');
       await tester.pumpAndSettle();
-      expect(find.text('No nearby places match your search.'), findsOneWidget);
+      expect(find.text('No nearby matches.'), findsOneWidget);
       expect(find.text(discoveryItem.title), findsNothing);
       await tester.enterText(find.byType(TextField), 'gallery');
       await tester.pumpAndSettle();
@@ -574,7 +827,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(findHomeText('Try again'), findsOneWidget);
-        expect(findHomeText('I’m here'), findsOneWidget);
+        expect(findHomeText('Activate presence'), findsOneWidget);
         expect(
           findHomeText('You’re discoverable here for a limited time.'),
           findsNothing,
@@ -945,8 +1198,8 @@ void main() {
           );
           for (final label in [
             'Welcome back',
-            'Presence off',
-            'I’m here',
+            'Real moments, intentional connection.',
+            'Activate presence',
             'Happening around you',
             'Google Maps',
             'DEMO',

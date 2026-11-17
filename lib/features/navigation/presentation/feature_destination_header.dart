@@ -42,12 +42,13 @@ class FeatureDestinationHeader extends ConsumerWidget {
               ),
             ],
           ),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          if (subtitle.isNotEmpty)
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
         ],
       ),
     ),

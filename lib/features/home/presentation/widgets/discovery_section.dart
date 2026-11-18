@@ -1,6 +1,12 @@
-import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../../discovery/data/discovery_providers.dart';
 import '../../../discovery/domain/discovery_item.dart';
+import '../../../discovery/domain/place_photo.dart';
 
 class DiscoverySection extends StatelessWidget {
   const DiscoverySection({
@@ -112,20 +118,26 @@ class _DiscoveryCard extends StatelessWidget {
     final content = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: hasPhoto
-              ? Image.network(
-                  item.imageReference!,
-                  fit: BoxFit.cover,
-                  excludeFromSemantics: true,
-                  loadingBuilder: (_, child, progress) => progress == null
-                      ? child
-                      : const _MissingPhoto(loading: true),
-                  errorBuilder: (_, _, _) => const _MissingPhoto(),
-                )
-              : const _MissingPhoto(),
-        ),
+        if (item.placePhoto case final photo?)
+          _GooglePlacePhoto(
+            key: ValueKey((photo.name, photo.signature)),
+            photo: photo,
+          )
+        else
+          AspectRatio(
+            aspectRatio: 16 / 9,
+            child: hasPhoto
+                ? Image.network(
+                    item.imageReference!,
+                    fit: BoxFit.cover,
+                    excludeFromSemantics: true,
+                    loadingBuilder: (_, child, progress) => progress == null
+                        ? child
+                        : const _MissingPhoto(loading: true),
+                    errorBuilder: (_, _, _) => const _MissingPhoto(),
+                  )
+                : const _MissingPhoto(),
+          ),
         Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -152,7 +164,21 @@ class _DiscoveryCard extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   if (providerLabel != null)
-                    Text(providerLabel, style: theme.textTheme.labelSmall),
+                    Text(
+                      providerLabel,
+                      softWrap: item.source != 'google-places',
+                      style: item.source == 'google-places'
+                          ? theme.textTheme.bodySmall?.copyWith(
+                              color: theme.brightness == Brightness.dark
+                                  ? Colors.white
+                                  : const Color(0xff5e5e5e),
+                              fontSize: 12,
+                              fontStyle: FontStyle.normal,
+                              fontWeight: FontWeight.w400,
+                              letterSpacing: 0,
+                            )
+                          : theme.textTheme.labelSmall,
+                    ),
                   if (attribution != null &&
                       attribution.isNotEmpty &&
                       attribution.toLowerCase() != providerLabel?.toLowerCase())
@@ -220,4 +246,114 @@ class _MissingPhoto extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _GooglePlacePhoto extends ConsumerStatefulWidget {
+  const _GooglePlacePhoto({required this.photo, super.key});
+
+  final PlacePhoto photo;
+
+  @override
+  ConsumerState<_GooglePlacePhoto> createState() => _GooglePlacePhotoState();
+}
+
+class _GooglePlacePhotoState extends ConsumerState<_GooglePlacePhoto> {
+  ui.Image? _image;
+  bool _requested = false;
+  bool _loading = false;
+
+  Future<void> _load() async {
+    if (_requested) return;
+    setState(() {
+      _requested = true;
+      _loading = true;
+    });
+    try {
+      final bytes = await ref.read(placePhotoLoaderProvider)(widget.photo);
+      if (!mounted) return;
+      final codec = await ui.instantiateImageCodec(bytes);
+      try {
+        final frame = await codec.getNextFrame();
+        if (!mounted) {
+          frame.image.dispose();
+          return;
+        }
+        setState(() => _image = frame.image);
+      } finally {
+        codec.dispose();
+      }
+    } catch (_) {
+      // The place remains readable with the existing unavailable state.
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _openLink(Uri uri) async {
+    try {
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {
+      // Some devices do not have a handler for external links.
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      const SnackBar(content: Text('Could not open the Google Maps link')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final image = _image;
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: image != null
+              ? RawImage(image: image, fit: BoxFit.cover)
+              : !_requested
+              ? ColoredBox(
+                  color: theme.colorScheme.surfaceContainerLow,
+                  child: Center(
+                    child: TextButton(
+                      onPressed: _load,
+                      child: const Text('Load place photo'),
+                    ),
+                  ),
+                )
+              : _MissingPhoto(loading: _loading),
+        ),
+        if (image != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (final author in widget.photo.authors)
+                  if (author.profileUri case final uri?)
+                    TextButton(
+                      onPressed: () => _openLink(uri),
+                      child: Text(author.displayName),
+                    )
+                  else
+                    Text(author.displayName, style: theme.textTheme.labelSmall),
+                if (widget.photo.googleMapsUri case final uri?)
+                  TextButton(
+                    onPressed: () => _openLink(uri),
+                    child: const Text('View photo on Google Maps'),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 }

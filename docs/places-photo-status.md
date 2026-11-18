@@ -1,20 +1,20 @@
-# Optional Places photos: implementation and verification
+# Optional Places photos
 
-Status (2026-11-18): implementation covered by automated tests; live photos remain
-unverified. Do not describe this as a resolved upstream photo issue.
+Nearby Discovery requests `places.photos` and returns one signed photo reference
+per place, with author attribution and the source photo link when available.
+References expire after 15 minutes and are bound to the authenticated user. The
+discovery response and the photo response use `Cache-Control: private, no-store`.
 
-`nearby-discovery` requests `places.photos` and resolves at most one fresh photo
-per valid place (at most 10 per search). Missing photo metadata makes no media
-request. A failed, unsafe or timed-out photo preserves the place and its existing
-UI fallback. Media resolution can add Google billable requests when photos exist
-and up to four seconds to search latency. No persistent photo-reference cache is
-introduced. API keys stay in server-side request headers; clients receive only
-validated HTTPS Google image URLs and author display attribution.
+Valinor discovery cards request media when the user selects **Load place photo**.
+The authenticated Edge Function calls Place Photos (New), validates the Google
+image URL, and returns bounded image bytes. The provider key stays on the server.
+Cards show a loading or unavailable state as appropriate. The client still accepts
+safe image URLs from the existing deployed development function.
 
-The Flutter parser accepts the optional image fields. Existing discovery cards
-show Google Maps source credit, author attribution and loading/error fallback.
-Location refresh tests verify Google Places and Ticketmaster share refreshed
-device coordinates without enabling presence.
+Nearby Search remains in the Pro tier. Each successful Place Photos (New) media
+request is billed separately. The signed-reference flow makes no media requests
+during discovery search or scrolling. It requires deployment of
+`nearby-discovery` to take effect in the development backend.
 
 ## Live DEV evidence
 

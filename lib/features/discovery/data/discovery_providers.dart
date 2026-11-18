@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/discovery_item.dart';
+import '../domain/place_photo.dart';
 import '../domain/discovery_repository.dart';
 import 'demo_discovery_repository.dart';
 import 'google_discovery_repository.dart';
@@ -28,3 +31,8 @@ final nearbyDiscoveryProvider = FutureProvider.autoDispose
           )
           .timeout(discoveryRequestTimeout);
     }, retry: (_, _) => null);
+
+final placePhotoLoaderProvider =
+    Provider<Future<Uint8List> Function(PlacePhoto)>(
+      (ref) => GoogleDiscoveryRepository(Supabase.instance.client).loadPhoto,
+    );

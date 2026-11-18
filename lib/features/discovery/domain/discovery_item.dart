@@ -1,3 +1,5 @@
+import 'place_photo.dart';
+
 enum DiscoveryItemType { place, activity }
 
 class DiscoveryItem {
@@ -8,6 +10,7 @@ class DiscoveryItem {
     required this.title,
     required this.category,
     this.imageReference,
+    this.placePhoto,
     this.imageAttribution,
     this.context,
     this.distanceKm,
@@ -22,6 +25,7 @@ class DiscoveryItem {
   final String title;
   final List<String> category;
   final String? imageReference;
+  final PlacePhoto? placePhoto;
   final String? imageAttribution;
   final String? context;
   final double? distanceKm;

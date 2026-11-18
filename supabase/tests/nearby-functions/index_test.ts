@@ -18,6 +18,7 @@ Deno.test("both nearby entrypoints reject coerced coordinates and abort stalled 
   let calls = 0;
   let mode: "normal" | "headers-stall" | "body-stall" = "normal";
   let signal: AbortSignal;
+  let placesFixture = false;
   const env: Record<string, string> = {
     SUPABASE_URL: "https://example.invalid",
     SUPABASE_ANON_KEY: "fixture-only",
@@ -74,6 +75,32 @@ Deno.test("both nearby entrypoints reject coerced coordinates and abort stalled 
         ),
       );
     }
+    if (url.hostname === "places.googleapis.com" && placesFixture) {
+      equal(
+        new Headers(init?.headers).get("X-Goog-FieldMask")?.split(",").includes(
+          "places.photos",
+        ),
+        true,
+      );
+      return Promise.resolve(Response.json({
+        places: [
+          {
+            id: "with-photo",
+            displayName: { text: "Fixture place" },
+            location: { latitude: 0, longitude: 0 },
+            photos: [{
+              name: "places/with-photo/photos/fixture",
+              authorAttributions: [{ displayName: "Fixture photographer" }],
+            }],
+          },
+          {
+            id: "no-photo",
+            displayName: { text: "Fixture without photo" },
+            location: { latitude: 0, longitude: 0 },
+          },
+        ],
+      }));
+    }
     return Promise.resolve(new Response("{}"));
   }) as typeof fetch;
   const run = async (body: unknown, bearer = "Bearer fixture-session") => {
@@ -104,6 +131,31 @@ Deno.test("both nearby entrypoints reject coerced coordinates and abort stalled 
       ]
     ) {
       await import(path);
+      if (name === "places") {
+        await t.step(
+          "discovery returns optional photo metadata without fetching media",
+          async () => {
+            placesFixture = true;
+            const before = calls;
+            try {
+              const result = await run({ latitude: 0, longitude: 0 });
+              equal(result.status, 200);
+              equal(
+                result.body.items[0].photo.name,
+                "places/with-photo/photos/fixture",
+              );
+              equal(
+                result.body.items[0].photo.authors[0].displayName,
+                "Fixture photographer",
+              );
+              equal(result.body.items[1].photo, null);
+              equal(calls - before, 1);
+            } finally {
+              placesFixture = false;
+            }
+          },
+        );
+      }
       for (
         const body of [
           null,

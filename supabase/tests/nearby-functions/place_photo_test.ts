@@ -1,94 +1,117 @@
 import {
-  placePhoto,
+  makePhoto,
   safeGooglePhotoUri,
+  servePhoto,
 } from "../../functions/_shared/place_photo.ts";
-function equal(a: unknown, b: unknown) {
-  if (JSON.stringify(a) !== JSON.stringify(b)) {
-    throw new Error(`Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
-  }
-}
-const place = {
-  id: "fixture",
-  photos: [{
-    name: "places/fixture/photos/photo",
-    authorAttributions: [{ displayName: "Fixture photographer" }],
+
+const apiKey = "fixture-key";
+const user = "fixture-user";
+const name = "places/fixture/photos/fixture";
+const raw = {
+  name,
+  googleMapsUri: "https://www.google.com/maps/example-photo",
+  authorAttributions: [{
+    displayName: "Fixture photographer",
+    uri: "//maps.google.com/maps/contrib/123",
+    photoUri: "https://lh3.googleusercontent.com/fixture-avatar",
   }],
 };
-Deno.test("photo resolves on server without returning API key and retains attribution", async () => {
-  let calls = 0;
-  const result = await placePhoto(
-    place,
-    "fixture-key",
-    ((url: URL, init: RequestInit) => {
-      calls++;
-      equal(url.origin, "https://places.googleapis.com");
-      equal(url.pathname, "/v1/places/fixture/photos/photo/media");
-      equal(url.searchParams.get("skipHttpRedirect"), "true");
-      equal(url.searchParams.has("key"), false);
-      equal(new Headers(init.headers).get("X-Goog-Api-Key"), "fixture-key");
-      equal(init.redirect, "error");
+
+function equal(actual: unknown, expected: unknown) {
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    throw new Error(
+      `Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+    );
+  }
+}
+
+Deno.test("returns one signed photo with provider attribution, or null without a valid photo", async () => {
+  equal(await makePhoto(undefined, "fixture", user, apiKey), null);
+  equal(
+    await makePhoto(
+      { name: "https://example.invalid" },
+      "fixture",
+      user,
+      apiKey,
+    ),
+    null,
+  );
+  equal(await makePhoto(raw, "different-place", user, apiKey), null);
+  const photo = await makePhoto(raw, "fixture", user, apiKey);
+  equal(photo?.name, name);
+  equal(photo?.googleMapsUri, raw.googleMapsUri);
+  equal(photo?.authors, [{
+    displayName: "Fixture photographer",
+    uri: "https://maps.google.com/maps/contrib/123",
+    photoUri: "https://lh3.googleusercontent.com/fixture-avatar",
+  }]);
+});
+
+Deno.test("photo proxy binds references to a user, bounds media and handles provider failures", async () => {
+  const photo = await makePhoto(raw, "fixture", user, apiKey);
+  if (!photo) throw new Error("Missing fixture photo");
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  let unavailable = false;
+  let unsafe = false;
+  globalThis.fetch = ((request: string | URL, init: RequestInit) => {
+    const input = new URL(request);
+    calls.push(input.hostname);
+    if (input.hostname === "places.googleapis.com") {
+      equal(input.pathname, `/v1/${name}/media`);
+      equal(input.searchParams.get("maxWidthPx"), "720");
+      equal(input.searchParams.get("key"), null);
+      equal(new Headers(init.headers).get("X-Goog-Api-Key"), apiKey);
       return Promise.resolve(
-        Response.json({
-          photoUri: "https://lh3.googleusercontent.com/fixture",
+        unavailable ? new Response(null, { status: 429 }) : Response.json({
+          photoUri: unsafe
+            ? "https://example.invalid/photo"
+            : "https://lh3.googleusercontent.com/media",
         }),
       );
-    }) as typeof fetch,
-  );
-  equal(calls, 1);
-  equal(result, {
-    imageReference: "https://lh3.googleusercontent.com/fixture",
-    imageAttribution: "Fixture photographer",
-  });
-  equal(JSON.stringify(result).includes("fixture-key"), false);
-});
-Deno.test("missing, malformed and mismatched photo resources never call provider", async () => {
-  for (
-    const input of [{ id: "fixture" }, { ...place, id: "other" }, {
-      ...place,
-      photos: [{ name: "https://evil.invalid/photo" }],
-    }]
-  ) {
-    let calls = 0;
-    equal(
-      await placePhoto(
-        input,
-        "fixture",
-        (() => {
-          calls++;
-          throw new Error("must not call");
-        }) as typeof fetch,
-      ),
-      {},
+    }
+    equal(input.hostname, "lh3.googleusercontent.com");
+    equal(new Headers(init.headers).has("X-Goog-Api-Key"), false);
+    return Promise.resolve(
+      new Response(Uint8Array.of(1, 2, 3), {
+        headers: { "Content-Type": "image/jpeg" },
+      }),
     );
-    equal(calls, 0);
+  }) as typeof fetch;
+  try {
+    equal((await servePhoto(photo, "different-user", apiKey, {})).status, 403);
+    equal(
+      (await servePhoto(
+        { ...photo, expiresAt: Date.now() - 1 },
+        user,
+        apiKey,
+        {},
+      )).status,
+      400,
+    );
+    equal(calls, []);
+    const success = await servePhoto(photo, user, apiKey, {});
+    equal(success.status, 200);
+    equal(success.headers.get("cache-control"), "private, no-store");
+    equal(Array.from(new Uint8Array(await success.arrayBuffer())), [1, 2, 3]);
+    unavailable = true;
+    const failure = await servePhoto(photo, user, apiKey, {});
+    equal(failure.status, 502);
+    equal(await failure.json(), { error: "Photo unavailable" });
+    unavailable = false;
+    unsafe = true;
+    equal((await servePhoto(photo, user, apiKey, {})).status, 502);
+    equal(calls, [
+      "places.googleapis.com",
+      "lh3.googleusercontent.com",
+      "places.googleapis.com",
+      "places.googleapis.com",
+    ]);
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
-Deno.test("upstream failure or malformed image preserves photo fallback", async () => {
-  for (
-    const response of [
-      new Response("", { status: 403 }),
-      Response.json({ photoUri: "https://evil.invalid/photo" }),
-      Response.json({}),
-    ]
-  ) {
-    equal(
-      await placePhoto(
-        place,
-        "fixture",
-        (() => Promise.resolve(response)) as typeof fetch,
-      ),
-      {},
-    );
-  }
-  equal(
-    await placePhoto(
-      place,
-      "fixture",
-      (() => Promise.reject(new Error("fixture failure"))) as typeof fetch,
-    ),
-    {},
-  );
-});
+
 Deno.test("photo URLs reject credentials, unsafe hosts, and schemes", () => {
   for (
     const url of [
@@ -104,29 +127,4 @@ Deno.test("photo URLs reject credentials, unsafe hosts, and schemes", () => {
     safeGooglePhotoUri("https://lh3.googleusercontent.com/x"),
     "https://lh3.googleusercontent.com/x",
   );
-});
-
-Deno.test("photo deadline aborts without taking down places", async () => {
-  const timeout = AbortSignal.timeout;
-  AbortSignal.timeout = ((ms: number) => {
-    equal(ms, 4000);
-    return timeout(5);
-  }) as typeof AbortSignal.timeout;
-  try {
-    const result = await placePhoto(
-      place,
-      "fixture",
-      ((_url: URL, init: RequestInit) =>
-        new Promise((_resolve, reject) => {
-          init.signal!.addEventListener(
-            "abort",
-            () => reject(init.signal!.reason),
-            { once: true },
-          );
-        })) as typeof fetch,
-    );
-    equal(result, {});
-  } finally {
-    AbortSignal.timeout = timeout;
-  }
 });

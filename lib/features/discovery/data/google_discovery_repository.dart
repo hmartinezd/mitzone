@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/discovery_item.dart';
+import '../domain/place_photo.dart';
 import '../domain/discovery_repository.dart';
 import '../domain/discovery_ranking.dart';
 import '../domain/nearby_provider_exception.dart';
@@ -55,6 +58,28 @@ class GoogleDiscoveryRepository implements DiscoveryRepository {
     return rankDiscoveryItems(items, interests: interests, now: now);
   }
 
+  Future<Uint8List> loadPhoto(PlacePhoto photo) async {
+    if (photo.expiresAt <= DateTime.now().millisecondsSinceEpoch) {
+      throw StateError('Photo reference expired');
+    }
+    final response = await client.functions
+        .invoke(
+          'nearby-discovery',
+          body: {
+            'action': 'photo',
+            'name': photo.name,
+            'expiresAt': photo.expiresAt,
+            'signature': photo.signature,
+          },
+        )
+        .timeout(const Duration(seconds: 12));
+    final data = response.data;
+    if (data is! Uint8List || data.isEmpty) {
+      throw StateError('Photo unavailable');
+    }
+    return data;
+  }
+
   String? _safePhoto(Object? value) {
     if (value is! String) return null;
     final uri = Uri.tryParse(value);
@@ -86,6 +111,7 @@ class GoogleDiscoveryRepository implements DiscoveryRepository {
     return DiscoveryItem(
       id: id,
       source: 'google-places',
+      placePhoto: PlacePhoto.fromJson(value['photo']),
       type: DiscoveryItemType.place,
       title: title,
       category: categories.whereType<String>().toList(),

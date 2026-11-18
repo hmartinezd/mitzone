@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { nearbyCoordinates, nearbyProviderTimeoutMs } from "../_shared/nearby_request.ts";
 
+import { placePhoto } from "../_shared/place_photo.ts";
+
 const radiusMeters = 2500;
 const maxResults = 10;
 const includedTypes = [
@@ -8,7 +10,7 @@ const includedTypes = [
   "shopping_mall", "stadium", "sports_complex", "tourist_attraction",
   "performing_arts_theater",
 ];
-const fieldMask = "places.id,places.displayName,places.primaryType,places.types,places.shortFormattedAddress,places.location";
+const fieldMask = "places.id,places.displayName,places.primaryType,places.types,places.shortFormattedAddress,places.location,places.photos";
 
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 
@@ -29,7 +31,13 @@ Deno.serve(async (req) => {
     const google = await fetch("https://places.googleapis.com/v1/places:searchNearby", { method: "POST", signal: AbortSignal.timeout(nearbyProviderTimeoutMs), headers: { "Content-Type": "application/json", "X-Goog-Api-Key": Deno.env.get("GOOGLE_PLACES_API_KEY")!, "X-Goog-FieldMask": fieldMask }, body: JSON.stringify({ includedTypes, maxResultCount: count, rankPreference: "DISTANCE", locationRestriction: { circle: { center: { latitude, longitude }, radius } } }) });
     if (!google.ok) return json({ error: "Discovery provider unavailable" }, 502);
     const payload = await google.json();
-    const items = (payload.places ?? []).flatMap((place: any) => normalize(place, latitude, longitude));
+    const candidates = (Array.isArray(payload.places) ? payload.places : []).slice(0, count);
+    const items = (await Promise.all(candidates.map(async (place: any) => {
+      const normalized = normalize(place, latitude, longitude);
+      if (!normalized.length) return [];
+      const photo = await placePhoto(place, Deno.env.get("GOOGLE_PLACES_API_KEY")!);
+      return [{ ...normalized[0], ...photo }];
+    }))).flat();
     return json({ items });
   } catch (_) { return json({ error: "Discovery unavailable" }, 500); }
 });

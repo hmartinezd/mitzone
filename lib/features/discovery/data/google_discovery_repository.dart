@@ -55,6 +55,29 @@ class GoogleDiscoveryRepository implements DiscoveryRepository {
     return rankDiscoveryItems(items, interests: interests, now: now);
   }
 
+  String? _safePhoto(Object? value) {
+    if (value is! String) return null;
+    final uri = Uri.tryParse(value);
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasPort) {
+      return null;
+    }
+    final allowed = [
+      'googleusercontent.com',
+      'ggpht.com',
+    ].any((host) => uri.host == host || uri.host.endsWith('.$host'));
+    if (!allowed ||
+        uri.queryParameters.keys.any(
+          (key) =>
+              RegExp('key|token|secret', caseSensitive: false).hasMatch(key),
+        )) {
+      return null;
+    }
+    return value;
+  }
+
   DiscoveryItem? _parse(Map value) {
     final id = value['id'];
     final title = value['title'];
@@ -66,6 +89,10 @@ class GoogleDiscoveryRepository implements DiscoveryRepository {
       type: DiscoveryItemType.place,
       title: title,
       category: categories.whereType<String>().toList(),
+      imageReference: _safePhoto(value['imageReference']),
+      imageAttribution: value['imageAttribution'] is String
+          ? value['imageAttribution'] as String
+          : null,
       context: value['context'] as String?,
       distanceKm: (value['distanceKm'] as num?)?.toDouble(),
     );

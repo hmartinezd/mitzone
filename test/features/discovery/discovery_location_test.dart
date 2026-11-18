@@ -70,6 +70,29 @@ void main() {
     },
   );
 
+  test(
+    'refresh shares the new device coordinates with both providers',
+    () async {
+      setup();
+      addTearDown(container.dispose);
+      await Future.wait([
+        container.read(nearbyDiscoveryProvider(interests).future),
+        container.read(nearbyEventsProvider.future),
+      ]);
+      location.latitude = 27.94;
+      location.longitude = -82.27;
+      container.invalidate(discoveryLocationProvider);
+      await Future.wait([
+        container.read(nearbyDiscoveryProvider(interests).future),
+        container.read(nearbyEventsProvider.future),
+      ]);
+      expect(location.calls, 2);
+      expect(places.coordinates, (27.94, -82.27));
+      expect(events.coordinates, places.coordinates);
+      expect(presence.records, 0);
+    },
+  );
+
   for (final failure in ForegroundLocationFailure.values) {
     testWidgets(
       '$failure fails closed without automatic retries and supports explicit retry',
@@ -204,6 +227,8 @@ LocationObservation _observation() => LocationObservation(
 );
 
 class _Location implements LocationObservationSource {
+  double latitude = 40.7;
+  double longitude = -74.0;
   int calls = 0;
   ForegroundLocationFailure? failure;
   Completer<LocationObservation>? pending;
@@ -211,7 +236,14 @@ class _Location implements LocationObservationSource {
   Future<LocationObservation> observeForeground() async {
     calls++;
     if (failure != null) throw ForegroundLocationException(failure!);
-    return pending?.future ?? Future.value(_observation());
+    return pending?.future ??
+        Future.value(
+          LocationObservation(
+            latitude: latitude,
+            longitude: longitude,
+            observedAt: DateTime.now().toUtc(),
+          ),
+        );
   }
 }
 

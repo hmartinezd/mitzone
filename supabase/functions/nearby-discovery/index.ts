@@ -41,6 +41,21 @@ Deno.serve(async (req) => {
     await Promise.all(items.map(async (item) => {
       item.photo = await makePhoto(item.photo, item.id.slice("google:".length), user.id, apiKey);
     }));
+    if (items.length > 0 && items.every((item) => !item.photo)) {
+      console.info(JSON.stringify({
+        event: "nearby_discovery_no_photo",
+        googleStatus: google.status,
+        placesReturned: candidates.length,
+        placesWithGooglePhotos: candidates.filter((place: any) =>
+          Array.isArray(place?.photos) && place.photos.length > 0
+        ).length,
+        placesWithGooglePhotoNames: candidates.filter((place: any) =>
+          Array.isArray(place?.photos) &&
+          place.photos.some((photo: any) => typeof photo?.name === "string" && photo.name.length > 0)
+        ).length,
+        placesNormalized: items.length,
+      }));
+    }
     return json({ items });
   } catch (_) { return json({ error: "Discovery unavailable" }, 500); }
 });
